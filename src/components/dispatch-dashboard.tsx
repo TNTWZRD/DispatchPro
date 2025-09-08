@@ -30,7 +30,6 @@ export function DispatchDashboard() {
 
   useEffect(() => {
     setIsClient(true);
-    setTime(new Date());
     const timer = setInterval(() => setTime(new Date()), 1000 * 60);
     return () => clearInterval(timer);
   }, []);
@@ -104,6 +103,22 @@ export function DispatchDashboard() {
     );
   };
   
+  const handleUnassignDriver = (rideId: string) => {
+    const ride = rides.find(r => r.id === rideId);
+    if (!ride || !ride.driverId) return;
+
+    const driverId = ride.driverId;
+
+    // Set ride back to pending and remove driver
+    setRides(prev => prev.map(r => r.id === rideId ? { ...r, status: 'pending', driverId: null } : r));
+
+    // Check if the driver has any other active rides
+    const otherRides = rides.filter(r => r.driverId === driverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
+    if (otherRides.length === 0) {
+      setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, status: 'available' } : d));
+    }
+  };
+
   const onDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
 
@@ -119,6 +134,8 @@ export function DispatchDashboard() {
     if (destination.droppableId.startsWith('driver-')) {
       const driverId = destination.droppableId;
       handleAssignDriver(ride.id, driverId);
+    } else if (destination.droppableId === 'waiting') {
+      handleUnassignDriver(ride.id);
     }
   };
 
@@ -202,6 +219,7 @@ export function DispatchDashboard() {
                               onAssignDriver={handleAssignDriver}
                               onChangeStatus={handleChangeStatus}
                               onSetFare={handleSetFare}
+                              onUnassignDriver={handleUnassignDriver}
                             />
                           </div>
                         )}
@@ -228,6 +246,7 @@ export function DispatchDashboard() {
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
+              onUnassignDriver={handleUnassignDriver}
             />
           ))}
         </div>
@@ -254,6 +273,7 @@ export function DispatchDashboard() {
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
+              onUnassignDriver={handleUnassignDriver}
             />
           ))}
           {pendingRides.length === 0 && (
@@ -274,6 +294,7 @@ export function DispatchDashboard() {
                 onAssignDriver={handleAssignDriver}
                 onChangeStatus={handleChangeStatus}
                 onSetFare={handleSetFare}
+                onUnassignDriver={handleUnassignDriver}
               />
         </TabsContent>
       ))}
@@ -289,7 +310,7 @@ export function DispatchDashboard() {
         </h1>
         <div className="ml-auto flex items-center gap-4">
           <div className="text-sm text-muted-foreground hidden md:block">
-            {time && <>{time.toLocaleDateString()} {time.toLocaleTimeString()}</>}
+            {isClient && time && <>{time.toLocaleDateString()} {time.toLocaleTimeString()}</>}
           </div>
           <Dialog open={isLogCallOpen} onOpenChange={setIsLogCallOpen}>
             <DialogTrigger asChild>
@@ -306,7 +327,11 @@ export function DispatchDashboard() {
       </header>
 
       <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6 lg:flex-row">
-        <Sidebar rides={rides} drivers={drivers} />
+        <Sidebar 
+            rides={rides} 
+            drivers={drivers}
+            onAssignSuggestion={handleAssignDriver} 
+        />
         
         <div className='flex-1 flex flex-col min-w-0'>
           {isClient && (isMobile ? renderMobileView() : renderDesktopView())}
