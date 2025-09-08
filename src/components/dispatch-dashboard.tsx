@@ -247,7 +247,7 @@ function DispatchDashboardUI() {
   const renderDesktopView = () => (
      <DragDropContext onDragEnd={onDragEnd}>
         <div 
-          className="flex flex-1 gap-4 overflow-x-auto pb-4 transition-transform origin-top-left"
+          className="flex flex-1 items-stretch gap-4 overflow-x-auto pb-4 transition-transform origin-top-left"
           style={{ 
             transform: `scale(${zoom})`,
             width: `${100 / zoom}%`,
