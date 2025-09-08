@@ -42,8 +42,9 @@ function DispatchDashboardUI() {
   useHotkey('s', toggleCondensedMode, { alt: true });
   
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
-  const pendingRides = rides.filter(r => r.status === 'pending' && !r.scheduledTime);
-  const scheduledRides = rides.filter(r => r.status === 'pending' && r.scheduledTime);
+  const allPendingRides = rides.filter(r => r.status === 'pending');
+  const pendingRides = allPendingRides.filter(r => !r.scheduledTime);
+  const scheduledRides = allPendingRides.filter(r => r.scheduledTime);
   const hasScheduledRides = scheduledRides.length > 0;
 
   useEffect(() => {
@@ -414,15 +415,6 @@ function DispatchDashboardUI() {
         <Carousel
           setApi={setCarouselApi}
           className="flex-1 w-full mt-4 min-h-0"
-          opts={{
-            dragFree: true,
-            dragThreshold: 1,
-            watchDrag: (emblaApi) => {
-              const { dragStart, dragEnd } = emblaApi.internalEngine().dragHandler
-              emblaApi.on('pointerDown', dragStart)
-              emblaApi.on('pointerUp', dragEnd)
-            }
-          }}
         >
           <CarouselContent className="h-full">
             {/* Waiting Tab */}
