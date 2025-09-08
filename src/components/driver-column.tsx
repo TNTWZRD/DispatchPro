@@ -20,11 +20,12 @@ type DriverColumnProps = {
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
+  style?: React.CSSProperties;
 };
 
-export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide }: DriverColumnProps) {
+export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, style }: DriverColumnProps) {
   const isAvailable = driver.status === 'available';
-  const isMobile = useIsMobile();
+  const isMobile = useIs_Mobile();
   const hasRides = rides.length > 0;
 
   const renderContent = () => (
@@ -85,10 +86,11 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
           ref={provided.innerRef}
           {...provided.droppableProps}
           className={cn(
-            "w-80 shrink-0 flex flex-col",
+            "shrink-0 flex flex-col",
             snapshot.isDraggingOver && "bg-primary/20",
             driver.status === 'offline' && "bg-muted/50"
           )}
+          style={style}
         >
           {renderContent()}
           {provided.placeholder}

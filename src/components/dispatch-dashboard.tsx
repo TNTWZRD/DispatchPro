@@ -244,7 +244,11 @@ function DispatchDashboardUI() {
   
   const pendingRides = rides.filter(r => r.status === 'pending');
 
-  const renderDesktopView = () => (
+  const renderDesktopView = () => {
+    const totalColumns = activeDrivers.length + 1;
+    const columnWidth = Math.max(280, 100 / totalColumns * 20); // Dynamic width with a minimum
+
+    return (
      <DragDropContext onDragEnd={onDragEnd}>
         <div 
           className="flex flex-1 items-stretch gap-4 overflow-x-auto pb-4 transition-transform origin-top-left"
@@ -261,9 +265,10 @@ function DispatchDashboardUI() {
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   className={cn(
-                    "w-80 shrink-0 flex flex-col",
+                    "shrink-0 flex flex-col",
                     snapshot.isDraggingOver && "bg-accent/20"
                   )}
+                   style={{ width: `${columnWidth}px` }}
                 >
                   <CardHeader>
                     <CardTitle>Waiting ({pendingRides.length})</CardTitle>
@@ -313,11 +318,12 @@ function DispatchDashboardUI() {
               onSetFare={handleSetFare}
               onUnassignDriver={handleUnassignDriver}
               onEditRide={handleOpenEdit}
+              style={{ width: `${columnWidth}px` }}
             />
           ))}
         </div>
       </DragDropContext>
-  );
+  )};
 
   const renderMobileView = () => {
     return (
