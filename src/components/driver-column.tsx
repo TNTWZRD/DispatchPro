@@ -13,16 +13,17 @@ import { StrictModeDroppable } from './strict-mode-droppable';
 
 type DriverColumnProps = {
   driver: Driver;
-  ride: Ride | undefined;
+  rides: Ride[];
   allDrivers: Driver[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, fare: number, paymentMethod: PaymentMethod) => void;
 };
 
-export function DriverColumn({ driver, ride, allDrivers, onAssignDriver, onChangeStatus, onSetFare }: DriverColumnProps) {
+export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare }: DriverColumnProps) {
   const isAvailable = driver.status === 'available';
   const isMobile = useIsMobile();
+  const hasRides = rides.length > 0;
 
   const renderContent = () => (
     <>
@@ -45,21 +46,20 @@ export function DriverColumn({ driver, ride, allDrivers, onAssignDriver, onChang
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-4">
-        {ride ? (
-          <RideCard
-            ride={ride}
-            drivers={allDrivers}
-            onAssignDriver={onAssignDriver}
-            onChangeStatus={onChangeStatus}
-            onSetFare={onSetFare}
-          />
+        {hasRides ? (
+          rides.map(ride => (
+            <RideCard
+              key={ride.id}
+              ride={ride}
+              drivers={allDrivers}
+              onAssignDriver={onAssignDriver}
+              onChangeStatus={onChangeStatus}
+              onSetFare={onSetFare}
+            />
+          ))
         ) : (
             <div className="flex h-full min-h-[100px] items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 text-center text-muted-foreground p-4">
-              {isAvailable ? (
-                <p>Available for new ride. Drag a pending ride here to assign.</p>
-              ) : (
-                  <p>Currently on a ride.</p>
-              )}
+              <p>Available for rides. Drag a pending ride here to assign.</p>
             </div>
         )}
       </CardContent>
@@ -75,7 +75,7 @@ export function DriverColumn({ driver, ride, allDrivers, onAssignDriver, onChang
   }
 
   return (
-    <StrictModeDroppable droppableId={driver.id} isDropDisabled={!isAvailable}>
+    <StrictModeDroppable droppableId={driver.id} isDropDisabled={driver.status === 'offline'}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
@@ -83,7 +83,7 @@ export function DriverColumn({ driver, ride, allDrivers, onAssignDriver, onChang
           className={cn(
             "w-80 shrink-0 flex flex-col",
             snapshot.isDraggingOver && "bg-primary/20",
-            !isAvailable && "bg-muted/50"
+            driver.status === 'offline' && "bg-muted/50"
           )}
         >
           {renderContent()}

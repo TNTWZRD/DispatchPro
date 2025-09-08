@@ -74,17 +74,19 @@ export function DispatchDashboard() {
     const ride = rides.find(r => r.id === rideId);
     if (!ride) return;
 
-    // If driver is already on a ride, don't allow assignment
     const driver = drivers.find(d => d.id === driverId);
-    if (driver?.status === 'on-ride' || driver?.status === 'offline') {
-      // Maybe show a toast here in a real app
-      console.warn(`Driver ${driverId} is not available.`);
+    if (driver?.status === 'offline') {
+      console.warn(`Driver ${driverId} is offline.`);
       return;
     }
     
-    // Unassign from previous driver if it was a reassignment
+    // If the ride was previously assigned, update the old driver's status if they have no more rides
     if (ride.driverId) {
-        setDrivers(prevDrivers => prevDrivers.map(d => d.id === ride.driverId ? {...d, status: 'available'} : d));
+        const oldDriverId = ride.driverId;
+        const otherRides = rides.filter(r => r.driverId === oldDriverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
+        if (otherRides.length === 0) {
+            setDrivers(prevDrivers => prevDrivers.map(d => d.id === oldDriverId ? {...d, status: 'available'} : d));
+        }
     }
 
     setRides(prevRides =>
@@ -92,6 +94,8 @@ export function DispatchDashboard() {
         r.id === rideId ? { ...r, status: 'assigned', driverId } : r
       )
     );
+
+    // Set new driver to 'on-ride'
     setDrivers(prevDrivers =>
       prevDrivers.map(d =>
         d.id === driverId ? { ...d, status: 'on-ride' } : d
@@ -104,7 +108,6 @@ export function DispatchDashboard() {
 
     if (!destination) return;
 
-    // Dropped in the same place
     if (source.droppableId === destination.droppableId && source.index === destination.index) {
       return;
     }
@@ -112,8 +115,7 @@ export function DispatchDashboard() {
     const ride = rides.find(r => r.id === draggableId);
     if (!ride) return;
 
-    // Moving from 'waiting' column to a driver column
-    if (source.droppableId === 'waiting' && destination.droppableId.startsWith('driver-')) {
+    if (destination.droppableId.startsWith('driver-')) {
       const driverId = destination.droppableId;
       handleAssignDriver(ride.id, driverId);
     }
@@ -122,25 +124,31 @@ export function DispatchDashboard() {
 
   const handleChangeStatus = (rideId: string, newStatus: RideStatus) => {
     setRides(prevRides => {
-      const updatedRides = prevRides.map(ride => {
-        if (ride.id !== rideId) return ride;
+      const rideToUpdate = prevRides.find(ride => ride.id === rideId);
+      if (!rideToUpdate) return prevRides;
 
-        const updatedRide = { ...ride, status: newStatus };
-        if (newStatus === 'completed' || newStatus === 'cancelled') {
-          updatedRide.completionTime = new Date();
-          if (ride.driverId) {
-            setDrivers(prevDrivers =>
-              prevDrivers.map(driver =>
-                driver.id === ride.driverId ? { ...driver, status: 'available' } : driver
-              )
-            );
-          }
-           if (newStatus === 'cancelled') {
-              updatedRide.driverId = null;
-           }
+      const updatedRides = prevRides.map(ride => 
+        ride.id === rideId ? { ...ride, status: newStatus, completionTime: (newStatus === 'completed' || newStatus === 'cancelled') ? new Date() : undefined } : ride
+      );
+
+      // If ride is completed or cancelled, check driver status
+      if ((newStatus === 'completed' || newStatus === 'cancelled') && rideToUpdate.driverId) {
+        const driverId = rideToUpdate.driverId;
+        const remainingRides = updatedRides.filter(r => r.driverId === driverId && ['assigned', 'in-progress'].includes(r.status));
+        if (remainingRides.length === 0) {
+          setDrivers(prevDrivers =>
+            prevDrivers.map(driver =>
+              driver.id === driverId ? { ...driver, status: 'available' } : driver
+            )
+          );
         }
-        return updatedRide;
-      });
+      }
+      
+      // If ride is cancelled, it should lose its driver
+      if (newStatus === 'cancelled') {
+        return updatedRides.map(r => r.id === rideId ? {...r, driverId: null} : r);
+      }
+
       return updatedRides;
     });
   };
@@ -214,7 +222,7 @@ export function DispatchDashboard() {
             <DriverColumn
               key={driver.id}
               driver={driver}
-              ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+              rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
               allDrivers={drivers}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
@@ -260,7 +268,7 @@ export function DispatchDashboard() {
         <TabsContent key={driver.id} value={driver.id} className="flex-1 overflow-y-auto mt-4">
             <DriverColumn
                 driver={driver}
-                ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
                 allDrivers={drivers}
                 onAssignDriver={handleAssignDriver}
                 onChangeStatus={handleChangeStatus}
