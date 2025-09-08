@@ -213,6 +213,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={(value: PaymentMethod) => setPaymentMethod(value)}
+                className="flex items-center space-x-4"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="cash" id="cash" />

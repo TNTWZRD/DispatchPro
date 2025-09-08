@@ -125,10 +125,7 @@ export function DispatchDashboard() {
             // Set new driver to 'on-ride' if they are not already
              const newDriverIndex = newDrivers.findIndex(d => d.id === driverId);
             if (newDriverIndex !== -1) {
-              const hasOtherRides = newRides.some(r => r.driverId === driverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
-              if (!hasOtherRides) {
-                 newDrivers[newDriverIndex] = { ...newDrivers[newDriverIndex], status: 'on-ride' };
-              }
+               newDrivers[newDriverIndex] = { ...newDrivers[newDriverIndex], status: 'on-ride' };
             }
             
             // If ride was reassigned, check if old driver becomes available
