@@ -14,6 +14,7 @@ import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2,
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 
 type RideCardProps = {
@@ -107,99 +108,104 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
 
     return (
         ride.totalFare ? (
-            <div className="flex items-center pt-1 text-sm">
-                <DollarSign className="mr-2 h-4 w-4 text-green-600" />
-                <span className="font-medium">Fare: {formatCurrency(ride.totalFare)}</span>
-                {parts.length > 0 && <span className="ml-2 text-xs text-muted-foreground">({parts.join(', ')})</span>}
+            <div className="flex items-center pt-1 text-xs text-muted-foreground">
+                <DollarSign className="mr-1.5 h-3.5 w-3.5 text-green-600" />
+                <span className="font-medium text-foreground">{formatCurrency(ride.totalFare)}</span>
+                {parts.length > 0 && <span className="ml-2">({parts.join(', ')})</span>}
             </div>
         ) : null
     );
   }
 
   return (
-    <>
-      <Card className={cn("transition-all bg-card", ride.isNew && "animate-pulse border-primary")}>
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-5 w-5" /> {ride.passengerCount || 'N/A'} Passenger(s)
+    <TooltipProvider>
+      <Card className={cn("transition-all bg-card text-sm", ride.isNew && "animate-pulse border-primary")}>
+        <CardHeader className="p-3">
+           <div className="flex items-start justify-between">
+            <CardTitle className="text-base flex items-center gap-3">
+              Ride #{ride.id.split('-')[1]}
             </CardTitle>
              <div className="flex items-center gap-2">
-               {ride.isPrepaid && <Badge variant="secondary">Prepaid</Badge>}
                {ride.status !== 'pending' && getStatusBadge(ride.status)}
              </div>
           </div>
-           {ride.passengerPhone && (
-            <div className="flex items-center text-sm text-muted-foreground">
-                <Phone className="mr-2 h-4 w-4" />
-                <span>{ride.passengerPhone}</span>
-            </div>
-           )}
-          {ride.scheduledTime && (
-            <div className="flex items-center text-sm text-amber-600">
-              <Calendar className="mr-2 h-4 w-4" />
-              <span>Scheduled: {format(ride.scheduledTime, "p")}</span>
-            </div>
-          )}
+           <div className="flex items-center text-xs text-muted-foreground gap-x-3 gap-y-1 flex-wrap">
+               <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1}</div>
+               {ride.passengerPhone && (
+                <div className="flex items-center">
+                    <Phone className="mr-1.5" />
+                    <span>{ride.passengerPhone}</span>
+                </div>
+               )}
+              {ride.scheduledTime && (
+                <div className="flex items-center text-amber-600 font-medium">
+                  <Calendar className="mr-1.5" />
+                  <span>{format(ride.scheduledTime, "p")}</span>
+                </div>
+              )}
+           </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm pt-2">
+        <CardContent className="space-y-1.5 p-3 pt-0">
           <div className="flex items-start">
             <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-            <span className="font-medium">From:</span>
-            <span className="ml-2">{ride.pickup.name}</span>
+            <span className="font-medium">{ride.pickup.name}</span>
           </div>
            {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
              <div key={index} className="flex items-start pl-2">
                 <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-                <span className="font-medium">Stop:</span>
-                <span className="ml-2">{stop.name}</span>
+                <span>{stop.name}</span>
             </div>
            ))}
            {ride.dropoff && (
              <div className="flex items-start">
                 <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                <span className="font-medium">To:</span>
-                <span className="ml-2">{ride.dropoff.name}</span>
+                <span>{ride.dropoff.name}</span>
             </div>
            )}
           {assignedDriver && ride.status !== 'pending' && (
-            <div className="flex items-center pt-1">
+            <div className="flex items-center pt-1 text-xs">
               <Truck className="mr-2 h-4 w-4 text-primary" />
               <span className="font-medium">Driver:</span>
-              <span className="ml-2">{assignedDriver.name}</span>
+              <span className="ml-2 text-muted-foreground">{assignedDriver.name}</span>
             </div>
           )}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm text-muted-foreground">
-            {ride.movingFee && (
-                <div className="flex items-center">
-                    <Package className="mr-2 h-4 w-4 text-primary" />
-                    <span className="font-medium">Moving Fee</span>
-                </div>
-            )}
-             {ride.isReturnTrip && (
-                <div className="flex items-center">
-                    <Repeat className="mr-2 h-4 w-4 text-primary" />
-                    <span className="font-medium">Return Trip</span>
-                </div>
-            )}
-          </div>
           {ride.notes && (
-            <div className="flex items-start pt-1 text-sm text-muted-foreground">
+            <div className="flex items-start pt-1 text-xs text-muted-foreground">
               <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
               <span className="italic">{ride.notes}</span>
             </div>
           )}
           {getPaymentSummary()}
         </CardContent>
-        <CardFooter className="flex justify-between items-center">
+        <CardFooter className="flex justify-between items-center p-3 pt-2">
           <div className="flex items-center text-xs text-muted-foreground">
             <Clock className="mr-1.5 h-3 w-3" />
             <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
+             <div className="flex items-center gap-1 ml-3">
+                {ride.movingFee && (
+                    <Tooltip>
+                        <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
+                        <TooltipContent><p>Moving Fee</p></TooltipContent>
+                    </Tooltip>
+                )}
+                 {ride.isReturnTrip && (
+                    <Tooltip>
+                        <TooltipTrigger><Repeat className="h-4 w-4 text-primary" /></TooltipTrigger>
+                        <TooltipContent><p>Return Trip</p></TooltipContent>
+                    </Tooltip>
+                )}
+                 {ride.isPrepaid && (
+                     <Tooltip>
+                        <TooltipTrigger><Gift className="h-4 w-4 text-primary" /></TooltipTrigger>
+                        <TooltipContent><p>Prepaid</p></TooltipContent>
+                     </Tooltip>
+                )}
+             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsFareModalOpen(true)}>
-                <DollarSign className="h-4 w-4 mr-2" />
-                {ride.totalFare ? 'Edit Fare' : 'Set Fare'}
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
+                <DollarSign className="h-4 w-4" />
+                <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>
             </Button>
             
             <DropdownMenu>
@@ -340,7 +346,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                     <span>Subtotal:</span>
                     <span>{formatCurrency(totalPayment)}</span>
                 </div>
-                 {fareTip && fareTip > 0 && (
+                 {fareTip > 0 && (
                     <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Tip:</span>
                         <span>+ {formatCurrency(fareTip)}</span>
@@ -355,7 +361,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <hr className="my-2" />
                 <div className="flex justify-between text-lg font-bold">
                     <span>Total Charged to Customer:</span>
-                    <span>{formatCurrency(totalPayment + (fareTip || 0) + cardFee)}</span>
+                    <span>{formatCurrency(totalPayment + cardFee)}</span>
                 </div>
             </div>
             
@@ -373,6 +379,8 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </TooltipProvider>
   );
 }
+
+    
