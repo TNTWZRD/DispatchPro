@@ -84,14 +84,23 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
     name: "stops",
   });
 
+  const handleSelectOnFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.select();
+  }
+
   function onSubmit(values: CallLoggerFormValues) {
+    const passengerCount = values.passengerCount || 1;
+    const calculatedFare = (values.totalFare || 5) 
+      + (values.movingFee ? 10 : 0) 
+      + (passengerCount > 1 ? (passengerCount - 1) : 0);
+
     const baseRideData = {
+      totalFare: calculatedFare,
       pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
-      totalFare: values.totalFare,
       passengerPhone: values.passengerPhone,
       dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
       stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
-      passengerCount: values.passengerCount,
+      passengerCount: passengerCount,
       movingFee: values.movingFee,
       isReturnTrip: values.isReturnTrip,
       isPrepaid: values.isPrepaid,
@@ -121,6 +130,11 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       <CardContent className="max-h-[70vh] overflow-y-auto pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+             <Button type="submit" className="w-full">
+              {isEditMode ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+              {isEditMode ? 'Update Ride' : 'Log Ride Request'}
+            </Button>
+
              <FormField
               control={form.control}
               name="pickupLocation"
@@ -128,7 +142,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 <FormItem>
                   <FormLabel>Pickup Location</FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main St" {...field} />
+                    <Input placeholder="123 Main St" {...field} onFocus={handleSelectOnFocus} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,9 +153,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
               name="totalFare"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fare</FormLabel>
+                  <FormLabel>Base Fare</FormLabel>
                   <FormControl>
-                    <Input type="number" min="0" {...field} />
+                    <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +169,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 <FormItem>
                   <FormLabel>Dropoff Location (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="456 Oak Ave" {...field} />
+                    <Input placeholder="456 Oak Ave" {...field} onFocus={handleSelectOnFocus} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -172,7 +186,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                     <FormLabel>Stop {index + 1}</FormLabel>
                      <div className="flex items-center gap-2">
                         <FormControl>
-                          <Input placeholder="e.g., 789 Side Ave" {...field} />
+                          <Input placeholder="e.g., 789 Side Ave" {...field} onFocus={handleSelectOnFocus} />
                         </FormControl>
                         <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
                             <Trash2 />
@@ -199,7 +213,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 <FormItem>
                   <FormLabel>Passenger Phone (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="555-123-4567" {...field} />
+                    <Input placeholder="555-123-4567" {...field} onFocus={handleSelectOnFocus} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -213,7 +227,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 <FormItem>
                   <FormLabel>Passengers (Optional)</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" {...field} />
+                    <Input type="number" min="1" {...field} onFocus={handleSelectOnFocus} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -267,7 +281,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g., Passenger requires assistance, has extra luggage." {...field} />
+                    <Textarea placeholder="e.g., Passenger requires assistance, has extra luggage." {...field} onFocus={handleSelectOnFocus} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -335,11 +349,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 </FormItem>
               )}
             />
-            
-            <Button type="submit" className="w-full">
-              {isEditMode ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-              {isEditMode ? 'Update Ride' : 'Log Ride Request'}
-            </Button>
           </form>
         </Form>
       </CardContent>
