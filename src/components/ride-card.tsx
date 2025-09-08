@@ -6,7 +6,7 @@ import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -243,7 +243,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             </div>
             {/* Right Column */}
             <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
-              {ride.passengerCount && ride.passengerCount > 1 && (
+              {ride.passengerCount && ride.passengerCount > 1 && !isCondensed && (
                 <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount} passengers</div>
               )}
               {ride.passengerPhone && (
@@ -252,7 +252,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                     <span>{ride.passengerPhone}</span>
                 </div>
               )}
-              {ride.scheduledTime && (
+              {ride.scheduledTime && !isCondensed && (
                 <div className="flex items-center text-amber-600 font-medium">
                   <Calendar className="mr-1.5" />
                   <span>Scheduled for {format(ride.scheduledTime, "p")}</span>
@@ -415,5 +415,3 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     </TooltipProvider>
   );
 }
-
-    
