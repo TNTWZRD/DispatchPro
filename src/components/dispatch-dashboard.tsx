@@ -411,7 +411,19 @@ function DispatchDashboardUI() {
           ))}
         </TabsList>
         
-        <Carousel setApi={setCarouselApi} className="flex-1 w-full mt-4 min-h-0">
+        <Carousel
+          setApi={setCarouselApi}
+          className="flex-1 w-full mt-4 min-h-0"
+          opts={{
+            dragFree: true,
+            dragThreshold: 1,
+            watchDrag: (emblaApi) => {
+              const { dragStart, dragEnd } = emblaApi.internalEngine().dragHandler
+              emblaApi.on('pointerDown', dragStart)
+              emblaApi.on('pointerUp', dragEnd)
+            }
+          }}
+        >
           <CarouselContent className="h-full">
             {/* Waiting Tab */}
             <CarouselItem className="overflow-y-auto">
@@ -564,5 +576,7 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
 
     
