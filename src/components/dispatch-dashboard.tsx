@@ -530,7 +530,7 @@ function DispatchDashboardUI() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6 lg:flex-row">
+      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-2 md:p-4 lg:flex-row">
         <Sidebar 
             rides={rides} 
             drivers={drivers}

@@ -9,7 +9,6 @@ import type { Ride, Driver } from '@/lib/types';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { DispatchSuggester } from './dispatch-suggester';
 
 
 type SidebarProps = {
@@ -19,7 +18,7 @@ type SidebarProps = {
 };
 
 export function Sidebar({ rides, drivers, onAssignSuggestion }: SidebarProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
   
   const pendingRides = rides.filter(r => r.status === 'pending');
@@ -42,11 +41,6 @@ export function Sidebar({ rides, drivers, onAssignSuggestion }: SidebarProps) {
       <CollapsibleContent asChild className="data-[state=closed]:hidden">
         <div className="w-[350px] xl:w-[450px] flex flex-col gap-4">
             <MapView rides={rides} drivers={drivers} />
-            <DispatchSuggester 
-              pendingRides={pendingRides}
-              availableDrivers={availableDrivers}
-              onAssignSuggestion={onAssignSuggestion}
-            />
         </div>
       </CollapsibleContent>
        {!isOpen && (
