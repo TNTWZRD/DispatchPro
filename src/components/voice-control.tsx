@@ -1,14 +1,15 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
 import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { processVoiceInput, type VoiceOutput } from '@/ai/flows/unified-voice-flow';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mic, StopCircle, Loader2, AlertTriangle, Command } from 'lucide-react';
+import { Mic, StopCircle, Loader2, AlertTriangle, Command, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 type VoiceControlProps = {
   rides: Ride[];
@@ -24,6 +25,7 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
   const [isClient, setIsClient] = useState(false);
   const [micAvailable, setMicAvailable] = useState(true);
   const [transcript, setTranscript] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -154,6 +156,7 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
       } finally {
         setIsProcessing(false);
         setTranscript('');
+        setIsOpen(false);
       }
     };
   };
@@ -214,30 +217,42 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
   if (!isClient) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Unified Voice Control</CardTitle>
-        <CardDescription>Log new calls or manage existing rides with your voice.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="default"
+          size="icon"
+          className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-50"
+          disabled={!micAvailable}
+        >
+          <Mic className="h-8 w-8" />
+          <span className="sr-only">Voice Command</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Unified Voice Control</DialogTitle>
+        </DialogHeader>
         {!micAvailable ? (
           <div className="flex items-center justify-center p-4 bg-destructive/10 text-destructive rounded-md">
             <AlertTriangle className="mr-2 h-5 w-5" />
             <p className="text-sm font-medium">Voice control not available on this device.</p>
           </div>
         ) : (
-          <Button
-            onClick={isRecording ? handleStopRecording : handleStartRecording}
-            disabled={isProcessing}
-            className={cn("w-full", isRecording && "bg-red-600 hover:bg-red-700")}
-          >
-            {isProcessing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <ButtonIcon className="mr-2 h-4 w-4" />
-            )}
-            {isProcessing ? 'Processing...' : buttonText}
-          </Button>
+          <div className="py-4">
+            <Button
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+              disabled={isProcessing}
+              className={cn("w-full h-24 text-lg", isRecording && "bg-red-600 hover:bg-red-700")}
+            >
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+              ) : (
+                <ButtonIcon className="mr-2 h-6 w-6" />
+              )}
+              {isProcessing ? 'Processing...' : buttonText}
+            </Button>
+          </div>
         )}
         {transcript && (
             <Alert className="mt-4">
@@ -248,7 +263,7 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
                 </AlertDescription>
             </Alert>
         )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

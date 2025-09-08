@@ -4,11 +4,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
-import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { MapView } from './map-view';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
@@ -18,6 +17,7 @@ import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StrictModeDroppable } from './strict-mode-droppable';
+import { Sidebar } from './sidebar';
 
 
 export function DispatchDashboard() {
@@ -222,7 +222,7 @@ export function DispatchDashboard() {
             <DriverColumn
               key={driver.id}
               driver={driver}
-              rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+              rides={rides.filter(r => r.driverId === driver.id && (r.status === 'assigned' || r.status === 'in-progress'))}
               allDrivers={drivers}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
@@ -305,23 +305,19 @@ export function DispatchDashboard() {
       </header>
 
       <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6 lg:flex-row">
-        <div className='lg:w-1/3 xl:w-2/5 flex flex-col gap-4'>
-            <MapView rides={rides} drivers={drivers} />
-            <VoiceControl
-              rides={rides}
-              drivers={drivers}
-              onAddRide={handleAddRide}
-              onAssignDriver={handleAssignDriver}
-              onChangeStatus={handleChangeStatus}
-            />
-        </div>
+        <Sidebar rides={rides} drivers={drivers} />
         
         <div className='flex-1 flex flex-col min-w-0'>
           {isClient && (isMobile ? renderMobileView() : renderDesktopView())}
         </div>
       </main>
+      <VoiceControl
+          rides={rides}
+          drivers={drivers}
+          onAddRide={handleAddRide}
+          onAssignDriver={handleAssignDriver}
+          onChangeStatus={handleChangeStatus}
+        />
     </div>
   );
 }
-
-    
