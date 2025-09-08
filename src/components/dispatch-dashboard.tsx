@@ -411,7 +411,7 @@ function DispatchDashboardUI() {
           <CarouselContent className="h-full">
             {/* Waiting Tab */}
             <CarouselItem className="overflow-y-auto">
-              <div className="space-y-4 h-full">
+              <div className="space-y-4 h-full pr-1">
                 {pendingRides.map((ride) => (
                   <RideCard
                     key={ride.id}
@@ -434,7 +434,7 @@ function DispatchDashboardUI() {
             
             {/* Scheduled Tab */}
              <CarouselItem className="overflow-y-auto">
-              <div className="space-y-4 h-full">
+              <div className="space-y-4 h-full pr-1">
                 {scheduledRides.map((ride) => (
                   <RideCard
                     key={ride.id}
@@ -459,16 +459,18 @@ function DispatchDashboardUI() {
             {/* Driver Tabs */}
             {activeDrivers.map(driver => (
               <CarouselItem key={driver.id} className="overflow-y-auto">
-                  <DriverColumn
-                      driver={driver}
-                      rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
-                      allDrivers={drivers}
-                      onAssignDriver={handleAssignDriver}
-                      onChangeStatus={handleChangeStatus}
-                      onSetFare={handleSetFare}
-                      onUnassignDriver={handleUnassignDriver}
-                      onEditRide={handleOpenEdit}
-                    />
+                  <div className="pr-1">
+                    <DriverColumn
+                        driver={driver}
+                        rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                        allDrivers={drivers}
+                        onAssignDriver={handleAssignDriver}
+                        onChangeStatus={handleChangeStatus}
+                        onSetFare={handleSetFare}
+                        onUnassignDriver={handleUnassignDriver}
+                        onEditRide={handleOpenEdit}
+                      />
+                  </div>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -561,5 +563,3 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    

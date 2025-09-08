@@ -73,9 +73,11 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
 
   if (isMobile) {
     return (
-      <Card className="w-full shrink-0 flex flex-col">
-        {renderContent()}
-      </Card>
+      <div className="w-full shrink-0 flex flex-col space-y-4">
+        <Card>
+          {renderContent()}
+        </Card>
+      </div>
     );
   }
 
