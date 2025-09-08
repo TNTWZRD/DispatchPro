@@ -18,11 +18,12 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const formSchema = z.object({
-  passengerPhone: z.string().min(10, { message: 'Enter a valid phone number.' }),
   pickupLocation: z.string().min(3, { message: 'Enter a pickup location.' }),
-  dropoffLocation: z.string().min(3, { message: 'Enter a dropoff location.' }),
+  totalFare: z.coerce.number().min(0, { message: 'Fare must be a positive number.'}),
+  passengerPhone: z.string().optional(),
+  dropoffLocation: z.string().optional(),
   stops: z.array(z.object({ name: z.string().min(3, { message: 'Enter a stop location.' }) })).optional(),
-  passengerCount: z.coerce.number().min(1, { message: 'Must have at least 1 passenger.' }),
+  passengerCount: z.coerce.number().optional(),
   scheduledTime: z.date().optional(),
   movingFee: z.boolean().default(false),
   isReturnTrip: z.boolean().default(false),
@@ -33,16 +34,16 @@ type CallLoggerFormValues = z.infer<typeof formSchema>;
 
 type CallLoggerFormProps = {
   onAddRide: (rideData: {
-    passengerPhone: string;
     pickup: { name: string; coords: { x: number; y: number } };
-    dropoff: { name: string; coords: { x: number; y: number } };
+    totalFare: number;
+    passengerPhone?: string;
+    dropoff?: { name: string; coords: { x: number; y: number } };
     stops?: { name: string; coords: { x: number; y: number } }[];
-    passengerCount: number;
+    passengerCount?: number;
     movingFee: boolean;
     isReturnTrip: boolean;
     notes?: string;
     scheduledTime?: Date;
-    totalFare: number;
   }) => void;
 };
 
@@ -50,8 +51,9 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
   const form = useForm<CallLoggerFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      passengerPhone: '',
       pickupLocation: '',
+      totalFare: 5,
+      passengerPhone: '',
       dropoffLocation: '',
       stops: [],
       passengerCount: 1,
@@ -68,30 +70,18 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
 
   function onSubmit(values: CallLoggerFormValues) {
     const pickupCoords = { x: Math.random() * 100, y: Math.random() * 100 };
-    const dropoffCoords = { x: Math.random() * 100, y: Math.random() * 100 };
-
-    // Simulate distance-based fare
-    const distance = Math.sqrt(Math.pow(dropoffCoords.x - pickupCoords.x, 2) + Math.pow(dropoffCoords.y - pickupCoords.y, 2));
-    let calculatedFare = 10 + distance * 0.2; // Base fare + per "mile" charge
-
-    if (values.movingFee) {
-      calculatedFare += 10;
-    }
-    if (values.passengerCount > 1) {
-      calculatedFare += (values.passengerCount - 1);
-    }
     
     onAddRide({
-      passengerPhone: values.passengerPhone,
       pickup: { name: values.pickupLocation, coords: pickupCoords },
-      dropoff: { name: values.dropoffLocation, coords: dropoffCoords },
+      totalFare: values.totalFare,
+      passengerPhone: values.passengerPhone,
+      dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
       stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
       passengerCount: values.passengerCount,
       movingFee: values.movingFee,
       isReturnTrip: values.isReturnTrip,
       notes: values.notes,
       scheduledTime: values.scheduledTime,
-      totalFare: Math.round(calculatedFare * 100) / 100, // Round to 2 decimal places
     });
     form.reset();
   }
@@ -104,20 +94,7 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
       <CardContent className="max-h-[70vh] overflow-y-auto pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="passengerPhone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Passenger Phone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="555-123-4567" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+             <FormField
               control={form.control}
               name="pickupLocation"
               render={({ field }) => (
@@ -125,6 +102,33 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
                   <FormLabel>Pickup Location</FormLabel>
                   <FormControl>
                     <Input placeholder="123 Main St" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="totalFare"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fare</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="0" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="dropoffLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dropoff Location (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="456 Oak Ave" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,16 +164,15 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
             >
                 <MapPin className="mr-2"/> Add Stop
             </Button>
-
-
+            
             <FormField
               control={form.control}
-              name="dropoffLocation"
+              name="passengerPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Final Dropoff Location</FormLabel>
+                  <FormLabel>Passenger Phone (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="456 Oak Ave" {...field} />
+                    <Input placeholder="555-123-4567" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -181,7 +184,7 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
               name="passengerCount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Passengers</FormLabel>
+                  <FormLabel>Passengers (Optional)</FormLabel>
                   <FormControl>
                     <Input type="number" min="1" {...field} />
                   </FormControl>
@@ -257,7 +260,7 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                         <FormLabel>
-                        Moving Fee (+$10)
+                        Moving Fee
                         </FormLabel>
                     </div>
                     </FormItem>

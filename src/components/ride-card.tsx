@@ -110,14 +110,16 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-5 w-5" /> {ride.passengerCount} Passenger(s)
+              <Users className="h-5 w-5" /> {ride.passengerCount || 'N/A'} Passenger(s)
             </CardTitle>
             {ride.status !== 'pending' && getStatusBadge(ride.status)}
           </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Phone className="mr-2 h-4 w-4" />
-            <span>{ride.passengerPhone}</span>
-          </div>
+           {ride.passengerPhone && (
+            <div className="flex items-center text-sm text-muted-foreground">
+                <Phone className="mr-2 h-4 w-4" />
+                <span>{ride.passengerPhone}</span>
+            </div>
+           )}
           {ride.scheduledTime && (
             <div className="flex items-center text-sm text-amber-600">
               <Calendar className="mr-2 h-4 w-4" />
@@ -138,11 +140,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <span className="ml-2">{stop.name}</span>
             </div>
            ))}
-          <div className="flex items-start">
-            <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-            <span className="font-medium">To:</span>
-            <span className="ml-2">{ride.dropoff.name}</span>
-          </div>
+           {ride.dropoff && (
+             <div className="flex items-start">
+                <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                <span className="font-medium">To:</span>
+                <span className="ml-2">{ride.dropoff.name}</span>
+            </div>
+           )}
           {assignedDriver && ride.status !== 'pending' && (
             <div className="flex items-center pt-1">
               <Truck className="mr-2 h-4 w-4 text-primary" />
@@ -251,7 +255,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           <DialogHeader>
             <DialogTitle>Set Final Fare</DialogTitle>
             <DialogDescription>
-              Enter the payment method(s) for ride #{ride.id.split('-').pop()}. The initial fare is {formatCurrency(ride.totalFare)}.
+              Enter the payment method(s) for ride #{ride.id.split('-').pop()}. The quoted fare is {formatCurrency(ride.totalFare)}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -293,7 +297,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
 
             <div className="space-y-2 rounded-md border bg-muted/50 p-4">
                 <div className="flex justify-between font-medium">
-                    <span>Initial Fare:</span>
+                    <span>Quoted Fare:</span>
                     <span>{formatCurrency(ride.totalFare)}</span>
                 </div>
                 <div className="flex justify-between font-medium">

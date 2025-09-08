@@ -21,9 +21,10 @@ export type Driver = {
 
 export type Ride = {
   id: string;
-  passengerPhone: string;
   pickup: Location;
-  dropoff: Location;
+  totalFare: number;
+  passengerPhone?: string;
+  dropoff?: Location;
   stops?: Location[];
   status: RideStatus;
   driverId: string | null;
@@ -31,11 +32,10 @@ export type Ride = {
   scheduledTime?: Date;
   completionTime?: Date;
   isNew?: boolean;
-  passengerCount: number;
+  passengerCount?: number;
   movingFee: boolean;
   isReturnTrip?: boolean;
   notes?: string;
-  totalFare?: number;
   paymentDetails?: {
     cash?: number;
     card?: number;

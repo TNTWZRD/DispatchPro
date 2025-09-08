@@ -21,6 +21,7 @@ export const initialRides: Ride[] = [
     isNew: true,
     passengerCount: 1,
     movingFee: false,
+    totalFare: 25,
     notes: 'Passenger has a small dog.',
   },
   {
@@ -34,6 +35,7 @@ export const initialRides: Ride[] = [
     isNew: true,
     passengerCount: 2,
     movingFee: false,
+    totalFare: 30,
   },
   {
     id: 'ride-3',
@@ -47,6 +49,7 @@ export const initialRides: Ride[] = [
     movingFee: true,
     isReturnTrip: true,
     stops: [{ name: 'Grocery Store', coords: { x: 50, y: 50 } }],
+    totalFare: 45,
   },
     {
     id: 'ride-4',
@@ -58,6 +61,7 @@ export const initialRides: Ride[] = [
     requestTime: new Date(Date.now() - 15 * 60 * 1000),
     passengerCount: 1,
     movingFee: false,
+    totalFare: 80,
   },
   {
     id: 'ride-5',
@@ -78,12 +82,12 @@ export const initialRides: Ride[] = [
     id: 'ride-6',
     passengerPhone: '555-0106',
     pickup: { name: 'Daily Planet', coords: { x: 50, y: 80 } },
-    dropoff: { name: 'Fortress of Solitude', coords: { x: 0, y: 100 } },
     status: 'cancelled',
     driverId: null,
     requestTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
     completionTime: new Date(Date.now() - 110 * 60 * 1000),
     passengerCount: 1,
     movingFee: false,
+    totalFare: 150,
   },
 ];
