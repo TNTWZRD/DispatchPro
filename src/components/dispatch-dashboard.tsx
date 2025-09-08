@@ -524,7 +524,7 @@ function DispatchDashboardUI() {
                 Log New Call
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl">
+            <DialogContent className="max-w-xl sm:max-h-none max-h-[50vh] p-4 sm:p-6">
               <CallLoggerForm 
                 onAddRide={handleAddRide} 
                 onEditRide={handleEditRide}
@@ -571,5 +571,6 @@ export function DispatchDashboard() {
     
 
     
+
 
 

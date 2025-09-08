@@ -229,7 +229,7 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
           <span className="sr-only">Voice Command</span>
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-h-none max-h-[50vh] p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Unified Voice Control</DialogTitle>
         </DialogHeader>
