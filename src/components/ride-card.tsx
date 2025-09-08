@@ -77,8 +77,9 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   };
 
   const handleSetFare = () => {
+    const newTotalFare = totalPayment > 0 ? totalPayment : ride.totalFare
     onSetFare(ride.id, {
-      totalFare: totalPayment,
+      totalFare: newTotalFare,
       paymentDetails: {
         cash: fareCash || undefined,
         card: fareCard || undefined,
@@ -86,6 +87,9 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         tip: fareTip || undefined,
       }
     });
+    if (ride.status !== 'completed' && ride.status !== 'cancelled') {
+        onChangeStatus(ride.id, 'completed');
+    }
     setIsFareModalOpen(false);
   };
   
@@ -332,10 +336,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             </div>
 
             <div className="space-y-2 rounded-md border bg-muted/50 p-4">
-                <div className="flex justify-between font-medium">
-                    <span>Quoted Fare:</span>
-                    <span>{formatCurrency(ride.totalFare)}</span>
-                </div>
                 <div className="flex justify-between font-medium">
                     <span>Subtotal:</span>
                     <span>{formatCurrency(totalPayment)}</span>
