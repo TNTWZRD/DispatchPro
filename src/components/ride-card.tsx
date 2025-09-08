@@ -130,11 +130,24 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               <span className="font-bold text-base">#{ride.id.split('-')[1]}</span>
               {ride.status !== 'pending' && getStatusBadge(ride.status)}
               {isCondensed && ride.scheduledTime && (
-                <div className="flex items-center text-amber-600 font-medium text-xs">
-                  <Calendar className="mr-1" />
-                  <span>{format(ride.scheduledTime, "p")}</span>
-                </div>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center text-amber-600 font-medium text-xs">
+                      <Calendar className="mr-1 h-3.5 w-3.5" />
+                      <span>{format(ride.scheduledTime, "p")}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Scheduled for {format(ride.scheduledTime, "PPpp")}</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
+               {isCondensed && (
+                 <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="mr-1.5 h-3 w-3" />
+                    <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
+                </div>
+               )}
             </div>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
@@ -230,7 +243,9 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             </div>
             {/* Right Column */}
             <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
-              <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>
+              {ride.passengerCount && ride.passengerCount > 1 && (
+                <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount} passengers</div>
+              )}
               {ride.passengerPhone && (
                 <div className="flex items-center">
                     <Phone className="mr-1.5" />
@@ -240,7 +255,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               {ride.scheduledTime && (
                 <div className="flex items-center text-amber-600 font-medium">
                   <Calendar className="mr-1.5" />
-                  <span>{format(ride.scheduledTime, "p")}</span>
+                  <span>Scheduled for {format(ride.scheduledTime, "p")}</span>
                 </div>
               )}
             </div>
@@ -263,10 +278,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
 
           {/* Footer Row */}
           <div className="flex justify-between items-center mt-2 pt-2 border-t">
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Clock className="mr-1.5 h-3 w-3" />
-              <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
-            </div>
+             {!isCondensed && (
+                <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="mr-1.5 h-3 w-3" />
+                    <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
+                </div>
+             )}
              <div className="flex items-center gap-1.5">
                 {ride.movingFee && (
                     <Tooltip>
