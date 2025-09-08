@@ -42,6 +42,7 @@ type CallLoggerFormProps = {
     isReturnTrip: boolean;
     notes?: string;
     scheduledTime?: Date;
+    totalFare: number;
   }) => void;
 };
 
@@ -66,16 +67,31 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
   });
 
   function onSubmit(values: CallLoggerFormValues) {
+    const pickupCoords = { x: Math.random() * 100, y: Math.random() * 100 };
+    const dropoffCoords = { x: Math.random() * 100, y: Math.random() * 100 };
+
+    // Simulate distance-based fare
+    const distance = Math.sqrt(Math.pow(dropoffCoords.x - pickupCoords.x, 2) + Math.pow(dropoffCoords.y - pickupCoords.y, 2));
+    let calculatedFare = 10 + distance * 0.2; // Base fare + per "mile" charge
+
+    if (values.movingFee) {
+      calculatedFare += 10;
+    }
+    if (values.passengerCount > 1) {
+      calculatedFare += (values.passengerCount - 1);
+    }
+    
     onAddRide({
       passengerPhone: values.passengerPhone,
-      pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
-      dropoff: { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
+      pickup: { name: values.pickupLocation, coords: pickupCoords },
+      dropoff: { name: values.dropoffLocation, coords: dropoffCoords },
       stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
       passengerCount: values.passengerCount,
       movingFee: values.movingFee,
       isReturnTrip: values.isReturnTrip,
       notes: values.notes,
       scheduledTime: values.scheduledTime,
+      totalFare: Math.round(calculatedFare * 100) / 100, // Round to 2 decimal places
     });
     form.reset();
   }
@@ -241,7 +257,7 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                         <FormLabel>
-                        Moving Fee
+                        Moving Fee (+$10)
                         </FormLabel>
                     </div>
                     </FormItem>

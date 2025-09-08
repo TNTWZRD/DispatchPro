@@ -43,7 +43,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
-  const totalFare = useMemo(() => {
+  const cardFee = useMemo(() => {
+    if (!fareCard || fareCard <= 0) return 0;
+    return Math.floor(fareCard / 40);
+  }, [fareCard]);
+
+  const totalPayment = useMemo(() => {
     return (fareCash || 0) + (fareCard || 0) + (fareCheck || 0);
   }, [fareCash, fareCard, fareCheck]);
 
@@ -65,17 +70,15 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   };
 
   const handleSetFare = () => {
-    if (totalFare > 0) {
-      onSetFare(ride.id, {
-        totalFare: totalFare,
-        paymentDetails: {
-          cash: fareCash || undefined,
-          card: fareCard || undefined,
-          check: fareCheck || undefined,
-        }
-      });
-      setIsFareModalOpen(false);
-    }
+    onSetFare(ride.id, {
+      totalFare: totalPayment,
+      paymentDetails: {
+        cash: fareCash || undefined,
+        card: fareCard || undefined,
+        check: fareCheck || undefined,
+      }
+    });
+    setIsFareModalOpen(false);
   };
   
   const formatCurrency = (amount?: number) => {
@@ -84,20 +87,20 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   }
   
   const getPaymentSummary = () => {
-    if (!ride.totalFare) return null;
-
     const parts = [];
     if (ride.paymentDetails?.cash) parts.push(`Cash: ${formatCurrency(ride.paymentDetails.cash)}`);
     if (ride.paymentDetails?.card) parts.push(`Card: ${formatCurrency(ride.paymentDetails.card)}`);
     if (ride.paymentDetails?.check) parts.push(`Check: ${formatCurrency(ride.paymentDetails.check)}`);
 
     return (
-      <div className="flex items-center pt-1 text-sm">
-        <DollarSign className="mr-2 h-4 w-4 text-green-600" />
-        <span className="font-medium">Fare: {formatCurrency(ride.totalFare)}</span>
-        <span className="ml-2 text-xs text-muted-foreground">({parts.join(', ')})</span>
-         {ride.cardFee && <span className='ml-2 text-xs text-muted-foreground'>(+ {formatCurrency(ride.cardFee)} fee)</span>}
-      </div>
+        ride.totalFare ? (
+            <div className="flex items-center pt-1 text-sm">
+                <DollarSign className="mr-2 h-4 w-4 text-green-600" />
+                <span className="font-medium">Fare: {formatCurrency(ride.totalFare)}</span>
+                {parts.length > 0 && <span className="ml-2 text-xs text-muted-foreground">({parts.join(', ')})</span>}
+                {ride.cardFee && <span className='ml-2 text-xs text-muted-foreground'>(+ {formatCurrency(ride.cardFee)} fee)</span>}
+            </div>
+        ) : null
     );
   }
 
@@ -175,11 +178,10 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
           </div>
           <div className="flex gap-2">
-            {!['completed', 'cancelled'].includes(ride.status) && (
-              <Button variant="outline" size="sm" onClick={() => setIsFareModalOpen(true)}>
-                <DollarSign className="h-4 w-4 mr-2" /> Set Fare
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setIsFareModalOpen(true)}>
+                <DollarSign className="h-4 w-4 mr-2" />
+                {ride.totalFare ? 'Edit Fare' : 'Set Fare'}
+            </Button>
             
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -233,6 +235,11 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                       </DropdownMenuItem>
                     </>
                   )}
+                  {ride.status === 'completed' && (
+                     <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>
+                        <Undo2 className="mr-2 h-4 w-4" /> Re-open Ride
+                     </DropdownMenuItem>
+                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
           </div>
@@ -244,7 +251,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           <DialogHeader>
             <DialogTitle>Set Final Fare</DialogTitle>
             <DialogDescription>
-              Enter the fare and payment method(s) for ride #{ride.id.split('-').pop()}.
+              Enter the payment method(s) for ride #{ride.id.split('-').pop()}. The initial fare is {formatCurrency(ride.totalFare)}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -284,19 +291,45 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               </div>
             </div>
 
-            <div className="text-lg font-bold text-right">
-                Total: {formatCurrency(totalFare)}
-            </div>
+            <div className="space-y-2 rounded-md border bg-muted/50 p-4">
+                <div className="flex justify-between font-medium">
+                    <span>Initial Fare:</span>
+                    <span>{formatCurrency(ride.totalFare)}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(totalPayment)}</span>
+                </div>
+                {cardFee > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Card Fee:</span>
+                        <span>+ {formatCurrency(cardFee)}</span>
+                    </div>
+                )}
+                <hr className="my-2" />
+                <div className="flex justify-between text-lg font-bold">
+                    <span>Total Charged:</span>
+                    <span>{formatCurrency(totalPayment + cardFee)}</span>
+                </div>
+                 {totalPayment > (ride.totalFare || 0) && (
+                    <div className="flex justify-between text-sm text-green-600">
+                        <span>Tip:</span>
+                        <span>{formatCurrency(totalPayment - (ride.totalFare || 0))}</span>
+                    </div>
+                )}
 
-            {fareCard && fareCard > 0 && (
-              <p className="text-sm text-muted-foreground">
-                A ${Math.floor(fareCard / 40)} card processing fee will be applied to the card portion.
+            </div>
+            
+            {cardFee > 0 && (
+              <p className="text-xs text-center text-muted-foreground">
+                A {formatCurrency(cardFee)} card processing fee will be applied.
               </p>
             )}
+
           </div>
           <DialogFooter>
-            <Button onClick={handleSetFare} disabled={totalFare <= 0}>
-              Save Fare
+            <Button onClick={handleSetFare} disabled={totalPayment <= 0}>
+              Save Fare & Mark Completed
             </Button>
           </DialogFooter>
         </DialogContent>

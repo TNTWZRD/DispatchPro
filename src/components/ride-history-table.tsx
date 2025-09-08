@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Ride, Driver } from '@/lib/types';
@@ -28,6 +29,15 @@ export function RideHistoryTable({ rides, drivers }: RideHistoryTableProps) {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
     }
     
+    const getPaymentSummary = (ride: Ride) => {
+        if (!ride.paymentDetails) return 'N/A';
+        const parts = [];
+        if (ride.paymentDetails.cash) parts.push('Cash');
+        if (ride.paymentDetails.card) parts.push('Card');
+        if (ride.paymentDetails.check) parts.push('Check');
+        return parts.join(', ') || 'N/A';
+    }
+
   return (
     <Table>
       <TableHeader>
@@ -54,8 +64,8 @@ export function RideHistoryTable({ rides, drivers }: RideHistoryTableProps) {
             <TableCell>{getDriverName(ride.driverId)}</TableCell>
             <TableCell>{ride.pickup.name}</TableCell>
             <TableCell>{ride.dropoff.name}</TableCell>
-            <TableCell>{formatCurrency(ride.fare)}</TableCell>
-            <TableCell className="capitalize">{ride.paymentMethod || 'N/A'}</TableCell>
+            <TableCell>{formatCurrency(ride.totalFare)}</TableCell>
+            <TableCell>{getPaymentSummary(ride)}</TableCell>
             <TableCell>
               {ride.completionTime ? format(ride.completionTime, 'PPpp') : 'N/A'}
             </TableCell>
