@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
-import { DragDropContext, type DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,13 +23,14 @@ import { Sidebar } from './sidebar';
 export function DispatchDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLogCallOpen, setIsLogCallOpen] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
     setIsClient(true);
+    setTime(new Date());
     const timer = setInterval(() => setTime(new Date()), 1000 * 60);
     return () => clearInterval(timer);
   }, []);
@@ -288,7 +289,7 @@ export function DispatchDashboard() {
         </h1>
         <div className="ml-auto flex items-center gap-4">
           <div className="text-sm text-muted-foreground hidden md:block">
-            {time.toLocaleDateString()} {time.toLocaleTimeString()}
+            {time && <>{time.toLocaleDateString()} {time.toLocaleTimeString()}</>}
           </div>
           <Dialog open={isLogCallOpen} onOpenChange={setIsLogCallOpen}>
             <DialogTrigger asChild>
