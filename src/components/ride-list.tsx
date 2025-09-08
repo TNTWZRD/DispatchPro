@@ -12,9 +12,10 @@ type RideListProps = {
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onEstimateEta: (ride: Ride) => void;
+  onEstimateFare: (ride: Ride) => void;
 };
 
-export function RideList({ title, rides, drivers, onAssignDriver, onChangeStatus, onEstimateEta }: RideListProps) {
+export function RideList({ title, rides, drivers, onAssignDriver, onChangeStatus, onEstimateEta, onEstimateFare }: RideListProps) {
   return (
     <Card className="h-[350px] flex flex-col">
       <CardHeader>
@@ -32,6 +33,7 @@ export function RideList({ title, rides, drivers, onAssignDriver, onChangeStatus
                   onAssignDriver={onAssignDriver}
                   onChangeStatus={onChangeStatus}
                   onEstimateEta={onEstimateEta}
+                  onEstimateFare={onEstimateFare}
                 />
               ))}
             </div>

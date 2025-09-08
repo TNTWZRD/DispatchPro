@@ -12,12 +12,15 @@ import { RideHistoryTable } from './ride-history-table';
 import { DispatchSuggester } from './dispatch-suggester';
 import { Truck } from 'lucide-react';
 import { EtaPredictorModal } from './eta-predictor-modal';
+import { FareEstimatorModal } from './fare-estimator-modal';
 
 export function DispatchDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
   const [selectedRideForEta, setSelectedRideForEta] = useState<Ride | null>(null);
   const [isEtaModalOpen, setIsEtaModalOpen] = useState(false);
+  const [selectedRideForFare, setSelectedRideForFare] = useState<Ride | null>(null);
+  const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -106,6 +109,11 @@ export function DispatchDashboard() {
     setIsEtaModalOpen(true);
   }
 
+  const handleEstimateFare = (ride: Ride) => {
+    setSelectedRideForFare(ride);
+    setIsFareModalOpen(true);
+  }
+
   const pendingRides = rides.filter(r => r.status === 'pending');
   const activeRides = rides.filter(r => ['assigned', 'in-progress'].includes(r.status));
   const pastRides = rides.filter(r => ['completed', 'cancelled'].includes(r.status));
@@ -149,6 +157,7 @@ export function DispatchDashboard() {
                   onAssignDriver={handleAssignDriver} 
                   onChangeStatus={handleChangeStatus}
                   onEstimateEta={handleEstimateEta}
+                  onEstimateFare={handleEstimateFare}
                 />
               </div>
 
@@ -160,6 +169,7 @@ export function DispatchDashboard() {
                   onAssignDriver={handleAssignDriver} 
                   onChangeStatus={handleChangeStatus}
                   onEstimateEta={handleEstimateEta}
+                  onEstimateFare={handleEstimateFare}
                 />
               </div>
             </div>
@@ -184,6 +194,14 @@ export function DispatchDashboard() {
           onClose={() => setIsEtaModalOpen(false)}
           ride={selectedRideForEta}
           drivers={drivers}
+        />
+      )}
+      
+      {selectedRideForFare && (
+        <FareEstimatorModal
+          isOpen={isFareModalOpen}
+          onClose={() => setIsFareModalOpen(false)}
+          ride={selectedRideForFare}
         />
       )}
     </div>

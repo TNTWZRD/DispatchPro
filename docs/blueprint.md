@@ -15,6 +15,7 @@
 - Primary color: Modern blue (#3498DB) for a professional and reliable feel.
 - Background color: Light blue (#EBF5FB) for a clean, spacious backdrop.
 - Accent color: Yellow (#F1C40F) to highlight key actions and information.
+- Toggleable Dark mode
 - Body and headline font: 'PT Sans', a modern sans-serif for readability and clean UI.
 - Use clean, simple icons to represent ride status, locations, and driver availability.
 - A clean, organized layout to minimize distraction for dispatchers.
