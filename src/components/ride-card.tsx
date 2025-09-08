@@ -362,8 +362,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                     />
                  </div>
                   <div className="space-y-1">
-                    <Label htmlFor="fare-tip">Tip (Card)</Label>
-                    <Input
+                    <Label htmlFor="fare-tip">Tip (Card)</Label>                    <Input
                         id="fare-tip"
                         type="number"
                         placeholder="e.g., 5.00"
