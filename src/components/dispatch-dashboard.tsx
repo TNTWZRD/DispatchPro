@@ -64,7 +64,9 @@ function DispatchDashboardUI() {
     const onSelect = () => {
       const selectedIndex = carouselApi.selectedScrollSnap();
       const newTab = ['waiting', 'scheduled', ...activeDrivers.map(d => d.id)][selectedIndex];
-      setActiveTab(newTab);
+      if (newTab) {
+        setActiveTab(newTab);
+      }
     };
 
     carouselApi.on("select", onSelect);
@@ -396,10 +398,7 @@ function DispatchDashboardUI() {
   const renderMobileView = () => {
     return (
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col flex-1 min-h-0">
-        <TabsList
-          className="grid w-full"
-          style={{ gridTemplateColumns: `repeat(${activeDrivers.length + 2}, minmax(0, 1fr))` }}
-        >
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
           <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>
           {activeDrivers.map(driver => (
