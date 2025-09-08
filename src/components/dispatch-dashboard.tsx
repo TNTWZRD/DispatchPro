@@ -181,74 +181,81 @@ export function DispatchDashboard() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6">
-        <div className='flex-shrink-0'>
+      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6 lg:flex-row">
+        <div className='lg:w-1/3 xl:w-2/5 flex flex-col gap-4'>
             <MapView rides={rides} drivers={drivers} />
+            <DispatchSuggester
+              pendingRides={pendingRides}
+              availableDrivers={drivers.filter(d => d.status === 'available')}
+              onAssignSuggestion={handleAssignDriver}
+            />
         </div>
         
-        {isClient && (
-          <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
-                {/* Waiting Column */}
-                <Droppable droppableId="waiting">
-                  {(provided, snapshot) => (
-                    <Card
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={cn(
-                        "w-80 shrink-0 flex flex-col",
-                        snapshot.isDraggingOver && "bg-accent/20"
-                      )}
-                    >
-                      <CardHeader>
-                        <CardTitle>Waiting ({pendingRides.length})</CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex-1 overflow-y-auto space-y-4">
-                        {pendingRides.map((ride, index) => (
-                          <Draggable key={ride.id} draggableId={ride.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                              >
-                                <RideCard
-                                  ride={ride}
-                                  drivers={drivers}
-                                  onAssignDriver={handleAssignDriver}
-                                  onChangeStatus={handleChangeStatus}
-                                  onSetFare={handleSetFare}
-                                />
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                         {pendingRides.length === 0 && (
-                            <div className="flex h-full items-center justify-center text-muted-foreground">
-                                <p>No pending rides.</p>
-                            </div>
+        <div className='flex-1 flex flex-col min-w-0'>
+          {isClient && (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
+                  {/* Waiting Column */}
+                  <Droppable droppableId="waiting">
+                    {(provided, snapshot) => (
+                      <Card
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "w-80 shrink-0 flex flex-col",
+                          snapshot.isDraggingOver && "bg-accent/20"
                         )}
-                      </CardContent>
-                    </Card>
-                  )}
-                </Droppable>
+                      >
+                        <CardHeader>
+                          <CardTitle>Waiting ({pendingRides.length})</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-y-auto space-y-4">
+                          {pendingRides.map((ride, index) => (
+                            <Draggable key={ride.id} draggableId={ride.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                >
+                                  <RideCard
+                                    ride={ride}
+                                    drivers={drivers}
+                                    onAssignDriver={handleAssignDriver}
+                                    onChangeStatus={handleChangeStatus}
+                                    onSetFare={handleSetFare}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                           {pendingRides.length === 0 && (
+                              <div className="flex h-full items-center justify-center text-muted-foreground">
+                                  <p>No pending rides.</p>
+                              </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </Droppable>
 
-              {/* Driver Columns */}
-              {activeDrivers.map(driver => (
-                <DriverColumn
-                  key={driver.id}
-                  driver={driver}
-                  ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
-                  allDrivers={drivers}
-                  onAssignDriver={handleAssignDriver}
-                  onChangeStatus={handleChangeStatus}
-                  onSetFare={handleSetFare}
-                />
-              ))}
-            </div>
-          </DragDropContext>
-        )}
+                {/* Driver Columns */}
+                {activeDrivers.map(driver => (
+                  <DriverColumn
+                    key={driver.id}
+                    driver={driver}
+                    ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                    allDrivers={drivers}
+                    onAssignDriver={handleAssignDriver}
+                    onChangeStatus={handleChangeStatus}
+                    onSetFare={handleSetFare}
+                  />
+                ))}
+              </div>
+            </DragDropContext>
+          )}
+        </div>
       </main>
     </div>
   );

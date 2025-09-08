@@ -14,7 +14,7 @@ import {z} from 'genkit';
 const DispatchingSuggestionsInputSchema = z.object({
   availableDrivers: z.array(z.object({
     driverId: z.string().describe('The unique identifier of the driver.'),
-    currentLocation: z.string().describe('The current location of the driver.'),
+    currentLocation: z.string().describe('The current location of the driver as a coordinate string like "(x, y)".'),
     availabilityStatus: z.enum(['available', 'unavailable']).describe('The availability status of the driver.'),
   })).describe('A list of available drivers with their current locations and availability status.'),
   pendingRideRequests: z.array(z.object({
@@ -65,26 +65,9 @@ const prompt = ai.definePrompt({
   {{/each}}
 
   Consider factors such as driver proximity to pickup locations, estimated travel times, driver availability, passenger count, and any special conditions like moving fees or scheduled times when making your suggestions.
-
-  Provide your suggestions in the following format:
-  {
-    "driverAssignmentSuggestions": [
-      {
-        "driverId": "driver123",
-        "rideRequestId": "request456",
-        "reason": "Driver is closest to the passenger pickup location and is available."
-      }
-    ],
-    "driverReassignmentSuggestions": [
-      {
-        "driverId": "driver789",
-        "newRideRequestId": "request101",
-        "reason": "Reassigning driver to a higher priority request closer to their current location."
-      }
-    ]
-  }
-
-  Ensure that your suggestions are clear, concise, and actionable.  If there are no suggestions to make, return empty lists for both driverAssignmentSuggestions and driverReassignmentSuggestions.
+  Your suggestions should be based on the provided data. Do not invent new locations or ride requests.
+  
+  Provide your suggestions in the specified JSON format. If there are no suggestions to make, return empty lists for both driverAssignmentSuggestions and driverReassignmentSuggestions.
 `,
 });
 

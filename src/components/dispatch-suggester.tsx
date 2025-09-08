@@ -28,7 +28,7 @@ export function DispatchSuggester({ pendingRides, availableDrivers, onAssignSugg
       const result = await getDispatchingSuggestions({
         availableDrivers: availableDrivers.map(d => ({
           driverId: d.id,
-          currentLocation: 'Simulated Location', // In a real app, this would be live data
+          currentLocation: `(${d.location.x}, ${d.location.y})`,
           availabilityStatus: 'available',
         })),
         pendingRideRequests: pendingRides.map(r => ({
@@ -60,7 +60,7 @@ export function DispatchSuggester({ pendingRides, availableDrivers, onAssignSugg
   };
 
   return (
-    <Card>
+    <Card className="flex-1">
       <CardHeader>
         <CardTitle>AI Dispatch Assistant</CardTitle>
         <CardDescription>Get optimal driver assignments.</CardDescription>
