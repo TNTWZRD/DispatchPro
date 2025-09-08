@@ -2,13 +2,13 @@
 "use client";
 
 import React from 'react';
-import { Droppable } from 'react-beautiful-dnd';
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { StrictModeDroppable } from './strict-mode-droppable';
 
 
 type DriverColumnProps = {
@@ -75,7 +75,7 @@ export function DriverColumn({ driver, ride, allDrivers, onAssignDriver, onChang
   }
 
   return (
-    <Droppable droppableId={driver.id} isDropDisabled={!isAvailable}>
+    <StrictModeDroppable droppableId={driver.id} isDropDisabled={!isAvailable}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
@@ -90,8 +90,6 @@ export function DriverColumn({ driver, ride, allDrivers, onAssignDriver, onChang
           {provided.placeholder}
         </Card>
       )}
-    </Droppable>
+    </StrictModeDroppable>
   );
 }
-
-    

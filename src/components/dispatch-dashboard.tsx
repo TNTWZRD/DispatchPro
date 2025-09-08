@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
-import { DragDropContext, Droppable, Draggable, type DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StrictModeDroppable } from './strict-mode-droppable';
+
 
 export function DispatchDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
@@ -163,7 +165,7 @@ export function DispatchDashboard() {
      <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
             {/* Waiting Column */}
-            <Droppable droppableId="waiting">
+            <StrictModeDroppable droppableId="waiting">
               {(provided, snapshot) => (
                 <Card
                   ref={provided.innerRef}
@@ -205,7 +207,7 @@ export function DispatchDashboard() {
                   </CardContent>
                 </Card>
               )}
-            </Droppable>
+            </StrictModeDroppable>
 
           {/* Driver Columns */}
           {activeDrivers.map(driver => (
