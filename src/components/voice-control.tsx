@@ -229,7 +229,7 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
           <span className="sr-only">Voice Command</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-h-none max-h-[50vh] p-4 sm:p-6">
+      <DialogContent className="p-4 top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 sm:p-6">
         <DialogHeader>
           <DialogTitle>Unified Voice Control</DialogTitle>
         </DialogHeader>
@@ -267,3 +267,5 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
     </Dialog>
   );
 }
+
+    

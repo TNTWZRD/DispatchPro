@@ -284,7 +284,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                     <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
                 </div>
              )}
-             <div className="flex items-center gap-1.5">
+             <div className="flex items-center gap-1.5 ml-auto">
                 {ride.movingFee && (
                     <Tooltip>
                         <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
@@ -309,7 +309,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
       </Card>
       
       <Dialog open={isFareModalOpen} onOpenChange={setIsFareModalOpen}>
-        <DialogContent className="sm:max-h-none max-h-[50vh] p-4 sm:p-6">
+        <DialogContent className="sm:max-w-lg p-4 top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 sm:p-6">
           <DialogHeader>
             <DialogTitle>Set Final Fare</DialogTitle>
             <DialogDescription>
@@ -415,3 +415,5 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     </TooltipProvider>
   );
 }
+
+    

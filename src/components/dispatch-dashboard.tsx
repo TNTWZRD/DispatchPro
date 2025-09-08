@@ -413,7 +413,7 @@ function DispatchDashboardUI() {
         </TabsList>
         
          <div className="flex-1 mt-4 overflow-hidden">
-            <Carousel setApi={setCarouselApi} className="h-full">
+            <Carousel setApi={setCarouselApi} className="h-full" opts={{ dragFree: true }}>
               <CarouselContent className="h-full">
                 {/* Waiting Tab */}
                 <CarouselItem className="overflow-y-auto">
@@ -524,7 +524,7 @@ function DispatchDashboardUI() {
                 Log New Call
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl sm:max-h-none max-h-[50vh] p-4 sm:p-6">
+            <DialogContent className="max-w-xl p-4 top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 sm:p-6">
               <CallLoggerForm 
                 onAddRide={handleAddRide} 
                 onEditRide={handleEditRide}
@@ -575,3 +575,6 @@ export function DispatchDashboard() {
 
 
 
+
+
+    
