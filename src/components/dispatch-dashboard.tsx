@@ -42,6 +42,9 @@ function DispatchDashboardUI() {
   useHotkey('s', toggleCondensedMode, { alt: true });
   
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
+  const pendingRides = rides.filter(r => r.status === 'pending' && !r.scheduledTime);
+  const scheduledRides = rides.filter(r => r.status === 'pending' && r.scheduledTime);
+  const hasScheduledRides = scheduledRides.length > 0;
 
   useEffect(() => {
     setIsClient(true);
@@ -51,11 +54,15 @@ function DispatchDashboardUI() {
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
-    const tabIndex = ['waiting', 'scheduled', ...activeDrivers.map(d => d.id)].indexOf(value);
+    const tabs = ['waiting'];
+    if (hasScheduledRides) tabs.push('scheduled');
+    tabs.push(...activeDrivers.map(d => d.id));
+    const tabIndex = tabs.indexOf(value);
+
     if (carouselApi && tabIndex !== -1) {
       carouselApi.scrollTo(tabIndex);
     }
-  }, [carouselApi, activeDrivers]);
+  }, [carouselApi, activeDrivers, hasScheduledRides]);
 
 
   useEffect(() => {
@@ -63,7 +70,11 @@ function DispatchDashboardUI() {
     
     const onSelect = () => {
       const selectedIndex = carouselApi.selectedScrollSnap();
-      const newTab = ['waiting', 'scheduled', ...activeDrivers.map(d => d.id)][selectedIndex];
+      const tabs = ['waiting'];
+      if (hasScheduledRides) tabs.push('scheduled');
+      tabs.push(...activeDrivers.map(d => d.id));
+      const newTab = tabs[selectedIndex];
+
       if (newTab) {
         setActiveTab(newTab);
       }
@@ -73,7 +84,7 @@ function DispatchDashboardUI() {
     return () => {
       carouselApi.off("select", onSelect);
     };
-  }, [carouselApi, activeDrivers]);
+  }, [carouselApi, activeDrivers, hasScheduledRides]);
 
   useEffect(() => {
     const movementInterval = setInterval(() => {
@@ -259,12 +270,9 @@ function DispatchDashboardUI() {
     setEditingRide(null);
     setIsFormOpen(true);
   }
-  
-  const pendingRides = rides.filter(r => r.status === 'pending' && !r.scheduledTime);
-  const scheduledRides = rides.filter(r => r.status === 'pending' && r.scheduledTime);
 
   const renderDesktopView = () => {
-    const totalColumns = activeDrivers.length + 2; // +2 for Waiting and Scheduled
+    const totalColumns = activeDrivers.length + (hasScheduledRides ? 2 : 1);
     const columnWidth = Math.max(280, 100 / totalColumns * 20); // Dynamic width with a minimum
 
     return (
@@ -326,54 +334,51 @@ function DispatchDashboardUI() {
             </StrictModeDroppable>
             
             {/* Scheduled Column */}
-            <StrictModeDroppable droppableId="scheduled">
-              {(provided, snapshot) => (
-                <Card
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={cn(
-                    "shrink-0 flex flex-col",
-                    snapshot.isDraggingOver && "bg-accent/20"
-                  )}
-                   style={{ width: `${columnWidth}px` }}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" /> Scheduled ({scheduledRides.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto space-y-4">
-                    {scheduledRides.map((ride, index) => (
-                      <Draggable key={ride.id} draggableId={ride.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <RideCard
-                              ride={ride}
-                              drivers={drivers}
-                              onAssignDriver={handleAssignDriver}
-                              onChangeStatus={handleChangeStatus}
-                              onSetFare={handleSetFare}
-                              onUnassignDriver={handleUnassignDriver}
-                              onEdit={handleOpenEdit}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                      {scheduledRides.length === 0 && (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                            <p>No scheduled rides.</p>
-                        </div>
+            {hasScheduledRides && (
+              <StrictModeDroppable droppableId="scheduled">
+                {(provided, snapshot) => (
+                  <Card
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={cn(
+                      "shrink-0 flex flex-col",
+                      snapshot.isDraggingOver && "bg-accent/20"
                     )}
-                  </CardContent>
-                </Card>
-              )}
-            </StrictModeDroppable>
+                    style={{ width: `${columnWidth}px` }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" /> Scheduled ({scheduledRides.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto space-y-4">
+                      {scheduledRides.map((ride, index) => (
+                        <Draggable key={ride.id} draggableId={ride.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <RideCard
+                                ride={ride}
+                                drivers={drivers}
+                                onAssignDriver={handleAssignDriver}
+                                onChangeStatus={handleChangeStatus}
+                                onSetFare={handleSetFare}
+                                onUnassignDriver={handleUnassignDriver}
+                                onEdit={handleOpenEdit}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </CardContent>
+                  </Card>
+                )}
+              </StrictModeDroppable>
+            )}
 
 
           {/* Driver Columns */}
@@ -400,7 +405,7 @@ function DispatchDashboardUI() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col flex-1 min-h-0">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>
+          {hasScheduledRides && <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>}
           {activeDrivers.map(driver => (
             <TabsTrigger key={driver.id} value={driver.id}>{driver.name.split(' ')[0]}</TabsTrigger>
           ))}
@@ -432,27 +437,24 @@ function DispatchDashboardUI() {
             </CarouselItem>
             
             {/* Scheduled Tab */}
-             <CarouselItem className="overflow-y-auto">
-              <div className="space-y-4 h-full pr-1">
-                {scheduledRides.map((ride) => (
-                  <RideCard
-                    key={ride.id}
-                    ride={ride}
-                    drivers={drivers}
-                    onAssignDriver={handleAssignDriver}
-                    onChangeStatus={handleChangeStatus}
-                    onSetFare={handleSetFare}
-                    onUnassignDriver={handleUnassignDriver}
-                    onEdit={handleOpenEdit}
-                  />
-                ))}
-                {scheduledRides.length === 0 && (
-                  <div className="flex h-full items-center justify-center text-muted-foreground pt-10">
-                      <p>No scheduled rides.</p>
-                  </div>
-                )}
-              </div>
-            </CarouselItem>
+            {hasScheduledRides && (
+              <CarouselItem className="overflow-y-auto">
+                <div className="space-y-4 h-full pr-1">
+                  {scheduledRides.map((ride) => (
+                    <RideCard
+                      key={ride.id}
+                      ride={ride}
+                      drivers={drivers}
+                      onAssignDriver={handleAssignDriver}
+                      onChangeStatus={handleChangeStatus}
+                      onSetFare={handleSetFare}
+                      onUnassignDriver={handleUnassignDriver}
+                      onEdit={handleOpenEdit}
+                    />
+                  ))}
+                </div>
+              </CarouselItem>
+            )}
 
 
             {/* Driver Tabs */}
@@ -562,3 +564,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
