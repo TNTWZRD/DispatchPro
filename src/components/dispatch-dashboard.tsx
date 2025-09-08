@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
 import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -19,9 +19,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StrictModeDroppable } from './strict-mode-droppable';
 import { Sidebar } from './sidebar';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
+import { ZoomProvider, ZoomContext } from '@/context/zoom-context';
 
 
-export function DispatchDashboard() {
+function DispatchDashboardUI() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
   const [time, setTime] = useState<Date | null>(null);
@@ -31,6 +32,8 @@ export function DispatchDashboard() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const isMobile = useIsMobile();
+  
+  const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
   
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
 
@@ -243,7 +246,10 @@ export function DispatchDashboard() {
 
   const renderDesktopView = () => (
      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
+        <div 
+          className="flex flex-1 gap-4 overflow-x-auto pb-4 transition-transform origin-top-left"
+          style={{ transform: `scale(${zoom})` }}
+        >
             {/* Waiting Column */}
             <StrictModeDroppable droppableId="waiting">
               {(provided, snapshot) => (
@@ -374,10 +380,21 @@ export function DispatchDashboard() {
         <h1 className="ml-3 text-xl md:text-2xl font-bold tracking-tight text-foreground">
           DispatchPro
         </h1>
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-2">
            <div className="text-sm text-muted-foreground hidden md:block">
             {isClient && time && <>{time.toLocaleDateString()} {time.toLocaleTimeString()}</>}
           </div>
+          
+          <div className="items-center gap-2 hidden md:flex">
+             <Button variant="outline" size="icon" onClick={zoomOut}>
+              <ZoomOut />
+            </Button>
+            <span className="text-sm text-muted-foreground w-12 text-center">{(zoom * 100).toFixed(0)}%</span>
+            <Button variant="outline" size="icon" onClick={zoomIn}>
+              <ZoomIn />
+            </Button>
+          </div>
+
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
               <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
@@ -416,4 +433,13 @@ export function DispatchDashboard() {
         />
     </div>
   );
+}
+
+
+export function DispatchDashboard() {
+  return (
+    <ZoomProvider>
+      <DispatchDashboardUI />
+    </ZoomProvider>
+  )
 }
