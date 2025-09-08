@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { MapView } from './map-view';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
-import { DispatchSuggester } from './dispatch-suggester';
+import { VoiceRecorder } from './voice-recorder';
 import { Truck, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
@@ -297,11 +297,7 @@ export function DispatchDashboard() {
       <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6 lg:flex-row">
         <div className='lg:w-1/3 xl:w-2/5 flex flex-col gap-4'>
             <MapView rides={rides} drivers={drivers} />
-            <DispatchSuggester
-              pendingRides={pendingRides}
-              availableDrivers={drivers.filter(d => d.status === 'available')}
-              onAssignSuggestion={handleAssignDriver}
-            />
+            <VoiceRecorder onAddRide={handleAddRide} />
         </div>
         
         <div className='flex-1 flex flex-col min-w-0'>
