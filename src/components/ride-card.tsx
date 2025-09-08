@@ -309,7 +309,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
       </Card>
       
       <Dialog open={isFareModalOpen} onOpenChange={setIsFareModalOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-h-none max-h-[50vh] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Set Final Fare</DialogTitle>
             <DialogDescription>

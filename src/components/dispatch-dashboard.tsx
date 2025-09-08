@@ -412,7 +412,7 @@ function DispatchDashboardUI() {
           ))}
         </TabsList>
         
-        <div className="flex-1 mt-4 overflow-hidden">
+         <div className="flex-1 mt-4 overflow-hidden">
             <Carousel setApi={setCarouselApi} className="h-full">
               <CarouselContent className="h-full">
                 {/* Waiting Tab */}
@@ -535,7 +535,7 @@ function DispatchDashboardUI() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 overflow-hidden lg:flex-row p-2 md:p-4">
+      <main className="flex flex-1 flex-col gap-4 overflow-hidden lg:flex-row p-2">
         <Sidebar 
             rides={rides} 
             drivers={drivers}
@@ -571,6 +571,7 @@ export function DispatchDashboard() {
     
 
     
+
 
 
 
