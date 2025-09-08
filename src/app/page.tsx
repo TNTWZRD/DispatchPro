@@ -1,3 +1,9 @@
+import { DispatchDashboard } from '@/components/dispatch-dashboard';
+
 export default function Home() {
-  return <></>;
+  return (
+    <main>
+      <DispatchDashboard />
+    </main>
+  );
 }
