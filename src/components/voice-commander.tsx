@@ -21,7 +21,7 @@ export function VoiceCommander({ rides, drivers, onAssignDriver, onChangeStatus 
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [micAvailable, setMicAvailable] = useState(true);
+  const [micAndApiAvailable, setMicAndApiAvailable] = useState(true);
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
@@ -54,29 +54,28 @@ export function VoiceCommander({ rides, drivers, onAssignDriver, onChangeStatus 
         });
         setIsRecording(false);
       };
-
     } else {
-        setMicAvailable(false);
+        setMicAndApiAvailable(false);
     }
 
      if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
       navigator.mediaDevices.enumerateDevices()
         .then(devices => {
           const hasMic = devices.some(device => device.kind === 'audioinput');
-          if(!hasMic) setMicAvailable(false);
+          if(!hasMic) setMicAndApiAvailable(false);
         })
-        .catch(() => setMicAvailable(false));
+        .catch(() => setMicAndApiAvailable(false));
     } else {
-      setMicAvailable(false);
+      setMicAndApiAvailable(false);
     }
   }, [toast]);
 
   const handleToggleRecording = () => {
-    if (!micAvailable || !recognitionRef.current) {
+    if (!micAndApiAvailable || !recognitionRef.current) {
       toast({
         variant: 'destructive',
-        title: 'Microphone not available',
-        description: 'Could not find a microphone. Please connect one and grant permission.',
+        title: 'Voice command not available',
+        description: 'Could not find a microphone or speech recognition is not supported on this device.',
       });
       return;
     }
@@ -170,10 +169,10 @@ export function VoiceCommander({ rides, drivers, onAssignDriver, onChangeStatus 
         <CardDescription>Use your voice to manage rides.</CardDescription>
       </CardHeader>
       <CardContent>
-        {!micAvailable ? (
+        {!micAndApiAvailable ? (
           <div className="flex items-center justify-center p-4 bg-destructive/10 text-destructive rounded-md">
             <AlertTriangle className="mr-2 h-5 w-5" />
-            <p className="text-sm font-medium">No microphone or speech recognition API not available.</p>
+            <p className="text-sm font-medium">Voice commands not available on this device.</p>
           </div>
         ) : (
           <Button

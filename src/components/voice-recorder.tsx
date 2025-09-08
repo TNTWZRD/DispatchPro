@@ -28,7 +28,7 @@ export function VoiceRecorder({ onAddRide }: VoiceRecorderProps) {
       navigator.mediaDevices.enumerateDevices()
         .then(devices => {
           const hasMic = devices.some(device => device.kind === 'audioinput');
-          setMicAvailable(hasMic);
+          if (!hasMic) setMicAvailable(false);
         })
         .catch(() => setMicAvailable(false));
     } else {
@@ -133,7 +133,7 @@ export function VoiceRecorder({ onAddRide }: VoiceRecorderProps) {
         {!micAvailable ? (
           <div className="flex items-center justify-center p-4 bg-destructive/10 text-destructive rounded-md">
             <AlertTriangle className="mr-2 h-5 w-5" />
-            <p className="text-sm font-medium">No microphone detected.</p>
+            <p className="text-sm font-medium">Voice recording not available on this device.</p>
           </div>
         ) : (
           <Button
