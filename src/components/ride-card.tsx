@@ -255,10 +255,21 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           <DialogHeader>
             <DialogTitle>Set Final Fare</DialogTitle>
             <DialogDescription>
-              Enter the payment method(s) for ride #{ride.id.split('-').pop()}. The quoted fare is {formatCurrency(ride.totalFare)}.
+              Enter the payment method(s) for ride #{ride.id.split('-').pop()}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+
+             <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+                <h4 className="font-medium">Ride Summary</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    <div className="flex justify-between"><span>Passengers:</span> <span className="font-medium text-foreground">{ride.passengerCount || 1}</span></div>
+                    <div className="flex justify-between"><span>Stops:</span> <span className="font-medium text-foreground">{ride.stops?.length || 0}</span></div>
+                    <div className="flex justify-between"><span>Return Trip:</span> <span className="font-medium text-foreground">{ride.isReturnTrip ? 'Yes' : 'No'}</span></div>
+                    <div className="flex justify-between"><span>Moving Fee:</span> <span className="font-medium text-foreground">{ride.movingFee ? 'Yes' : 'No'}</span></div>
+                </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Payment Details</Label>
               <div className="grid grid-cols-2 gap-4">
