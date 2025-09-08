@@ -17,7 +17,7 @@ type DriverColumnProps = {
   allDrivers: Driver[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
   style?: React.CSSProperties;
@@ -25,7 +25,7 @@ type DriverColumnProps = {
 
 export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, style }: DriverColumnProps) {
   const isAvailable = driver.status === 'available';
-  const isMobile = useIs_Mobile();
+  const isMobile = useIsMobile();
   const hasRides = rides.length > 0;
 
   const renderContent = () => (
