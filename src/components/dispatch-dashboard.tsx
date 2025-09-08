@@ -403,7 +403,7 @@ function DispatchDashboardUI() {
 
   const renderMobileView = () => {
     return (
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col flex-1 min-h-0">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col flex-1">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
           {hasScheduledRides && <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>}
@@ -412,74 +412,73 @@ function DispatchDashboardUI() {
           ))}
         </TabsList>
         
-        <Carousel
-          setApi={setCarouselApi}
-          className="flex-1 w-full mt-4 min-h-0"
-        >
-          <CarouselContent className="h-full">
-            {/* Waiting Tab */}
-            <CarouselItem className="overflow-y-auto">
-              <div className="space-y-4 h-full pr-1">
-                {pendingRides.map((ride) => (
-                  <RideCard
-                    key={ride.id}
-                    ride={ride}
-                    drivers={drivers}
-                    onAssignDriver={handleAssignDriver}
-                    onChangeStatus={handleChangeStatus}
-                    onSetFare={handleSetFare}
-                    onUnassignDriver={handleUnassignDriver}
-                    onEdit={handleOpenEdit}
-                  />
-                ))}
-                {pendingRides.length === 0 && (
-                  <div className="flex h-full items-center justify-center text-muted-foreground pt-10">
-                      <p>No pending rides.</p>
-                  </div>
-                )}
-              </div>
-            </CarouselItem>
-            
-            {/* Scheduled Tab */}
-            {hasScheduledRides && (
-              <CarouselItem className="overflow-y-auto">
-                <div className="space-y-4 h-full pr-1">
-                  {scheduledRides.map((ride) => (
-                    <RideCard
-                      key={ride.id}
-                      ride={ride}
-                      drivers={drivers}
-                      onAssignDriver={handleAssignDriver}
-                      onChangeStatus={handleChangeStatus}
-                      onSetFare={handleSetFare}
-                      onUnassignDriver={handleUnassignDriver}
-                      onEdit={handleOpenEdit}
-                    />
-                  ))}
-                </div>
-              </CarouselItem>
-            )}
-
-
-            {/* Driver Tabs */}
-            {activeDrivers.map(driver => (
-              <CarouselItem key={driver.id} className="overflow-y-auto">
-                  <div className="pr-1">
-                    <DriverColumn
-                        driver={driver}
-                        rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
-                        allDrivers={drivers}
+        <div className="flex-1 mt-4 overflow-hidden">
+            <Carousel setApi={setCarouselApi} className="h-full">
+              <CarouselContent className="h-full">
+                {/* Waiting Tab */}
+                <CarouselItem className="overflow-y-auto">
+                  <div className="space-y-4 h-full pr-1">
+                    {pendingRides.map((ride) => (
+                      <RideCard
+                        key={ride.id}
+                        ride={ride}
+                        drivers={drivers}
                         onAssignDriver={handleAssignDriver}
                         onChangeStatus={handleChangeStatus}
                         onSetFare={handleSetFare}
                         onUnassignDriver={handleUnassignDriver}
-                        onEditRide={handleOpenEdit}
+                        onEdit={handleOpenEdit}
                       />
+                    ))}
+                    {pendingRides.length === 0 && (
+                      <div className="flex h-full items-center justify-center text-muted-foreground pt-10">
+                          <p>No pending rides.</p>
+                      </div>
+                    )}
                   </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
+                </CarouselItem>
+                
+                {/* Scheduled Tab */}
+                {hasScheduledRides && (
+                  <CarouselItem className="overflow-y-auto">
+                    <div className="space-y-4 h-full pr-1">
+                      {scheduledRides.map((ride) => (
+                        <RideCard
+                          key={ride.id}
+                          ride={ride}
+                          drivers={drivers}
+                          onAssignDriver={handleAssignDriver}
+                          onChangeStatus={handleChangeStatus}
+                          onSetFare={handleSetFare}
+                          onUnassignDriver={handleUnassignDriver}
+                          onEdit={handleOpenEdit}
+                        />
+                      ))}
+                    </div>
+                  </CarouselItem>
+                )}
+
+
+                {/* Driver Tabs */}
+                {activeDrivers.map(driver => (
+                  <CarouselItem key={driver.id} className="overflow-y-auto">
+                      <div className="pr-1">
+                        <DriverColumn
+                            driver={driver}
+                            rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                            allDrivers={drivers}
+                            onAssignDriver={handleAssignDriver}
+                            onChangeStatus={handleChangeStatus}
+                            onSetFare={handleSetFare}
+                            onUnassignDriver={handleUnassignDriver}
+                            onEditRide={handleOpenEdit}
+                          />
+                      </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+        </div>
       </Tabs>
   )};
 
@@ -536,7 +535,7 @@ function DispatchDashboardUI() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-2 md:p-4 lg:flex-row">
+      <main className="flex flex-1 flex-col gap-4 overflow-hidden lg:flex-row p-2 md:p-4">
         <Sidebar 
             rides={rides} 
             drivers={drivers}
@@ -572,3 +571,4 @@ export function DispatchDashboard() {
     
 
     
+
