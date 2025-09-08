@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { useCondensedMode } from '@/context/condensed-mode-context';
 
 
 type RideCardProps = {
@@ -43,6 +44,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip);
   
   const isMobile = useIsMobile();
+  const { isCondensed } = useCondensedMode();
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
@@ -100,6 +102,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   }
   
   const getPaymentSummary = () => {
+    if (isCondensed) return null;
     const parts = [];
     if (ride.paymentDetails?.cash) parts.push(`Cash: ${formatCurrency(ride.paymentDetails.cash)}`);
     if (ride.paymentDetails?.card) parts.push(`Card: ${formatCurrency(ride.paymentDetails.card)}`);
@@ -130,7 +133,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
                   <DollarSign className="h-4 w-4" />
-                  <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>
+                  {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>}
               </Button>
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -206,7 +209,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                 <span className="font-medium">{ride.pickup.name}</span>
               </div>
-              {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
+              {!isCondensed && ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
                 <div key={index} className="flex items-start pl-2">
                     <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
                     <span>{stop.name}</span>
@@ -222,7 +225,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             {/* Right Column */}
             <div className="space-y-1.5 text-xs">
               <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>
-              {ride.passengerPhone && (
+              {!isCondensed && ride.passengerPhone && (
                 <div className="flex items-center">
                     <Phone className="mr-1.5" />
                     <span>{ride.passengerPhone}</span>
@@ -244,7 +247,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               <span className="ml-2 text-muted-foreground">{assignedDriver.name}</span>
             </div>
           )}
-          {ride.notes && (
+          {!isCondensed && ride.notes && (
             <div className="flex items-start pt-2 text-xs text-muted-foreground">
               <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
               <span className="italic">{ride.notes}</span>
@@ -265,13 +268,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                         <TooltipContent><p>Moving Fee</p></TooltipContent>
                     </Tooltip>
                 )}
-                 {ride.isReturnTrip && (
+                 {!isCondensed && ride.isReturnTrip && (
                     <Tooltip>
                         <TooltipTrigger><Repeat className="h-4 w-4 text-primary" /></TooltipTrigger>
                         <TooltipContent><p>Return Trip</p></TooltipContent>
                     </Tooltip>
                 )}
-                 {ride.isPrepaid && (
+                 {!isCondensed && ride.isPrepaid && (
                      <Tooltip>
                         <TooltipTrigger><Gift className="h-4 w-4 text-primary" /></TooltipTrigger>
                         <TooltipContent><p>Prepaid</p></TooltipContent>
@@ -389,7 +392,5 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     </TooltipProvider>
   );
 }
-
-    
 
     

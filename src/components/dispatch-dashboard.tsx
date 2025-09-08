@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -20,6 +20,9 @@ import { StrictModeDroppable } from './strict-mode-droppable';
 import { Sidebar } from './sidebar';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import { ZoomProvider, ZoomContext } from '@/context/zoom-context';
+import { CondensedModeProvider, useCondensedMode } from '@/context/condensed-mode-context';
+import { useHotkey } from '@/hooks/use-hotkey';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 
 function DispatchDashboardUI() {
@@ -34,6 +37,9 @@ function DispatchDashboardUI() {
   const isMobile = useIsMobile();
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
+  const { isCondensed, toggleCondensedMode } = useCondensedMode();
+
+  useHotkey('s', toggleCondensedMode, { alt: true });
   
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
 
@@ -396,6 +402,19 @@ function DispatchDashboardUI() {
           </div>
           
           <div className="items-center gap-2 hidden md:flex">
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={toggleCondensedMode}>
+                            {isCondensed ? <Maximize2 /> : <Minimize2 />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Toggle Condensed View (Alt+S)</p>
+                    </TooltipContent>
+                </Tooltip>
+             </TooltipProvider>
+
              <Button variant="outline" size="icon" onClick={zoomOut}>
               <ZoomOut />
             </Button>
@@ -449,7 +468,13 @@ function DispatchDashboardUI() {
 export function DispatchDashboard() {
   return (
     <ZoomProvider>
-      <DispatchDashboardUI />
+        <CondensedModeProvider>
+            <DispatchDashboardUI />
+        </CondensedModeProvider>
     </ZoomProvider>
   )
 }
+
+    
+
+    
