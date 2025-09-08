@@ -41,7 +41,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const isMobile = useIsMobile();
 
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
-  const availableDrivers = drivers.filter(d => d.status === 'available');
+  const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
   const getStatusBadge = (status: RideStatus) => {
     const config = statusConfig[status];
@@ -143,12 +143,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                         <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
-                            {availableDrivers.map(driver => (
+                            {availableDriversForMenu.map(driver => (
                               <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
                                 {driver.name}
                               </DropdownMenuItem>
                             ))}
-                             {availableDrivers.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                             {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
@@ -163,12 +163,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                         <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
-                            {availableDrivers.map(driver => (
-                              <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
+                            {availableDriversForMenu.map(driver => (
+                              <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)} disabled={driver.id === ride.driverId}>
                                 {driver.name}
                               </DropdownMenuItem>
                             ))}
-                             {availableDrivers.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                             {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>

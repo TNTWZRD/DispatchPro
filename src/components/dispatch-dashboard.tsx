@@ -71,36 +71,50 @@ export function DispatchDashboard() {
   };
 
   const handleAssignDriver = (rideId: string, driverId: string) => {
-    const ride = rides.find(r => r.id === rideId);
-    if (!ride) return;
+    const rideToAssign = rides.find(r => r.id === rideId);
+    if (!rideToAssign) return;
 
     const driver = drivers.find(d => d.id === driverId);
     if (driver?.status === 'offline') {
       console.warn(`Driver ${driverId} is offline.`);
       return;
     }
-    
-    // If the ride was previously assigned, update the old driver's status if they have no more rides
-    if (ride.driverId) {
-        const oldDriverId = ride.driverId;
-        const otherRides = rides.filter(r => r.driverId === oldDriverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
-        if (otherRides.length === 0) {
-            setDrivers(prevDrivers => prevDrivers.map(d => d.id === oldDriverId ? {...d, status: 'available'} : d));
-        }
-    }
 
-    setRides(prevRides =>
-      prevRides.map(r =>
-        r.id === rideId ? { ...r, status: 'assigned', driverId } : r
-      )
-    );
+    setRides(prevRides => {
+        const newRides = [...prevRides];
+        const rideIndex = newRides.findIndex(r => r.id === rideId);
+        if (rideIndex === -1) return prevRides;
 
-    // Set new driver to 'on-ride'
-    setDrivers(prevDrivers =>
-      prevDrivers.map(d =>
-        d.id === driverId ? { ...d, status: 'on-ride' } : d
-      )
-    );
+        const originalRide = newRides[rideIndex];
+        const originalDriverId = originalRide.driverId;
+
+        // Update the ride with the new driver and status
+        newRides[rideIndex] = { ...originalRide, driverId: driverId, status: 'assigned' };
+
+        setDrivers(prevDrivers => {
+            const newDrivers = [...prevDrivers];
+            
+            // Set new driver to 'on-ride'
+            const newDriverIndex = newDrivers.findIndex(d => d.id === driverId);
+            if (newDriverIndex !== -1) {
+                newDrivers[newDriverIndex] = { ...newDrivers[newDriverIndex], status: 'on-ride'};
+            }
+
+            // If ride was reassigned, check if old driver becomes available
+            if (originalDriverId && originalDriverId !== driverId) {
+                const otherRidesForOldDriver = newRides.filter(r => r.driverId === originalDriverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
+                if (otherRidesForOldDriver.length === 0) {
+                     const oldDriverIndex = newDrivers.findIndex(d => d.id === originalDriverId);
+                     if (oldDriverIndex !== -1) {
+                        newDrivers[oldDriverIndex] = {...newDrivers[oldDriverIndex], status: 'available'};
+                     }
+                }
+            }
+            return newDrivers;
+        });
+
+        return newRides;
+    });
   };
   
   const handleUnassignDriver = (rideId: string) => {
