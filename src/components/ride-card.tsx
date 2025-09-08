@@ -120,68 +120,145 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   return (
     <TooltipProvider>
       <Card className={cn("transition-all bg-card text-sm", ride.isNew && "animate-pulse border-primary")}>
-        <CardHeader className="p-3">
-           <div className="flex items-start justify-between">
-            <CardTitle className="text-base flex items-center gap-3">
-              Ride #{ride.id.split('-')[1]}
-            </CardTitle>
-             <div className="flex items-center gap-2">
-               {ride.status !== 'pending' && getStatusBadge(ride.status)}
-             </div>
+        <div className="p-3">
+          {/* Header Row */}
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-base">#{ride.id.split('-')[1]}</span>
+              {ride.status !== 'pending' && getStatusBadge(ride.status)}
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
+                  <DollarSign className="h-4 w-4" />
+                  <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>
+              </Button>
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => onEdit(ride)}>
+                      <Edit className="mr-2 h-4 w-4" /> Edit Ride
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {ride.status === 'pending' && isMobile && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              {availableDriversForMenu.map(driver => (
+                                <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
+                                  {driver.name}
+                                </DropdownMenuItem>
+                              ))}
+                              {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                    )}
+                    {['assigned', 'in-progress'].includes(ride.status) && (
+                      <DropdownMenuItem onClick={() => onUnassignDriver(ride.id)}>
+                          <Undo2 className="mr-2 h-4 w-4" /> Unassign
+                      </DropdownMenuItem>
+                    )}
+                    {isMobile && ['assigned', 'in-progress'].includes(ride.status) && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                              {availableDriversForMenu.map(driver => (
+                                <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)} disabled={driver.id === ride.driverId}>
+                                  {driver.name}
+                                </DropdownMenuItem>
+                              ))}
+                              {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                    )}
+                    {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
+                    {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
+                    {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'cancelled')} className="text-destructive">
+                          Cancel Ride
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {ride.status === 'completed' && (
+                      <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>
+                          <Undo2 className="mr-2 h-4 w-4" /> Re-open Ride
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
           </div>
-           <div className="flex items-center text-xs text-muted-foreground gap-x-3 gap-y-1 flex-wrap">
-               <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1}</div>
-               {ride.passengerPhone && (
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 gap-x-4">
+            {/* Left Column */}
+            <div className="space-y-1.5">
+              <div className="flex items-start">
+                <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                <span className="font-medium">{ride.pickup.name}</span>
+              </div>
+              {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
+                <div key={index} className="flex items-start pl-2">
+                    <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                    <span>{stop.name}</span>
+                </div>
+              ))}
+              {ride.dropoff && (
+                <div className="flex items-start">
+                    <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                    <span>{ride.dropoff.name}</span>
+                </div>
+              )}
+            </div>
+            {/* Right Column */}
+            <div className="space-y-1.5 text-xs">
+              <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>
+              {ride.passengerPhone && (
                 <div className="flex items-center">
                     <Phone className="mr-1.5" />
                     <span>{ride.passengerPhone}</span>
                 </div>
-               )}
+              )}
               {ride.scheduledTime && (
                 <div className="flex items-center text-amber-600 font-medium">
                   <Calendar className="mr-1.5" />
                   <span>{format(ride.scheduledTime, "p")}</span>
                 </div>
               )}
-           </div>
-        </CardHeader>
-        <CardContent className="space-y-1.5 p-3 pt-0">
-          <div className="flex items-start">
-            <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-            <span className="font-medium">{ride.pickup.name}</span>
+            </div>
           </div>
-           {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
-             <div key={index} className="flex items-start pl-2">
-                <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-                <span>{stop.name}</span>
-            </div>
-           ))}
-           {ride.dropoff && (
-             <div className="flex items-start">
-                <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                <span>{ride.dropoff.name}</span>
-            </div>
-           )}
-          {assignedDriver && ride.status !== 'pending' && (
-            <div className="flex items-center pt-1 text-xs">
+          
+           {assignedDriver && ride.status !== 'pending' && (
+            <div className="flex items-center pt-2 text-xs">
               <Truck className="mr-2 h-4 w-4 text-primary" />
               <span className="font-medium">Driver:</span>
               <span className="ml-2 text-muted-foreground">{assignedDriver.name}</span>
             </div>
           )}
           {ride.notes && (
-            <div className="flex items-start pt-1 text-xs text-muted-foreground">
+            <div className="flex items-start pt-2 text-xs text-muted-foreground">
               <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
               <span className="italic">{ride.notes}</span>
             </div>
           )}
           {getPaymentSummary()}
-        </CardContent>
-        <CardFooter className="flex justify-between items-center p-3 pt-2">
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Clock className="mr-1.5 h-3 w-3" />
-            <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
-             <div className="flex items-center gap-1 ml-3">
+
+          {/* Footer Row */}
+          <div className="flex justify-between items-center mt-2 pt-2 border-t">
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Clock className="mr-1.5 h-3 w-3" />
+              <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
+            </div>
+             <div className="flex items-center gap-1.5">
                 {ride.movingFee && (
                     <Tooltip>
                         <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
@@ -202,77 +279,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 )}
              </div>
           </div>
-          <div className="flex gap-1">
-            <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
-                <DollarSign className="h-4 w-4" />
-                <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>
-            </Button>
-            
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => onEdit(ride)}>
-                    <Edit className="mr-2 h-4 w-4" /> Edit Ride
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                   {ride.status === 'pending' && isMobile && (
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                          <DropdownMenuSubContent>
-                            {availableDriversForMenu.map(driver => (
-                              <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
-                                {driver.name}
-                              </DropdownMenuItem>
-                            ))}
-                             {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                      </DropdownMenuSub>
-                   )}
-                   {['assigned', 'in-progress'].includes(ride.status) && (
-                     <DropdownMenuItem onClick={() => onUnassignDriver(ride.id)}>
-                        <Undo2 className="mr-2 h-4 w-4" /> Unassign
-                     </DropdownMenuItem>
-                   )}
-                   {isMobile && ['assigned', 'in-progress'].includes(ride.status) && (
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                          <DropdownMenuSubContent>
-                            {availableDriversForMenu.map(driver => (
-                              <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)} disabled={driver.id === ride.driverId}>
-                                {driver.name}
-                              </DropdownMenuItem>
-                            ))}
-                             {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                      </DropdownMenuSub>
-                   )}
-                  {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
-                  {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
-                  {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'cancelled')} className="text-destructive">
-                        Cancel Ride
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {ride.status === 'completed' && (
-                     <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>
-                        <Undo2 className="mr-2 h-4 w-4" /> Re-open Ride
-                     </DropdownMenuItem>
-                   )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-          </div>
-        </CardFooter>
+        </div>
       </Card>
       
       <Dialog open={isFareModalOpen} onOpenChange={setIsFareModalOpen}>
@@ -382,5 +389,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     </TooltipProvider>
   );
 }
+
+    
 
     
