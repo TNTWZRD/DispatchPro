@@ -12,8 +12,6 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const DispatchingSuggestionsInputSchema = z.object({
-  passengerPickupLocation: z.string().describe('The pickup location of the passenger.'),
-  passengerDropoffLocation: z.string().describe('The dropoff location of the passenger.'),
   availableDrivers: z.array(z.object({
     driverId: z.string().describe('The unique identifier of the driver.'),
     currentLocation: z.string().describe('The current location of the driver.'),
@@ -23,6 +21,9 @@ const DispatchingSuggestionsInputSchema = z.object({
     requestId: z.string().describe('The unique identifier of the ride request.'),
     pickupLocation: z.string().describe('The pickup location of the ride request.'),
     dropoffLocation: z.string().describe('The dropoff location of the ride request.'),
+    passengerCount: z.number().describe('The number of passengers.'),
+    movingFee: z.boolean().describe('Whether a moving fee applies.'),
+    scheduledTime: z.string().optional().describe('The scheduled time for pickup, if any.')
   })).describe('A list of pending ride requests with their pickup and dropoff locations.'),
 });
 export type DispatchingSuggestionsInput = z.infer<typeof DispatchingSuggestionsInputSchema>;
@@ -53,9 +54,6 @@ const prompt = ai.definePrompt({
 
   Given the following information, provide suggestions for driver assignments and re-assignments.
 
-  Passenger Pickup Location: {{{passengerPickupLocation}}}
-  Passenger Dropoff Location: {{{passengerDropoffLocation}}}
-
   Available Drivers:
   {{#each availableDrivers}}
   - Driver ID: {{{driverId}}}, Current Location: {{{currentLocation}}}, Availability: {{{availabilityStatus}}}
@@ -63,10 +61,10 @@ const prompt = ai.definePrompt({
 
   Pending Ride Requests:
   {{#each pendingRideRequests}}
-  - Request ID: {{{requestId}}}, Pickup Location: {{{pickupLocation}}}, Dropoff Location: {{{dropoffLocation}}}
+  - Request ID: {{{requestId}}}, Pickup: {{{pickupLocation}}}, Dropoff: {{{dropoffLocation}}}, Passengers: {{{passengerCount}}}{{#if movingFee}}, Moving Fee{{/if}}{{#if scheduledTime}}, Scheduled: {{{scheduledTime}}}{{/if}}
   {{/each}}
 
-  Consider factors such as driver proximity to pickup locations, estimated travel times, and driver availability when making your suggestions.
+  Consider factors such as driver proximity to pickup locations, estimated travel times, driver availability, passenger count, and any special conditions like moving fees or scheduled times when making your suggestions.
 
   Provide your suggestions in the following format:
   {
@@ -101,4 +99,3 @@ const dispatchingSuggestionsFlow = ai.defineFlow(
     return output!;
   }
 );
-

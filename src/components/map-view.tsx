@@ -67,7 +67,7 @@ export function MapView({ rides, drivers }: MapViewProps) {
                   </div>
                 </TooltipTrigger>
                  <TooltipContent>
-                  <p className='font-bold'>Pickup for {ride.passengerName}</p>
+                  <p className='font-bold'>Pickup for {ride.passengerPhone}</p>
                   <p>{ride.pickup.name}</p>
                 </TooltipContent>
               </Tooltip>

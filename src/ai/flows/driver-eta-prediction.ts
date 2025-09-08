@@ -47,13 +47,13 @@ const prompt = ai.definePrompt({
   output: {schema: DriverEtaPredictionOutputSchema},
   prompt: `You are an expert in predicting the estimated time of arrival (ETA) for taxi drivers. Use the provided information to predict the ETA and provide a confidence level for your prediction.
 
-Pikcup Location: {{{pickupLocation}}}
+Pickup Location: {{{pickupLocation}}}
 Dropoff Location: {{{dropoffLocation}}}
 Driver Location: {{{driverLocation}}}
 Traffic Conditions: {{{trafficConditions}}}
 Time of Day: {{{timeOfDay}}}
 
-Provide the ETA, confidence level, and reasoning behind your prediction.`, // Corrected typo: Pikcup -> Pickup
+Provide the ETA, confidence level, and reasoning behind your prediction.`,
 });
 
 const predictDriverEtaFlow = ai.defineFlow(

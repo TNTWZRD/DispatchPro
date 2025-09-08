@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { Ride, Driver, RideStatus } from '@/lib/types';
+import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,13 +11,10 @@ import { CallLoggerForm } from './call-logger-form';
 import { RideHistoryTable } from './ride-history-table';
 import { DispatchSuggester } from './dispatch-suggester';
 import { Truck } from 'lucide-react';
-import { EtaPredictorModal } from './eta-predictor-modal';
 
 export function DispatchDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
-  const [selectedRideForEta, setSelectedRideForEta] = useState<Ride | null>(null);
-  const [isEtaModalOpen, setIsEtaModalOpen] = useState(false);
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -100,12 +97,22 @@ export function DispatchDashboard() {
       return updatedRides;
     });
   };
-  
-  const handleEstimateEta = (ride: Ride) => {
-    setSelectedRideForEta(ride);
-    setIsEtaModalOpen(true);
-  }
 
+  const handleSetFare = (rideId: string, fare: number, paymentMethod: PaymentMethod) => {
+    setRides(prevRides =>
+      prevRides.map(ride => {
+        if (ride.id !== rideId) return ride;
+
+        let cardFee: number | undefined;
+        if (paymentMethod === 'card') {
+          cardFee = Math.floor(fare / 40);
+        }
+
+        return { ...ride, fare, paymentMethod, cardFee };
+      })
+    );
+  };
+  
   const pendingRides = rides.filter(r => r.status === 'pending');
   const activeRides = rides.filter(r => ['assigned', 'in-progress'].includes(r.status));
   const pastRides = rides.filter(r => ['completed', 'cancelled'].includes(r.status));
@@ -143,12 +150,12 @@ export function DispatchDashboard() {
 
               <div className="flex flex-col gap-4 lg:col-span-3 xl:col-span-2">
                 <RideList 
-                  title="Pending Requests" 
+                  title="Pending & Upcoming" 
                   rides={pendingRides} 
                   drivers={availableDrivers} 
                   onAssignDriver={handleAssignDriver} 
                   onChangeStatus={handleChangeStatus}
-                  onEstimateEta={handleEstimateEta}
+                  onSetFare={handleSetFare}
                 />
               </div>
 
@@ -159,7 +166,7 @@ export function DispatchDashboard() {
                   drivers={drivers}
                   onAssignDriver={handleAssignDriver} 
                   onChangeStatus={handleChangeStatus}
-                  onEstimateEta={handleEstimateEta}
+                  onSetFare={handleSetFare}
                 />
               </div>
             </div>
@@ -177,15 +184,6 @@ export function DispatchDashboard() {
           </TabsContent>
         </Tabs>
       </main>
-      
-      {selectedRideForEta && (
-        <EtaPredictorModal
-          isOpen={isEtaModalOpen}
-          onClose={() => setIsEtaModalOpen(false)}
-          ride={selectedRideForEta}
-          drivers={drivers}
-        />
-      )}
     </div>
   );
 }

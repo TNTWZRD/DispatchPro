@@ -26,18 +26,18 @@ export function DispatchSuggester({ pendingRides, availableDrivers, onAssignSugg
 
     try {
       const result = await getDispatchingSuggestions({
-        // Using a dummy passenger location for now, as the prompt focuses on matching existing rides
-        passengerPickupLocation: "N/A",
-        passengerDropoffLocation: "N/A",
         availableDrivers: availableDrivers.map(d => ({
           driverId: d.id,
-          currentLocation: 'Simulated Location',
+          currentLocation: 'Simulated Location', // In a real app, this would be live data
           availabilityStatus: 'available',
         })),
         pendingRideRequests: pendingRides.map(r => ({
           requestId: r.id,
           pickupLocation: r.pickup.name,
           dropoffLocation: r.dropoff.name,
+          passengerCount: r.passengerCount,
+          movingFee: r.movingFee,
+          scheduledTime: r.scheduledTime?.toISOString(),
         })),
       });
       setSuggestions(result);
@@ -66,7 +66,7 @@ export function DispatchSuggester({ pendingRides, availableDrivers, onAssignSugg
         <CardDescription>Get optimal driver assignments.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={handleGetSuggestions} disabled={isLoading} className="w-full">
+        <Button onClick={handleGetSuggestions} disabled={isLoading || pendingRides.length === 0} className="w-full">
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (

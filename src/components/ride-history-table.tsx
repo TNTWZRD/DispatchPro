@@ -22,17 +22,23 @@ export function RideHistoryTable({ rides, drivers }: RideHistoryTableProps) {
         if (!driverId) return 'N/A';
         return drivers.find(d => d.id === driverId)?.name || 'Unknown';
     };
+
+    const formatCurrency = (amount?: number) => {
+      if (amount === undefined) return 'N/A';
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    }
     
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Status</TableHead>
-          <TableHead>Passenger</TableHead>
+          <TableHead>Passenger Phone</TableHead>
           <TableHead>Driver</TableHead>
           <TableHead>Pickup</TableHead>
           <TableHead>Dropoff</TableHead>
-          <TableHead>Requested</TableHead>
+          <TableHead>Fare</TableHead>
+          <TableHead>Payment</TableHead>
           <TableHead>Completed</TableHead>
         </TableRow>
       </TableHeader>
@@ -44,11 +50,12 @@ export function RideHistoryTable({ rides, drivers }: RideHistoryTableProps) {
                 {ride.status}
               </Badge>
             </TableCell>
-            <TableCell>{ride.passengerName}</TableCell>
+            <TableCell>{ride.passengerPhone}</TableCell>
             <TableCell>{getDriverName(ride.driverId)}</TableCell>
             <TableCell>{ride.pickup.name}</TableCell>
             <TableCell>{ride.dropoff.name}</TableCell>
-            <TableCell>{format(ride.requestTime, 'PPpp')}</TableCell>
+            <TableCell>{formatCurrency(ride.fare)}</TableCell>
+            <TableCell className="capitalize">{ride.paymentMethod || 'N/A'}</TableCell>
             <TableCell>
               {ride.completionTime ? format(ride.completionTime, 'PPpp') : 'N/A'}
             </TableCell>
