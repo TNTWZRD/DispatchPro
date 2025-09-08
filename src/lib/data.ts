@@ -77,7 +77,6 @@ export const initialRides: Ride[] = [
     movingFee: false,
     totalFare: 75.50,
     paymentDetails: { card: 75.50, tip: 10 },
-    cardFee: 2,
   },
   {
     id: 'ride-6',

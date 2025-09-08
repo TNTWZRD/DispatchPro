@@ -220,17 +220,11 @@ export function DispatchDashboard() {
     });
   };
 
-  const handleSetFare = (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => {
+  const handleSetFare = (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => {
     setRides(prevRides =>
       prevRides.map(ride => {
         if (ride.id !== rideId) return ride;
-        
-        let cardFee: number | undefined;
-        if (details.paymentDetails.card && details.paymentDetails.card > 0) {
-            cardFee = Math.floor(details.paymentDetails.card / 40);
-        }
-
-        return { ...ride, totalFare: details.totalFare, paymentDetails: details.paymentDetails, cardFee };
+        return { ...ride, totalFare: details.totalFare, paymentDetails: details.paymentDetails };
       })
     );
   };

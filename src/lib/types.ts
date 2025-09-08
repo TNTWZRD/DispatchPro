@@ -43,5 +43,4 @@ export type Ride = {
     check?: number;
     tip?: number;
   };
-  cardFee?: number;
 };

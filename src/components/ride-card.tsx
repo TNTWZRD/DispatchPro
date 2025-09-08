@@ -46,8 +46,8 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
   const cardPaymentAmount = useMemo(() => {
-    return (fareCard || 0);
-  }, [fareCard]);
+    return (fareCard || 0) + (fareTip || 0);
+  }, [fareCard, fareTip]);
   
   const cardFee = useMemo(() => {
     if (!cardPaymentAmount || cardPaymentAmount <= 0) return 0;
@@ -107,7 +107,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <DollarSign className="mr-2 h-4 w-4 text-green-600" />
                 <span className="font-medium">Fare: {formatCurrency(ride.totalFare)}</span>
                 {parts.length > 0 && <span className="ml-2 text-xs text-muted-foreground">({parts.join(', ')})</span>}
-                {ride.cardFee && <span className='ml-2 text-xs text-muted-foreground'>(+ {formatCurrency(ride.cardFee)} fee)</span>}
             </div>
         ) : null
     );
