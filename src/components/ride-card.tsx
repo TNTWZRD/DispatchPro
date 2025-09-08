@@ -224,7 +224,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             </div>
             {/* Right Column */}
             <div className="space-y-1.5 text-xs">
-              <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>
+              {!isCondensed && <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>}
               {!isCondensed && ride.passengerPhone && (
                 <div className="flex items-center">
                     <Phone className="mr-1.5" />
@@ -392,5 +392,3 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     </TooltipProvider>
   );
 }
-
-    
