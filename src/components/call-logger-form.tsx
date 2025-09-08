@@ -1,17 +1,19 @@
+
 "use client";
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Trash2, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -19,9 +21,12 @@ const formSchema = z.object({
   passengerPhone: z.string().min(10, { message: 'Enter a valid phone number.' }),
   pickupLocation: z.string().min(3, { message: 'Enter a pickup location.' }),
   dropoffLocation: z.string().min(3, { message: 'Enter a dropoff location.' }),
+  stops: z.array(z.object({ name: z.string().min(3, { message: 'Enter a stop location.' }) })).optional(),
   passengerCount: z.coerce.number().min(1, { message: 'Must have at least 1 passenger.' }),
   scheduledTime: z.date().optional(),
   movingFee: z.boolean().default(false),
+  isReturnTrip: z.boolean().default(false),
+  notes: z.string().optional(),
 });
 
 type CallLoggerFormValues = z.infer<typeof formSchema>;
@@ -31,8 +36,11 @@ type CallLoggerFormProps = {
     passengerPhone: string;
     pickup: { name: string; coords: { x: number; y: number } };
     dropoff: { name: string; coords: { x: number; y: number } };
+    stops?: { name: string; coords: { x: number; y: number } }[];
     passengerCount: number;
     movingFee: boolean;
+    isReturnTrip: boolean;
+    notes?: string;
     scheduledTime?: Date;
   }) => void;
 };
@@ -44,9 +52,17 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
       passengerPhone: '',
       pickupLocation: '',
       dropoffLocation: '',
+      stops: [],
       passengerCount: 1,
       movingFee: false,
+      isReturnTrip: false,
+      notes: '',
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "stops",
   });
 
   function onSubmit(values: CallLoggerFormValues) {
@@ -54,8 +70,11 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
       passengerPhone: values.passengerPhone,
       pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
       dropoff: { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
+      stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
       passengerCount: values.passengerCount,
       movingFee: values.movingFee,
+      isReturnTrip: values.isReturnTrip,
+      notes: values.notes,
       scheduledTime: values.scheduledTime,
     });
     form.reset();
@@ -66,7 +85,7 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
       <CardHeader>
         <CardTitle>Log New Call</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-h-[70vh] overflow-y-auto pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -82,34 +101,65 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="pickupLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pickup Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main St" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {fields.map((field, index) => (
               <FormField
+                key={field.id}
                 control={form.control}
-                name="pickupLocation"
+                name={`stops.${index}.name`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pickup</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St" {...field} />
-                    </FormControl>
+                    <FormLabel>Stop {index + 1}</FormLabel>
+                     <div className="flex items-center gap-2">
+                        <FormControl>
+                          <Input placeholder="e.g., 789 Side Ave" {...field} />
+                        </FormControl>
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                            <Trash2 />
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="dropoffLocation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Dropoff</FormLabel>
-                    <FormControl>
-                      <Input placeholder="456 Oak Ave" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            ))}
+             <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ name: "" })}
+            >
+                <MapPin className="mr-2"/> Add Stop
+            </Button>
+
+
+            <FormField
+              control={form.control}
+              name="dropoffLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Final Dropoff Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="456 Oak Ave" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+           
             <FormField
               control={form.control}
               name="passengerCount"
@@ -140,9 +190,9 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPP")
+                            format(field.value, "PPP p")
                           ) : (
-                            <span>Pick a date</span>
+                            <span>Pick a date and time</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -164,28 +214,60 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
-              name="movingFee"
+              name="notes"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                   <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="e.g., Passenger requires assistance, has extra luggage." {...field} />
                   </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Moving Fee
-                    </FormLabel>
-                    <FormDescription>
-                      Check if this is a moving-related service.
-                    </FormDescription>
-                  </div>
+                  <FormMessage />
                 </FormItem>
               )}
             />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="movingFee"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                        Moving Fee
+                        </FormLabel>
+                    </div>
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                control={form.control}
+                name="isReturnTrip"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                        Return Trip
+                        </FormLabel>
+                    </div>
+                    </FormItem>
+                )}
+                />
+            </div>
+            
             <Button type="submit" className="w-full">
               <Plus className="mr-2 h-4 w-4" /> Log Ride Request
             </Button>

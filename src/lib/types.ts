@@ -1,3 +1,4 @@
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -23,6 +24,7 @@ export type Ride = {
   passengerPhone: string;
   pickup: Location;
   dropoff: Location;
+  stops?: Location[];
   status: RideStatus;
   driverId: string | null;
   requestTime: Date;
@@ -31,7 +33,13 @@ export type Ride = {
   isNew?: boolean;
   passengerCount: number;
   movingFee: boolean;
-  fare?: number;
-  paymentMethod?: PaymentMethod;
+  isReturnTrip?: boolean;
+  notes?: string;
+  totalFare?: number;
+  paymentDetails?: {
+    cash?: number;
+    card?: number;
+    check?: number;
+  };
   cardFee?: number;
 };

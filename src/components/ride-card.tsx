@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2 } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,7 +21,7 @@ type RideCardProps = {
   drivers: Driver[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, fare: number, paymentMethod: PaymentMethod) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
 };
 
@@ -36,12 +35,24 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
 
 export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
-  const [fareAmount, setFareAmount] = useState<number | undefined>(ride.fare);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | undefined>(ride.paymentMethod);
+  const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
+  const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
+  const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check);
+  
   const isMobile = useIsMobile();
-
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
+
+  const totalFare = useMemo(() => {
+    return (fareCash || 0) + (fareCard || 0) + (fareCheck || 0);
+  }, [fareCash, fareCard, fareCheck]);
+
+  useEffect(() => {
+    setFareCash(ride.paymentDetails?.cash);
+    setFareCard(ride.paymentDetails?.card);
+    setFareCheck(ride.paymentDetails?.check);
+  }, [ride.paymentDetails]);
+
 
   const getStatusBadge = (status: RideStatus) => {
     const config = statusConfig[status];
@@ -54,8 +65,15 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   };
 
   const handleSetFare = () => {
-    if (fareAmount && paymentMethod) {
-      onSetFare(ride.id, fareAmount, paymentMethod);
+    if (totalFare > 0) {
+      onSetFare(ride.id, {
+        totalFare: totalFare,
+        paymentDetails: {
+          cash: fareCash || undefined,
+          card: fareCard || undefined,
+          check: fareCheck || undefined,
+        }
+      });
       setIsFareModalOpen(false);
     }
   };
@@ -63,6 +81,24 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const formatCurrency = (amount?: number) => {
     if (amount === undefined) return 'N/A';
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+  
+  const getPaymentSummary = () => {
+    if (!ride.totalFare) return null;
+
+    const parts = [];
+    if (ride.paymentDetails?.cash) parts.push(`Cash: ${formatCurrency(ride.paymentDetails.cash)}`);
+    if (ride.paymentDetails?.card) parts.push(`Card: ${formatCurrency(ride.paymentDetails.card)}`);
+    if (ride.paymentDetails?.check) parts.push(`Check: ${formatCurrency(ride.paymentDetails.check)}`);
+
+    return (
+      <div className="flex items-center pt-1 text-sm">
+        <DollarSign className="mr-2 h-4 w-4 text-green-600" />
+        <span className="font-medium">Fare: {formatCurrency(ride.totalFare)}</span>
+        <span className="ml-2 text-xs text-muted-foreground">({parts.join(', ')})</span>
+         {ride.cardFee && <span className='ml-2 text-xs text-muted-foreground'>(+ {formatCurrency(ride.cardFee)} fee)</span>}
+      </div>
+    );
   }
 
   return (
@@ -92,6 +128,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             <span className="font-medium">From:</span>
             <span className="ml-2">{ride.pickup.name}</span>
           </div>
+           {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
+             <div key={index} className="flex items-start pl-2">
+                <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                <span className="font-medium">Stop:</span>
+                <span className="ml-2">{stop.name}</span>
+            </div>
+           ))}
           <div className="flex items-start">
             <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
             <span className="font-medium">To:</span>
@@ -104,20 +147,27 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               <span className="ml-2">{assignedDriver.name}</span>
             </div>
           )}
-          {ride.movingFee && (
-            <div className="flex items-center pt-1 text-sm text-muted-foreground">
-              <Package className="mr-2 h-4 w-4 text-primary" />
-              <span className="font-medium">Moving Fee</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm text-muted-foreground">
+            {ride.movingFee && (
+                <div className="flex items-center">
+                    <Package className="mr-2 h-4 w-4 text-primary" />
+                    <span className="font-medium">Moving Fee</span>
+                </div>
+            )}
+             {ride.isReturnTrip && (
+                <div className="flex items-center">
+                    <Repeat className="mr-2 h-4 w-4 text-primary" />
+                    <span className="font-medium">Return Trip</span>
+                </div>
+            )}
+          </div>
+          {ride.notes && (
+            <div className="flex items-start pt-1 text-sm text-muted-foreground">
+              <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
+              <span className="italic">{ride.notes}</span>
             </div>
           )}
-           {ride.fare !== undefined && (
-            <div className="flex items-center pt-1 text-sm">
-              <DollarSign className="mr-2 h-4 w-4 text-green-600" />
-              <span className="font-medium">Fare:</span>
-              <span className="ml-2">{formatCurrency(ride.fare)} ({ride.paymentMethod})</span>
-              {ride.cardFee && <span className='ml-2 text-xs text-muted-foreground'>(+ {formatCurrency(ride.cardFee)} fee)</span>}
-            </div>
-          )}
+          {getPaymentSummary()}
         </CardContent>
         <CardFooter className="flex justify-between items-center">
           <div className="flex items-center text-xs text-muted-foreground">
@@ -125,7 +175,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
           </div>
           <div className="flex gap-2">
-            {ride.status === 'completed' && ride.fare === undefined && (
+            {!['completed', 'cancelled'].includes(ride.status) && (
               <Button variant="outline" size="sm" onClick={() => setIsFareModalOpen(true)}>
                 <DollarSign className="h-4 w-4 mr-2" /> Set Fare
               </Button>
@@ -194,49 +244,58 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           <DialogHeader>
             <DialogTitle>Set Final Fare</DialogTitle>
             <DialogDescription>
-              Enter the total fare and payment method for ride #{ride.id.split('-').pop()}.
+              Enter the fare and payment method(s) for ride #{ride.id.split('-').pop()}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="fare-amount">Fare Amount (USD)</Label>
-              <Input
-                id="fare-amount"
-                type="number"
-                placeholder="e.g., 25.50"
-                value={fareAmount || ''}
-                onChange={(e) => setFareAmount(parseFloat(e.target.value))}
-              />
+              <Label>Payment Details</Label>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1">
+                    <Label htmlFor="fare-cash">Cash Amount</Label>
+                    <Input
+                        id="fare-cash"
+                        type="number"
+                        placeholder="e.g., 20.00"
+                        value={fareCash || ''}
+                        onChange={(e) => setFareCash(parseFloat(e.target.value) || undefined)}
+                    />
+                 </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="fare-card">Card Amount</Label>
+                    <Input
+                        id="fare-card"
+                        type="number"
+                        placeholder="e.g., 25.50"
+                        value={fareCard || ''}
+                        onChange={(e) => setFareCard(parseFloat(e.target.value) || undefined)}
+                    />
+                 </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="fare-check">Check Amount</Label>
+                    <Input
+                        id="fare-check"
+                        type="number"
+                        placeholder="e.g., 50.00"
+                        value={fareCheck || ''}
+                        onChange={(e) => setFareCheck(parseFloat(e.target.value) || undefined)}
+                    />
+                 </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Payment Method</Label>
-              <RadioGroup
-                value={paymentMethod}
-                onValueChange={(value: PaymentMethod) => setPaymentMethod(value)}
-                className="flex items-center space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cash" id="cash" />
-                  <Label htmlFor="cash">Cash</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="card" id="card" />
-                  <Label htmlFor="card">Card</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="check" id="check" />
-                  <Label htmlFor="check">Check</Label>
-                </div>
-              </RadioGroup>
+
+            <div className="text-lg font-bold text-right">
+                Total: {formatCurrency(totalFare)}
             </div>
-            {paymentMethod === 'card' && fareAmount && (
+
+            {fareCard && fareCard > 0 && (
               <p className="text-sm text-muted-foreground">
-                A ${Math.floor(fareAmount / 40)} card processing fee will be applied.
+                A ${Math.floor(fareCard / 40)} card processing fee will be applied to the card portion.
               </p>
             )}
           </div>
           <DialogFooter>
-            <Button onClick={handleSetFare} disabled={!fareAmount || !paymentMethod}>
+            <Button onClick={handleSetFare} disabled={totalFare <= 0}>
               Save Fare
             </Button>
           </DialogFooter>

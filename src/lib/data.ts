@@ -1,3 +1,4 @@
+
 import type { Driver, Ride } from './types';
 
 export const initialDrivers: Driver[] = [
@@ -20,6 +21,7 @@ export const initialRides: Ride[] = [
     isNew: true,
     passengerCount: 1,
     movingFee: false,
+    notes: 'Passenger has a small dog.',
   },
   {
     id: 'ride-2',
@@ -43,6 +45,8 @@ export const initialRides: Ride[] = [
     requestTime: new Date(Date.now() - 10 * 60 * 1000),
     passengerCount: 1,
     movingFee: true,
+    isReturnTrip: true,
+    stops: [{ name: 'Grocery Store', coords: { x: 50, y: 50 } }],
   },
     {
     id: 'ride-4',
@@ -66,8 +70,8 @@ export const initialRides: Ride[] = [
     completionTime: new Date(Date.now() - 40 * 60 * 1000),
     passengerCount: 1,
     movingFee: false,
-    fare: 75.50,
-    paymentMethod: 'card',
+    totalFare: 75.50,
+    paymentDetails: { card: 75.50 },
     cardFee: 1,
   },
   {

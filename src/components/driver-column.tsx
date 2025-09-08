@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
+import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,7 @@ type DriverColumnProps = {
   allDrivers: Driver[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, fare: number, paymentMethod: PaymentMethod) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
 };
 

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
+import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
 import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -213,15 +213,17 @@ export function DispatchDashboard() {
     });
   };
 
-  const handleSetFare = (rideId: string, fare: number, paymentMethod: PaymentMethod) => {
+  const handleSetFare = (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => {
     setRides(prevRides =>
       prevRides.map(ride => {
         if (ride.id !== rideId) return ride;
+        
         let cardFee: number | undefined;
-        if (paymentMethod === 'card') {
-          cardFee = Math.floor(fare / 40);
+        if (details.paymentDetails.card && details.paymentDetails.card > 0) {
+            cardFee = Math.floor(details.paymentDetails.card / 40);
         }
-        return { ...ride, fare, paymentMethod, cardFee };
+
+        return { ...ride, totalFare: details.totalFare, paymentDetails: details.paymentDetails, cardFee };
       })
     );
   };
