@@ -248,7 +248,11 @@ function DispatchDashboardUI() {
      <DragDropContext onDragEnd={onDragEnd}>
         <div 
           className="flex flex-1 gap-4 overflow-x-auto pb-4 transition-transform origin-top-left"
-          style={{ transform: `scale(${zoom})` }}
+          style={{ 
+            transform: `scale(${zoom})`,
+            width: `${100 / zoom}%`,
+            height: `${100 / zoom}%`,
+           }}
         >
             {/* Waiting Column */}
             <StrictModeDroppable droppableId="waiting">
