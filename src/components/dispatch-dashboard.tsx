@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
 import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
@@ -18,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StrictModeDroppable } from './strict-mode-droppable';
 import { Sidebar } from './sidebar';
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 
 
 export function DispatchDashboard() {
@@ -26,13 +27,40 @@ export function DispatchDashboard() {
   const [time, setTime] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLogCallOpen, setIsLogCallOpen] = useState(false);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>()
+  const [activeTab, setActiveTab] = useState('waiting');
   const isMobile = useIsMobile();
+  
+  const activeDrivers = drivers.filter(d => d.status !== 'offline');
 
   useEffect(() => {
     setIsClient(true);
     const timer = setInterval(() => setTime(new Date()), 1000 * 60);
     return () => clearInterval(timer);
   }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    const tabIndex = ['waiting', ...activeDrivers.map(d => d.id)].indexOf(value);
+    if (carouselApi && tabIndex !== -1) {
+      carouselApi.scrollTo(tabIndex);
+    }
+  }, [carouselApi, activeDrivers]);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    
+    const onSelect = () => {
+      const selectedIndex = carouselApi.selectedScrollSnap();
+      const newTab = ['waiting', ...activeDrivers.map(d => d.id)][selectedIndex];
+      setActiveTab(newTab);
+    };
+
+    carouselApi.on("select", onSelect);
+    return () => {
+      carouselApi.off("select", onSelect);
+    };
+  }, [carouselApi, activeDrivers]);
 
   useEffect(() => {
     const movementInterval = setInterval(() => {
@@ -94,12 +122,15 @@ export function DispatchDashboard() {
         setDrivers(prevDrivers => {
             const newDrivers = [...prevDrivers];
             
-            // Set new driver to 'on-ride'
-            const newDriverIndex = newDrivers.findIndex(d => d.id === driverId);
+            // Set new driver to 'on-ride' if they are not already
+             const newDriverIndex = newDrivers.findIndex(d => d.id === driverId);
             if (newDriverIndex !== -1) {
-                newDrivers[newDriverIndex] = { ...newDrivers[newDriverIndex], status: 'on-ride'};
+              const hasOtherRides = newRides.some(r => r.driverId === driverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
+              if (!hasOtherRides) {
+                 newDrivers[newDriverIndex] = { ...newDrivers[newDriverIndex], status: 'on-ride' };
+              }
             }
-
+            
             // If ride was reassigned, check if old driver becomes available
             if (originalDriverId && originalDriverId !== driverId) {
                 const otherRidesForOldDriver = newRides.filter(r => r.driverId === originalDriverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
@@ -199,7 +230,6 @@ export function DispatchDashboard() {
   };
   
   const pendingRides = rides.filter(r => r.status === 'pending');
-  const activeDrivers = drivers.filter(d => d.status !== 'offline');
 
   const renderDesktopView = () => (
      <DragDropContext onDragEnd={onDragEnd}>
@@ -269,54 +299,58 @@ export function DispatchDashboard() {
 
   const renderMobileView = () => {
     return (
-    <Tabs defaultValue="waiting" className="w-full flex flex-col flex-1 min-h-0">
-      <TabsList 
-        className="grid w-full"
-        style={{ gridTemplateColumns: `repeat(${activeDrivers.length + 1}, minmax(0, 1fr))` }}
-      >
-        <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
-        {activeDrivers.map(driver => (
-          <TabsTrigger key={driver.id} value={driver.id}>{driver.name.split(' ')[0]}</TabsTrigger>
-        ))}
-      </TabsList>
-      
-      {/* Waiting Tab */}
-      <TabsContent value="waiting" className="flex-1 overflow-y-auto mt-4">
-        <div className="space-y-4">
-          {pendingRides.map((ride) => (
-            <RideCard
-              key={ride.id}
-              ride={ride}
-              drivers={drivers}
-              onAssignDriver={handleAssignDriver}
-              onChangeStatus={handleChangeStatus}
-              onSetFare={handleSetFare}
-              onUnassignDriver={handleUnassignDriver}
-            />
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col flex-1 min-h-0">
+        <TabsList
+          className="grid w-full"
+          style={{ gridTemplateColumns: `repeat(${activeDrivers.length + 1}, minmax(0, 1fr))` }}
+        >
+          <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
+          {activeDrivers.map(driver => (
+            <TabsTrigger key={driver.id} value={driver.id}>{driver.name.split(' ')[0]}</TabsTrigger>
           ))}
-          {pendingRides.length === 0 && (
-            <div className="flex h-full items-center justify-center text-muted-foreground pt-10">
-                <p>No pending rides.</p>
-            </div>
-          )}
-        </div>
-      </TabsContent>
+        </TabsList>
+        
+        <Carousel setApi={setCarouselApi} className="flex-1 w-full mt-4">
+          <CarouselContent>
+            {/* Waiting Tab */}
+            <CarouselItem>
+              <div className="space-y-4 h-full overflow-y-auto">
+                {pendingRides.map((ride) => (
+                  <RideCard
+                    key={ride.id}
+                    ride={ride}
+                    drivers={drivers}
+                    onAssignDriver={handleAssignDriver}
+                    onChangeStatus={handleChangeStatus}
+                    onSetFare={handleSetFare}
+                    onUnassignDriver={handleUnassignDriver}
+                  />
+                ))}
+                {pendingRides.length === 0 && (
+                  <div className="flex h-full items-center justify-center text-muted-foreground pt-10">
+                      <p>No pending rides.</p>
+                  </div>
+                )}
+              </div>
+            </CarouselItem>
 
-      {/* Driver Tabs */}
-      {activeDrivers.map(driver => (
-        <TabsContent key={driver.id} value={driver.id} className="flex-1 overflow-y-auto mt-4">
-            <DriverColumn
-                driver={driver}
-                rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
-                allDrivers={drivers}
-                onAssignDriver={handleAssignDriver}
-                onChangeStatus={handleChangeStatus}
-                onSetFare={handleSetFare}
-                onUnassignDriver={handleUnassignDriver}
-              />
-        </TabsContent>
-      ))}
-    </Tabs>
+            {/* Driver Tabs */}
+            {activeDrivers.map(driver => (
+              <CarouselItem key={driver.id}>
+                  <DriverColumn
+                      driver={driver}
+                      rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                      allDrivers={drivers}
+                      onAssignDriver={handleAssignDriver}
+                      onChangeStatus={handleChangeStatus}
+                      onSetFare={handleSetFare}
+                      onUnassignDriver={handleUnassignDriver}
+                    />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </Tabs>
   )};
 
   return (
