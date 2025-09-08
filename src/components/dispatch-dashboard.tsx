@@ -412,8 +412,8 @@ function DispatchDashboardUI() {
           ))}
         </TabsList>
         
-         <div className="flex-1 mt-4 overflow-hidden">
-            <Carousel setApi={setCarouselApi} className="h-full" opts={{ dragFree: true }}>
+        <div className="flex-1 mt-4 overflow-hidden">
+            <Carousel setApi={setCarouselApi} className="h-full">
               <CarouselContent className="h-full">
                 {/* Waiting Tab */}
                 <CarouselItem className="overflow-y-auto">
@@ -567,14 +567,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    
-
-    
-
-
-
-
-
 
     

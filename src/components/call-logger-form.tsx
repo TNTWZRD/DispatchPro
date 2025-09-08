@@ -355,3 +355,5 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
     </Card>
   );
 }
+
+    
