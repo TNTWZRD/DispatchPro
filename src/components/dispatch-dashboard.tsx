@@ -26,7 +26,8 @@ export function DispatchDashboard() {
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
   const [time, setTime] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [isLogCallOpen, setIsLogCallOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const isMobile = useIsMobile();
@@ -92,11 +93,17 @@ export function DispatchDashboard() {
       isNew: true,
     };
     setRides(prev => [newRide, ...prev]);
-    setIsLogCallOpen(false);
+    setIsFormOpen(false);
     setTimeout(() => {
       setRides(prev => prev.map(r => r.id === newRide.id ? { ...r, isNew: false } : r));
     }, 5000);
   };
+  
+  const handleEditRide = (updatedRide: Ride) => {
+    setRides(prev => prev.map(r => r.id === updatedRide.id ? updatedRide : r));
+    setEditingRide(null);
+    setIsFormOpen(false);
+  }
 
   const handleAssignDriver = (rideId: string, driverId: string) => {
     const rideToAssign = rides.find(r => r.id === rideId);
@@ -228,6 +235,16 @@ export function DispatchDashboard() {
     );
   };
   
+  const handleOpenEdit = (ride: Ride) => {
+    setEditingRide(ride);
+    setIsFormOpen(true);
+  }
+
+  const handleOpenLogNew = () => {
+    setEditingRide(null);
+    setIsFormOpen(true);
+  }
+  
   const pendingRides = rides.filter(r => r.status === 'pending');
 
   const renderDesktopView = () => (
@@ -263,6 +280,7 @@ export function DispatchDashboard() {
                               onChangeStatus={handleChangeStatus}
                               onSetFare={handleSetFare}
                               onUnassignDriver={handleUnassignDriver}
+                              onEdit={handleOpenEdit}
                             />
                           </div>
                         )}
@@ -290,6 +308,7 @@ export function DispatchDashboard() {
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
               onUnassignDriver={handleUnassignDriver}
+              onEditRide={handleOpenEdit}
             />
           ))}
         </div>
@@ -323,6 +342,7 @@ export function DispatchDashboard() {
                     onChangeStatus={handleChangeStatus}
                     onSetFare={handleSetFare}
                     onUnassignDriver={handleUnassignDriver}
+                    onEdit={handleOpenEdit}
                   />
                 ))}
                 {pendingRides.length === 0 && (
@@ -344,6 +364,7 @@ export function DispatchDashboard() {
                       onChangeStatus={handleChangeStatus}
                       onSetFare={handleSetFare}
                       onUnassignDriver={handleUnassignDriver}
+                      onEditRide={handleOpenEdit}
                     />
               </CarouselItem>
             ))}
@@ -360,18 +381,22 @@ export function DispatchDashboard() {
           DispatchPro
         </h1>
         <div className="ml-auto flex items-center gap-4">
-          <div className="text-sm text-muted-foreground hidden md:block">
+           <div className="text-sm text-muted-foreground hidden md:block">
             {isClient && time && <>{time.toLocaleDateString()} {time.toLocaleTimeString()}</>}
           </div>
-          <Dialog open={isLogCallOpen} onOpenChange={setIsLogCallOpen}>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button size={isMobile ? 'sm' : 'default'}>
+              <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
                 <PlusCircle />
                 Log New Call
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-xl">
-              <CallLoggerForm onAddRide={handleAddRide} />
+              <CallLoggerForm 
+                onAddRide={handleAddRide} 
+                onEditRide={handleEditRide}
+                rideToEdit={editingRide}
+              />
             </DialogContent>
           </Dialog>
         </div>

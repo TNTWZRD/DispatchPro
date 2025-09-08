@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -23,6 +23,7 @@ type RideCardProps = {
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
+  onEdit: (ride: Ride) => void;
 };
 
 const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }> = {
@@ -33,7 +34,7 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
   cancelled: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
 };
 
-export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver }: RideCardProps) {
+export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
@@ -194,6 +195,10 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => onEdit(ride)}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit Ride
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                    {ride.status === 'pending' && isMobile && (
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>

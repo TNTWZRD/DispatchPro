@@ -1,7 +1,8 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import type { Ride } from '@/lib/types';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Calendar as CalendarIcon, Trash2, MapPin } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Trash2, MapPin, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -33,21 +34,14 @@ const formSchema = z.object({
 type CallLoggerFormValues = z.infer<typeof formSchema>;
 
 type CallLoggerFormProps = {
-  onAddRide: (rideData: {
-    pickup: { name: string; coords: { x: number; y: number } };
-    totalFare: number;
-    passengerPhone?: string;
-    dropoff?: { name: string; coords: { x: number; y: number } };
-    stops?: { name: string; coords: { x: number; y: number } }[];
-    passengerCount?: number;
-    movingFee: boolean;
-    isReturnTrip: boolean;
-    notes?: string;
-    scheduledTime?: Date;
-  }) => void;
+  rideToEdit?: Ride | null;
+  onAddRide: (rideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'requestTime' | 'isNew'>) => void;
+  onEditRide: (rideData: Ride) => void;
 };
 
-export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
+export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
+  const isEditMode = !!rideToEdit;
+  
   const form = useForm<CallLoggerFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -62,6 +56,25 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
       notes: '',
     },
   });
+  
+  useEffect(() => {
+    if (isEditMode) {
+      form.reset({
+        pickupLocation: rideToEdit.pickup.name,
+        totalFare: rideToEdit.totalFare,
+        passengerPhone: rideToEdit.passengerPhone || '',
+        dropoffLocation: rideToEdit.dropoff?.name || '',
+        stops: rideToEdit.stops?.map(s => ({ name: s.name })) || [],
+        passengerCount: rideToEdit.passengerCount,
+        movingFee: rideToEdit.movingFee,
+        isReturnTrip: rideToEdit.isReturnTrip,
+        notes: rideToEdit.notes,
+        scheduledTime: rideToEdit.scheduledTime,
+      });
+    } else {
+      form.reset(); // Reset to default for new entries
+    }
+  }, [rideToEdit, isEditMode, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -69,27 +82,41 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
   });
 
   function onSubmit(values: CallLoggerFormValues) {
-    const pickupCoords = { x: Math.random() * 100, y: Math.random() * 100 };
-    
-    onAddRide({
-      pickup: { name: values.pickupLocation, coords: pickupCoords },
-      totalFare: values.totalFare,
-      passengerPhone: values.passengerPhone,
-      dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
-      stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
-      passengerCount: values.passengerCount,
-      movingFee: values.movingFee,
-      isReturnTrip: values.isReturnTrip,
-      notes: values.notes,
-      scheduledTime: values.scheduledTime,
-    });
+    if (isEditMode) {
+      onEditRide({
+        ...rideToEdit,
+        pickup: { ...rideToEdit.pickup, name: values.pickupLocation },
+        totalFare: values.totalFare,
+        passengerPhone: values.passengerPhone,
+        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: rideToEdit.dropoff?.coords || { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
+        stops: values.stops?.map((stop, i) => ({ name: stop.name, coords: rideToEdit.stops?.[i]?.coords || { x: Math.random() * 100, y: Math.random() * 100 } })),
+        passengerCount: values.passengerCount,
+        movingFee: values.movingFee,
+        isReturnTrip: values.isReturnTrip,
+        notes: values.notes,
+        scheduledTime: values.scheduledTime,
+      });
+    } else {
+      onAddRide({
+        pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
+        totalFare: values.totalFare,
+        passengerPhone: values.passengerPhone,
+        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
+        stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
+        passengerCount: values.passengerCount,
+        movingFee: values.movingFee,
+        isReturnTrip: values.isReturnTrip,
+        notes: values.notes,
+        scheduledTime: values.scheduledTime,
+      });
+    }
     form.reset();
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Log New Call</CardTitle>
+        <CardTitle>{isEditMode ? 'Edit Ride Details' : 'Log New Call'}</CardTitle>
       </CardHeader>
       <CardContent className="max-h-[70vh] overflow-y-auto pr-4">
         <Form {...form}>
@@ -288,7 +315,8 @@ export function CallLoggerForm({ onAddRide }: CallLoggerFormProps) {
             </div>
             
             <Button type="submit" className="w-full">
-              <Plus className="mr-2 h-4 w-4" /> Log Ride Request
+              {isEditMode ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+              {isEditMode ? 'Update Ride' : 'Log Ride Request'}
             </Button>
           </form>
         </Form>

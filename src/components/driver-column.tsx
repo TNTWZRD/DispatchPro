@@ -19,9 +19,10 @@ type DriverColumnProps = {
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
+  onEditRide: (ride: Ride) => void;
 };
 
-export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver }: DriverColumnProps) {
+export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide }: DriverColumnProps) {
   const isAvailable = driver.status === 'available';
   const isMobile = useIsMobile();
   const hasRides = rides.length > 0;
@@ -57,6 +58,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
               onChangeStatus={onChangeStatus}
               onSetFare={onSetFare}
               onUnassignDriver={onUnassignDriver}
+              onEdit={onEditRide}
             />
           ))
         ) : (
