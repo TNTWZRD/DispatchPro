@@ -15,6 +15,8 @@ import { DispatchSuggester } from './dispatch-suggester';
 import { Truck, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function DispatchDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
@@ -22,6 +24,7 @@ export function DispatchDashboard() {
   const [time, setTime] = useState(new Date());
   const [isClient, setIsClient] = useState(false);
   const [isLogCallOpen, setIsLogCallOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setIsClient(true);
@@ -156,20 +159,130 @@ export function DispatchDashboard() {
   const pendingRides = rides.filter(r => r.status === 'pending');
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
 
+  const renderDesktopView = () => (
+     <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
+            {/* Waiting Column */}
+            <Droppable droppableId="waiting">
+              {(provided, snapshot) => (
+                <Card
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={cn(
+                    "w-80 shrink-0 flex flex-col",
+                    snapshot.isDraggingOver && "bg-accent/20"
+                  )}
+                >
+                  <CardHeader>
+                    <CardTitle>Waiting ({pendingRides.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-y-auto space-y-4">
+                    {pendingRides.map((ride, index) => (
+                      <Draggable key={ride.id} draggableId={ride.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <RideCard
+                              ride={ride}
+                              drivers={drivers}
+                              onAssignDriver={handleAssignDriver}
+                              onChangeStatus={handleChangeStatus}
+                              onSetFare={handleSetFare}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                      {pendingRides.length === 0 && (
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                            <p>No pending rides.</p>
+                        </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </Droppable>
+
+          {/* Driver Columns */}
+          {activeDrivers.map(driver => (
+            <DriverColumn
+              key={driver.id}
+              driver={driver}
+              ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+              allDrivers={drivers}
+              onAssignDriver={handleAssignDriver}
+              onChangeStatus={handleChangeStatus}
+              onSetFare={handleSetFare}
+            />
+          ))}
+        </div>
+      </DragDropContext>
+  );
+
+  const renderMobileView = () => (
+    <Tabs defaultValue="waiting" className="w-full flex flex-col flex-1 min-h-0">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
+        {activeDrivers.slice(0, 2).map(driver => (
+          <TabsTrigger key={driver.id} value={driver.id}>{driver.name.split(' ')[0]}</TabsTrigger>
+        ))}
+      </TabsList>
+      
+      {/* Waiting Tab */}
+      <TabsContent value="waiting" className="flex-1 overflow-y-auto mt-4">
+        <div className="space-y-4">
+          {pendingRides.map((ride) => (
+            <RideCard
+              key={ride.id}
+              ride={ride}
+              drivers={drivers}
+              onAssignDriver={handleAssignDriver}
+              onChangeStatus={handleChangeStatus}
+              onSetFare={handleSetFare}
+            />
+          ))}
+          {pendingRides.length === 0 && (
+            <div className="flex h-full items-center justify-center text-muted-foreground pt-10">
+                <p>No pending rides.</p>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Driver Tabs */}
+      {activeDrivers.map(driver => (
+        <TabsContent key={driver.id} value={driver.id} className="flex-1 overflow-y-auto mt-4">
+            <DriverColumn
+                driver={driver}
+                ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                allDrivers={drivers}
+                onAssignDriver={handleAssignDriver}
+                onChangeStatus={handleChangeStatus}
+                onSetFare={handleSetFare}
+              />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+
   return (
     <div className="flex h-screen flex-col bg-secondary/50">
       <header className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
         <Truck className="h-6 w-6 text-primary" />
-        <h1 className="ml-3 text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="ml-3 text-xl md:text-2xl font-bold tracking-tight text-foreground">
           DispatchPro
         </h1>
         <div className="ml-auto flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground hidden md:block">
             {time.toLocaleDateString()} {time.toLocaleTimeString()}
           </div>
           <Dialog open={isLogCallOpen} onOpenChange={setIsLogCallOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button size={isMobile ? 'sm' : 'default'}>
                 <PlusCircle />
                 Log New Call
               </Button>
@@ -192,71 +305,11 @@ export function DispatchDashboard() {
         </div>
         
         <div className='flex-1 flex flex-col min-w-0'>
-          {isClient && (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
-                  {/* Waiting Column */}
-                  <Droppable droppableId="waiting">
-                    {(provided, snapshot) => (
-                      <Card
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={cn(
-                          "w-80 shrink-0 flex flex-col",
-                          snapshot.isDraggingOver && "bg-accent/20"
-                        )}
-                      >
-                        <CardHeader>
-                          <CardTitle>Waiting ({pendingRides.length})</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto space-y-4">
-                          {pendingRides.map((ride, index) => (
-                            <Draggable key={ride.id} draggableId={ride.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                >
-                                  <RideCard
-                                    ride={ride}
-                                    drivers={drivers}
-                                    onAssignDriver={handleAssignDriver}
-                                    onChangeStatus={handleChangeStatus}
-                                    onSetFare={handleSetFare}
-                                  />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                           {pendingRides.length === 0 && (
-                              <div className="flex h-full items-center justify-center text-muted-foreground">
-                                  <p>No pending rides.</p>
-                              </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-                  </Droppable>
-
-                {/* Driver Columns */}
-                {activeDrivers.map(driver => (
-                  <DriverColumn
-                    key={driver.id}
-                    driver={driver}
-                    ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
-                    allDrivers={drivers}
-                    onAssignDriver={handleAssignDriver}
-                    onChangeStatus={handleChangeStatus}
-                    onSetFare={handleSetFare}
-                  />
-                ))}
-              </div>
-            </DragDropContext>
-          )}
+          {isClient && (isMobile ? renderMobileView() : renderDesktopView())}
         </div>
       </main>
     </div>
   );
 }
+
+    

@@ -6,7 +6,7 @@ import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 type RideCardProps = {
   ride: Ride;
@@ -35,8 +37,10 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [fareAmount, setFareAmount] = useState<number | undefined>(ride.fare);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | undefined>(ride.paymentMethod);
+  const isMobile = useIsMobile();
 
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
+  const availableDrivers = drivers.filter(d => d.status === 'available');
 
   const getStatusBadge = (status: RideStatus) => {
     const config = statusConfig[status];
@@ -133,6 +137,21 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
+                   {isMobile && ['pending', 'assigned'].includes(ride.status) && (
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            {availableDrivers.map(driver => (
+                              <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
+                                {driver.name}
+                              </DropdownMenuItem>
+                            ))}
+                             {availableDrivers.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                   )}
                   {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
                   {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
                   {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
@@ -201,3 +220,5 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     </>
   );
 }
+
+    
