@@ -126,9 +126,15 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         <div className="p-3">
           {/* Header Row */}
           <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-base">#{ride.id.split('-')[1]}</span>
               {ride.status !== 'pending' && getStatusBadge(ride.status)}
+              {isCondensed && ride.scheduledTime && (
+                <div className="flex items-center text-amber-600 font-medium text-xs">
+                  <Calendar className="mr-1" />
+                  <span>{format(ride.scheduledTime, "p")}</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
@@ -202,7 +208,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className={cn("grid gap-x-4", isCondensed ? "grid-cols-1" : "grid-cols-2")}>
             {/* Left Column */}
             <div className="space-y-1.5">
               <div className="flex items-start">
@@ -223,9 +229,9 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               )}
             </div>
             {/* Right Column */}
-            <div className="space-y-1.5 text-xs">
-              {!isCondensed && <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>}
-              {!isCondensed && ride.passengerPhone && (
+            <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
+              <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount || 1} passenger(s)</div>
+              {ride.passengerPhone && (
                 <div className="flex items-center">
                     <Phone className="mr-1.5" />
                     <span>{ride.passengerPhone}</span>
