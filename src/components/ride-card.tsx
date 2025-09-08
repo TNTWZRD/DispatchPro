@@ -15,7 +15,6 @@ type RideCardProps = {
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onEstimateEta: (ride: Ride) => void;
-  onEstimateFare: (ride: Ride) => void;
 };
 
 const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }> = {
@@ -26,7 +25,7 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
   cancelled: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
 };
 
-export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onEstimateEta, onEstimateFare }: RideCardProps) {
+export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onEstimateEta }: RideCardProps) {
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
   const availableDrivers = drivers.filter(d => d.status === 'available');
 
@@ -79,9 +78,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onEsti
         <div className="flex gap-2">
            <Button variant="outline" size="sm" onClick={() => onEstimateEta(ride)}>
             <Bot className="h-4 w-4 mr-2" /> ETA
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => onEstimateFare(ride)}>
-            <DollarSign className="h-4 w-4 mr-2" /> Fare
           </Button>
 
           {ride.status === 'pending' && (
