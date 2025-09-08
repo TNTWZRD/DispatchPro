@@ -1,5 +1,5 @@
 
-import type { Driver, Ride } from './types';
+import type { Ride, Driver } from './types';
 
 export const initialDrivers: Driver[] = [
   { id: 'driver-1', name: 'John Doe', vehicle: 'Toyota Prius - ABC-123', rating: 4.8, status: 'available', location: { x: 20, y: 30 } },
@@ -36,6 +36,7 @@ export const initialRides: Ride[] = [
     passengerCount: 2,
     movingFee: false,
     totalFare: 30,
+    isPrepaid: true,
   },
   {
     id: 'ride-3',
@@ -75,8 +76,8 @@ export const initialRides: Ride[] = [
     passengerCount: 1,
     movingFee: false,
     totalFare: 75.50,
-    paymentDetails: { card: 75.50 },
-    cardFee: 1,
+    paymentDetails: { card: 75.50, tip: 10 },
+    cardFee: 2,
   },
   {
     id: 'ride-6',

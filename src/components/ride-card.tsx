@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,7 +21,7 @@ type RideCardProps = {
   drivers: Driver[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEdit: (ride: Ride) => void;
 };
@@ -39,15 +39,20 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
   const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check);
+  const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip);
   
   const isMobile = useIsMobile();
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
-  const cardFee = useMemo(() => {
-    if (!fareCard || fareCard <= 0) return 0;
-    return Math.floor(fareCard / 40);
+  const cardPaymentAmount = useMemo(() => {
+    return (fareCard || 0);
   }, [fareCard]);
+  
+  const cardFee = useMemo(() => {
+    if (!cardPaymentAmount || cardPaymentAmount <= 0) return 0;
+    return Math.floor(cardPaymentAmount / 40);
+  }, [cardPaymentAmount]);
 
   const totalPayment = useMemo(() => {
     return (fareCash || 0) + (fareCard || 0) + (fareCheck || 0);
@@ -57,6 +62,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     setFareCash(ride.paymentDetails?.cash);
     setFareCard(ride.paymentDetails?.card);
     setFareCheck(ride.paymentDetails?.check);
+    setFareTip(ride.paymentDetails?.tip);
   }, [ride.paymentDetails]);
 
 
@@ -77,6 +83,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         cash: fareCash || undefined,
         card: fareCard || undefined,
         check: fareCheck || undefined,
+        tip: fareTip || undefined,
       }
     });
     setIsFareModalOpen(false);
@@ -92,6 +99,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     if (ride.paymentDetails?.cash) parts.push(`Cash: ${formatCurrency(ride.paymentDetails.cash)}`);
     if (ride.paymentDetails?.card) parts.push(`Card: ${formatCurrency(ride.paymentDetails.card)}`);
     if (ride.paymentDetails?.check) parts.push(`Check: ${formatCurrency(ride.paymentDetails.check)}`);
+    if (ride.paymentDetails?.tip) parts.push(`Tip: ${formatCurrency(ride.paymentDetails.tip)}`);
 
     return (
         ride.totalFare ? (
@@ -113,7 +121,10 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="h-5 w-5" /> {ride.passengerCount || 'N/A'} Passenger(s)
             </CardTitle>
-            {ride.status !== 'pending' && getStatusBadge(ride.status)}
+             <div className="flex items-center gap-2">
+               {ride.isPrepaid && <Badge variant="secondary">Prepaid</Badge>}
+               {ride.status !== 'pending' && getStatusBadge(ride.status)}
+             </div>
           </div>
            {ride.passengerPhone && (
             <div className="flex items-center text-sm text-muted-foreground">
@@ -308,6 +319,16 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                         onChange={(e) => setFareCheck(parseFloat(e.target.value) || undefined)}
                     />
                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="fare-tip">Tip (Card)</Label>
+                    <Input
+                        id="fare-tip"
+                        type="number"
+                        placeholder="e.g., 5.00"
+                        value={fareTip || ''}
+                        onChange={(e) => setFareTip(parseFloat(e.target.value) || undefined)}
+                    />
+                 </div>
               </div>
             </div>
 
@@ -320,6 +341,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                     <span>Subtotal:</span>
                     <span>{formatCurrency(totalPayment)}</span>
                 </div>
+                 {fareTip && fareTip > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Tip:</span>
+                        <span>+ {formatCurrency(fareTip)}</span>
+                    </div>
+                )}
                 {cardFee > 0 && (
                     <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Card Fee:</span>
@@ -328,16 +355,9 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 )}
                 <hr className="my-2" />
                 <div className="flex justify-between text-lg font-bold">
-                    <span>Total Charged:</span>
-                    <span>{formatCurrency(totalPayment + cardFee)}</span>
+                    <span>Total Charged to Customer:</span>
+                    <span>{formatCurrency(totalPayment + (fareTip || 0) + cardFee)}</span>
                 </div>
-                 {totalPayment > (ride.totalFare || 0) && (
-                    <div className="flex justify-between text-sm text-green-600">
-                        <span>Tip:</span>
-                        <span>{formatCurrency(totalPayment - (ride.totalFare || 0))}</span>
-                    </div>
-                )}
-
             </div>
             
             {cardFee > 0 && (

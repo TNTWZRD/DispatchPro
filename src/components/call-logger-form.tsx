@@ -28,6 +28,7 @@ const formSchema = z.object({
   scheduledTime: z.date().optional(),
   movingFee: z.boolean().default(false),
   isReturnTrip: z.boolean().default(false),
+  isPrepaid: z.boolean().default(false),
   notes: z.string().optional(),
 });
 
@@ -53,6 +54,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       passengerCount: 1,
       movingFee: false,
       isReturnTrip: false,
+      isPrepaid: false,
       notes: '',
     },
   });
@@ -68,6 +70,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         passengerCount: rideToEdit.passengerCount,
         movingFee: rideToEdit.movingFee,
         isReturnTrip: rideToEdit.isReturnTrip,
+        isPrepaid: rideToEdit.isPrepaid,
         notes: rideToEdit.notes,
         scheduledTime: rideToEdit.scheduledTime,
       });
@@ -82,33 +85,30 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
   });
 
   function onSubmit(values: CallLoggerFormValues) {
+    const baseRideData = {
+      pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
+      totalFare: values.totalFare,
+      passengerPhone: values.passengerPhone,
+      dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
+      stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
+      passengerCount: values.passengerCount,
+      movingFee: values.movingFee,
+      isReturnTrip: values.isReturnTrip,
+      isPrepaid: values.isPrepaid,
+      notes: values.notes,
+      scheduledTime: values.scheduledTime,
+    };
+    
     if (isEditMode) {
       onEditRide({
         ...rideToEdit,
+        ...baseRideData,
         pickup: { ...rideToEdit.pickup, name: values.pickupLocation },
-        totalFare: values.totalFare,
-        passengerPhone: values.passengerPhone,
         dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: rideToEdit.dropoff?.coords || { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
         stops: values.stops?.map((stop, i) => ({ name: stop.name, coords: rideToEdit.stops?.[i]?.coords || { x: Math.random() * 100, y: Math.random() * 100 } })),
-        passengerCount: values.passengerCount,
-        movingFee: values.movingFee,
-        isReturnTrip: values.isReturnTrip,
-        notes: values.notes,
-        scheduledTime: values.scheduledTime,
       });
     } else {
-      onAddRide({
-        pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
-        totalFare: values.totalFare,
-        passengerPhone: values.passengerPhone,
-        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
-        stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
-        passengerCount: values.passengerCount,
-        movingFee: values.movingFee,
-        isReturnTrip: values.isReturnTrip,
-        notes: values.notes,
-        scheduledTime: values.scheduledTime,
-      });
+      onAddRide(baseRideData);
     }
     form.reset();
   }
@@ -313,6 +313,28 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 )}
                 />
             </div>
+             <FormField
+              control={form.control}
+              name="isPrepaid"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Mark as Prepaid
+                    </FormLabel>
+                    <FormDescription>
+                        Indicates the fare has been paid in advance.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
             
             <Button type="submit" className="w-full">
               {isEditMode ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}

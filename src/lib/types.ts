@@ -35,11 +35,13 @@ export type Ride = {
   passengerCount?: number;
   movingFee: boolean;
   isReturnTrip?: boolean;
+  isPrepaid?: boolean;
   notes?: string;
   paymentDetails?: {
     cash?: number;
     card?: number;
     check?: number;
+    tip?: number;
   };
   cardFee?: number;
 };
