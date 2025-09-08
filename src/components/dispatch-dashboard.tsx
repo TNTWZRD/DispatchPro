@@ -1,29 +1,35 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DragDropContext, Droppable, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { MapView } from './map-view';
-import { RideList } from './ride-list';
+import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
-import { RideHistoryTable } from './ride-history-table';
 import { DispatchSuggester } from './dispatch-suggester';
-import { Truck } from 'lucide-react';
+import { Truck, PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { DriverColumn } from './driver-column';
 
 export function DispatchDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
   const [time, setTime] = useState(new Date());
+  const [isClient, setIsClient] = useState(false);
+  const [isLogCallOpen, setIsLogCallOpen] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000 * 60); // Update time every minute
+    setIsClient(true);
+    const timer = setInterval(() => setTime(new Date()), 1000 * 60);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    // Simulate real-time driver movement
     const movementInterval = setInterval(() => {
       setDrivers(prevDrivers =>
         prevDrivers.map(driver => {
@@ -40,10 +46,9 @@ export function DispatchDashboard() {
         })
       );
     }, 5000);
-
     return () => clearInterval(movementInterval);
   }, []);
-  
+
   const handleAddRide = (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'requestTime' | 'isNew'>) => {
     const newRide: Ride = {
       ...newRideData,
@@ -54,25 +59,61 @@ export function DispatchDashboard() {
       isNew: true,
     };
     setRides(prev => [newRide, ...prev]);
-    
-    // Remove the 'new' flag after a few seconds
+    setIsLogCallOpen(false);
     setTimeout(() => {
-      setRides(prev => prev.map(r => r.id === newRide.id ? {...r, isNew: false} : r));
+      setRides(prev => prev.map(r => r.id === newRide.id ? { ...r, isNew: false } : r));
     }, 5000);
   };
 
   const handleAssignDriver = (rideId: string, driverId: string) => {
+    const ride = rides.find(r => r.id === rideId);
+    if (!ride) return;
+
+    // If driver is already on a ride, don't allow assignment
+    const driver = drivers.find(d => d.id === driverId);
+    if (driver?.status === 'on-ride' || driver?.status === 'offline') {
+      // Maybe show a toast here in a real app
+      console.warn(`Driver ${driverId} is not available.`);
+      return;
+    }
+    
+    // Unassign from previous driver if it was a reassignment
+    if (ride.driverId) {
+        setDrivers(prevDrivers => prevDrivers.map(d => d.id === ride.driverId ? {...d, status: 'available'} : d));
+    }
+
     setRides(prevRides =>
-      prevRides.map(ride =>
-        ride.id === rideId ? { ...ride, status: 'assigned', driverId } : ride
+      prevRides.map(r =>
+        r.id === rideId ? { ...r, status: 'assigned', driverId } : r
       )
     );
     setDrivers(prevDrivers =>
-      prevDrivers.map(driver =>
-        driver.id === driverId ? { ...driver, status: 'on-ride' } : driver
+      prevDrivers.map(d =>
+        d.id === driverId ? { ...d, status: 'on-ride' } : d
       )
     );
   };
+  
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+
+    if (!destination) return;
+
+    // Dropped in the same place
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+      return;
+    }
+
+    const ride = rides.find(r => r.id === draggableId);
+    if (!ride) return;
+
+    // Moving from 'waiting' column to a driver column
+    if (source.droppableId === 'waiting' && destination.droppableId.startsWith('driver-')) {
+      const driverId = destination.droppableId;
+      handleAssignDriver(ride.id, driverId);
+    }
+  };
+
 
   const handleChangeStatus = (rideId: string, newStatus: RideStatus) => {
     setRides(prevRides => {
@@ -82,8 +123,6 @@ export function DispatchDashboard() {
         const updatedRide = { ...ride, status: newStatus };
         if (newStatus === 'completed' || newStatus === 'cancelled') {
           updatedRide.completionTime = new Date();
-          
-          // Free up the driver
           if (ride.driverId) {
             setDrivers(prevDrivers =>
               prevDrivers.map(driver =>
@@ -91,6 +130,9 @@ export function DispatchDashboard() {
               )
             );
           }
+           if (newStatus === 'cancelled') {
+              updatedRide.driverId = null;
+           }
         }
         return updatedRide;
       });
@@ -102,87 +144,111 @@ export function DispatchDashboard() {
     setRides(prevRides =>
       prevRides.map(ride => {
         if (ride.id !== rideId) return ride;
-
         let cardFee: number | undefined;
         if (paymentMethod === 'card') {
           cardFee = Math.floor(fare / 40);
         }
-
         return { ...ride, fare, paymentMethod, cardFee };
       })
     );
   };
   
   const pendingRides = rides.filter(r => r.status === 'pending');
-  const activeRides = rides.filter(r => ['assigned', 'in-progress'].includes(r.status));
-  const pastRides = rides.filter(r => ['completed', 'cancelled'].includes(r.status));
-  const availableDrivers = drivers.filter(d => d.status === 'available');
+  const activeDrivers = drivers.filter(d => d.status !== 'offline');
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <header className="flex h-16 items-center border-b bg-card px-6 shadow-sm">
+    <div className="flex h-screen flex-col bg-secondary/50">
+      <header className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
         <Truck className="h-6 w-6 text-primary" />
         <h1 className="ml-3 text-2xl font-bold tracking-tight text-foreground">
           DispatchPro
         </h1>
-        <div className="ml-auto text-sm text-muted-foreground">
-          {time.toLocaleDateString()} {time.toLocaleTimeString()}
+        <div className="ml-auto flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {time.toLocaleDateString()} {time.toLocaleTimeString()}
+          </div>
+          <Dialog open={isLogCallOpen} onOpenChange={setIsLogCallOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle />
+                Log New Call
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl">
+              <CallLoggerForm onAddRide={handleAddRide} />
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto p-4 md:p-6">
-        <Tabs defaultValue="dispatch">
-          <TabsList className="mb-4">
-            <TabsTrigger value="dispatch">Live Dispatch</TabsTrigger>
-            <TabsTrigger value="history">Ride History</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="dispatch">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              <div className="lg:col-span-2 xl:col-span-3">
-                <MapView rides={rides} drivers={drivers} />
-              </div>
+      <main className="flex flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6">
+        <div className='flex-shrink-0'>
+            <MapView rides={rides} drivers={drivers} />
+        </div>
+        
+        {isClient && (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
+                {/* Waiting Column */}
+                <Droppable droppableId="waiting">
+                  {(provided, snapshot) => (
+                    <Card
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={cn(
+                        "w-80 shrink-0 flex flex-col",
+                        snapshot.isDraggingOver && "bg-accent/20"
+                      )}
+                    >
+                      <CardHeader>
+                        <CardTitle>Waiting ({pendingRides.length})</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-1 overflow-y-auto space-y-4">
+                        {pendingRides.map((ride, index) => (
+                          <Draggable key={ride.id} draggableId={ride.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <RideCard
+                                  ride={ride}
+                                  drivers={drivers}
+                                  onAssignDriver={handleAssignDriver}
+                                  onChangeStatus={handleChangeStatus}
+                                  onSetFare={handleSetFare}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                         {pendingRides.length === 0 && (
+                            <div className="flex h-full items-center justify-center text-muted-foreground">
+                                <p>No pending rides.</p>
+                            </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </Droppable>
 
-              <div className="row-start-1 flex flex-col gap-4 lg:col-start-3 xl:col-start-4">
-                 <DispatchSuggester pendingRides={pendingRides} availableDrivers={availableDrivers} onAssignSuggestion={handleAssignDriver}/>
-                 <CallLoggerForm onAddRide={handleAddRide} />
-              </div>
-
-              <div className="flex flex-col gap-4 lg:col-span-3 xl:col-span-2">
-                <RideList 
-                  title="Pending & Upcoming" 
-                  rides={pendingRides} 
-                  drivers={availableDrivers} 
-                  onAssignDriver={handleAssignDriver} 
+              {/* Driver Columns */}
+              {activeDrivers.map(driver => (
+                <DriverColumn
+                  key={driver.id}
+                  driver={driver}
+                  ride={rides.find(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                  allDrivers={drivers}
+                  onAssignDriver={handleAssignDriver}
                   onChangeStatus={handleChangeStatus}
                   onSetFare={handleSetFare}
                 />
-              </div>
-
-              <div className="flex flex-col gap-4 lg:col-span-3 xl:col-span-2 lg:col-start-1 lg:row-start-2 xl:col-start-3 xl:row-start-2">
-                <RideList 
-                  title="Active Rides" 
-                  rides={activeRides} 
-                  drivers={drivers}
-                  onAssignDriver={handleAssignDriver} 
-                  onChangeStatus={handleChangeStatus}
-                  onSetFare={handleSetFare}
-                />
-              </div>
+              ))}
             </div>
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ride History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RideHistoryTable rides={pastRides} drivers={drivers} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          </DragDropContext>
+        )}
       </main>
     </div>
   );

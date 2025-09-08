@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -36,7 +37,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | undefined>(ride.paymentMethod);
 
   const assignedDriver = drivers.find(d => d.id === ride.driverId);
-  const availableDrivers = drivers.filter(d => d.status === 'available');
 
   const getStatusBadge = (status: RideStatus) => {
     const config = statusConfig[status];
@@ -62,13 +62,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
 
   return (
     <>
-      <Card className={cn("transition-all", ride.isNew && "animate-pulse border-accent")}>
+      <Card className={cn("transition-all bg-card", ride.isNew && "animate-pulse border-primary")}>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
               <Users className="h-5 w-5" /> {ride.passengerCount} Passenger(s)
             </CardTitle>
-            {getStatusBadge(ride.status)}
+            {ride.status !== 'pending' && getStatusBadge(ride.status)}
           </div>
           <div className="flex items-center text-sm text-muted-foreground">
             <Phone className="mr-2 h-4 w-4" />
@@ -77,22 +77,22 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           {ride.scheduledTime && (
             <div className="flex items-center text-sm text-amber-600">
               <Calendar className="mr-2 h-4 w-4" />
-              <span>Scheduled for {format(ride.scheduledTime, "PPp")}</span>
+              <span>Scheduled: {format(ride.scheduledTime, "p")}</span>
             </div>
           )}
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div className="flex items-center">
-            <MapPin className="mr-2 h-4 w-4 text-green-500" />
+        <CardContent className="space-y-2 text-sm pt-2">
+          <div className="flex items-start">
+            <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
             <span className="font-medium">From:</span>
-            <span className="ml-2 truncate">{ride.pickup.name}</span>
+            <span className="ml-2">{ride.pickup.name}</span>
           </div>
-          <div className="flex items-center">
-            <MapPin className="mr-2 h-4 w-4 text-red-500" />
+          <div className="flex items-start">
+            <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
             <span className="font-medium">To:</span>
-            <span className="ml-2 truncate">{ride.dropoff.name}</span>
+            <span className="ml-2">{ride.dropoff.name}</span>
           </div>
-          {assignedDriver && (
+          {assignedDriver && ride.status !== 'pending' && (
             <div className="flex items-center pt-1">
               <Truck className="mr-2 h-4 w-4 text-primary" />
               <span className="font-medium">Driver:</span>
@@ -102,7 +102,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           {ride.movingFee && (
             <div className="flex items-center pt-1 text-sm text-muted-foreground">
               <Package className="mr-2 h-4 w-4 text-primary" />
-              <span className="font-medium">Moving Fee Applies</span>
+              <span className="font-medium">Moving Fee</span>
             </div>
           )}
            {ride.fare !== undefined && (
@@ -114,7 +114,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between items-center">
           <div className="flex items-center text-xs text-muted-foreground">
             <Clock className="mr-1.5 h-3 w-3" />
             <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
@@ -125,28 +125,8 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <DollarSign className="h-4 w-4 mr-2" /> Set Fare
               </Button>
             )}
-
-            {ride.status === 'pending' && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm">Assign Driver</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {availableDrivers.length > 0 ? (
-                    availableDrivers.map(driver => (
-                      <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
-                        {driver.name} ({driver.rating}★)
-                      </DropdownMenuItem>
-                    ))
-                  ) : (
-                    <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {['assigned', 'in-progress'].includes(ride.status) && (
-              <DropdownMenu>
+            
+            <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <MoreVertical className="h-4 w-4" />
@@ -155,12 +135,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <DropdownMenuContent>
                   {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
                   {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
-                  <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'cancelled')} className="text-destructive">
-                    Cancel Ride
-                  </DropdownMenuItem>
+                  {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
+                     <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'cancelled')} className="text-destructive">
+                       Cancel Ride
+                     </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
           </div>
         </CardFooter>
       </Card>

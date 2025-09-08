@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Ride, Driver, RideStatus, PaymentMethod } from '@/lib/types';
@@ -16,7 +17,7 @@ type RideListProps = {
 
 export function RideList({ title, rides, drivers, onAssignDriver, onChangeStatus, onSetFare }: RideListProps) {
   return (
-    <Card className="h-[350px] flex flex-col">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
