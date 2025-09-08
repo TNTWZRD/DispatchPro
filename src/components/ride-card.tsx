@@ -51,7 +51,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   
   const cardFee = useMemo(() => {
     if (!cardPaymentAmount || cardPaymentAmount <= 0) return 0;
-    return Math.floor(cardPaymentAmount / 40);
+    return 1 + Math.floor(cardPaymentAmount / 40);
   }, [cardPaymentAmount]);
 
   const totalPayment = useMemo(() => {
