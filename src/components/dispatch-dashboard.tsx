@@ -253,11 +253,13 @@ export function DispatchDashboard() {
       </DragDropContext>
   );
 
-  const renderMobileView = () => (
+  const renderMobileView = () => {
+    const gridCols = `grid-cols-${Math.min(activeDrivers.length + 1, 5)}`; // Max 5 tabs for sanity
+    return (
     <Tabs defaultValue="waiting" className="w-full flex flex-col flex-1 min-h-0">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className={cn("grid w-full", gridCols)}>
         <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
-        {activeDrivers.slice(0, 2).map(driver => (
+        {activeDrivers.map(driver => (
           <TabsTrigger key={driver.id} value={driver.id}>{driver.name.split(' ')[0]}</TabsTrigger>
         ))}
       </TabsList>
@@ -299,7 +301,7 @@ export function DispatchDashboard() {
         </TabsContent>
       ))}
     </Tabs>
-  );
+  )};
 
   return (
     <div className="flex h-screen flex-col bg-secondary/50">
@@ -347,3 +349,5 @@ export function DispatchDashboard() {
     </div>
   );
 }
+
+    
