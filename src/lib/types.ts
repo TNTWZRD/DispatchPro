@@ -41,9 +41,9 @@ export type Vehicle = {
     nickname: string;
     make: string;
     model: string;
-    year: number;
+    year: number | null;
     vin: string;
-    mileage: number;
+    mileage: number | null;
     status: 'active' | 'maintenance' | 'decommissioned';
     currentDriverId?: string | null;
     createdAt: Date;

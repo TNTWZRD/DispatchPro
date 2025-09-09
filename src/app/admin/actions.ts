@@ -147,13 +147,14 @@ export async function deleteDriver(driverId: string) {
 
 
 const createVehicleSchema = z.object({
-  nickname: z.string().min(2, { message: "Nickname is required." }),
-  make: z.string().min(2, { message: "Make is required." }),
-  model: z.string().min(2, { message: "Model is required." }),
-  year: z.coerce.number().min(1980, { message: "Year must be after 1980." }).max(new Date().getFullYear() + 1, { message: "Year cannot be in the distant future." }),
-  vin: z.string().min(11, { message: "VIN must be at least 11 characters." }),
-  mileage: z.coerce.number().min(0, { message: "Mileage must be a positive number." }),
+  nickname: z.string().min(2, { message: "Nickname must be at least 2 characters." }),
+  make: z.string().optional(),
+  model: z.string().optional(),
+  year: z.coerce.number().optional(),
+  vin: z.string().optional(),
+  mileage: z.coerce.number().optional(),
 });
+
 
 export async function createVehicle(prevState: any, formData: FormData) {
     const validatedFields = createVehicleSchema.safeParse(
@@ -175,11 +176,11 @@ export async function createVehicle(prevState: any, formData: FormData) {
 
         const newVehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'> = {
             nickname,
-            make,
-            model,
-            year,
-            vin,
-            mileage,
+            make: make || '',
+            model: model || '',
+            year: year || null,
+            vin: vin || '',
+            mileage: mileage || null,
             status: 'active',
             currentDriverId: null,
         };
