@@ -25,7 +25,7 @@ export function RideList({ title, rides, drivers, onAssignDriver, onChangeStatus
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
           {rides.length > 0 ? (
-            <div className="space-y-4 pr-4">
+            <div className="space-y-2 pr-2">
               {rides.map(ride => (
                 <RideCard
                   key={ride.id}

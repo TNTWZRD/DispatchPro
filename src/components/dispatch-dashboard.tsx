@@ -279,7 +279,7 @@ function DispatchDashboardUI() {
     return (
      <DragDropContext onDragEnd={onDragEnd}>
         <div 
-          className="flex flex-1 items-stretch gap-4 overflow-x-auto pb-4 transition-transform origin-top-left"
+          className="flex flex-1 items-stretch gap-2 overflow-x-auto pb-2 transition-transform origin-top-left"
           style={{ 
             transform: `scale(${zoom})`,
             width: `${100 / zoom}%`,
@@ -301,7 +301,7 @@ function DispatchDashboardUI() {
                   <CardHeader>
                     <CardTitle>Waiting ({pendingRides.length})</CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto space-y-4">
+                  <CardContent className="flex-1 overflow-y-auto space-y-2">
                     {pendingRides.map((ride, index) => (
                       <Draggable key={ride.id} draggableId={ride.id} index={index}>
                         {(provided, snapshot) => (
@@ -352,7 +352,7 @@ function DispatchDashboardUI() {
                         <Calendar className="h-5 w-5" /> Scheduled ({scheduledRides.length})
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-y-auto space-y-4">
+                    <CardContent className="flex-1 overflow-y-auto space-y-2">
                       {scheduledRides.map((ride, index) => (
                         <Draggable key={ride.id} draggableId={ride.id} index={index}>
                           {(provided, snapshot) => (
