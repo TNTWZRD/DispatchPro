@@ -56,7 +56,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto space-y-2">
+      <CardContent className="flex-1 overflow-y-auto space-y-2 p-2">
         {hasActiveRides ? (
           activeRides.map(ride => (
             <RideCard
@@ -71,7 +71,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
             />
           ))
         ) : (
-            <div className="flex h-full min-h-[100px] items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 text-center text-muted-foreground p-4">
+            <div className="flex h-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 text-center text-muted-foreground p-4">
               <p>Available for rides. Drag a pending ride here to assign.</p>
             </div>
         )}
