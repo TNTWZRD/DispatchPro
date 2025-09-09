@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -119,6 +119,39 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         ) : null
     );
   }
+  
+  const getTimelineEvent = () => {
+    let eventText = "Updated";
+    let eventDate = ride.updatedAt;
+
+    switch (ride.status) {
+      case 'completed':
+        eventText = "Completed";
+        eventDate = ride.droppedOffAt || ride.updatedAt;
+        break;
+      case 'cancelled':
+        eventText = "Cancelled";
+        eventDate = ride.cancelledAt || ride.updatedAt;
+        break;
+      case 'in-progress':
+        eventText = "Picked up";
+        eventDate = ride.pickedUpAt || ride.updatedAt;
+        break;
+      case 'assigned':
+        eventText = "Assigned";
+        eventDate = ride.assignedAt || ride.updatedAt;
+        break;
+      case 'pending':
+        eventText = "Requested";
+        eventDate = ride.createdAt;
+        break;
+      default:
+        eventText = "Updated";
+        eventDate = ride.updatedAt;
+    }
+    
+    return `${eventText} ${formatDistanceToNow(eventDate, { addSuffix: true })}`;
+  }
 
   return (
     <TooltipProvider>
@@ -144,8 +177,8 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               )}
                {isCondensed && (
                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="mr-1.5 h-3 w-3" />
-                    <span>{formatDistanceToNow(ride.updatedAt, { addSuffix: true })}</span>
+                    <History className="mr-1.5 h-3 w-3" />
+                    <span>{getTimelineEvent()}</span>
                 </div>
                )}
             </div>
@@ -273,8 +306,8 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           <div className="flex justify-between items-center mt-2 pt-2 border-t">
              {!isCondensed && (
                 <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="mr-1.5 h-3 w-3" />
-                    <span>{formatDistanceToNow(ride.updatedAt, { addSuffix: true })}</span>
+                    <History className="mr-1.5 h-3 w-3" />
+                    <span>{getTimelineEvent()}</span>
                 </div>
              )}
              <div className="flex items-center gap-1.5 ml-auto">
