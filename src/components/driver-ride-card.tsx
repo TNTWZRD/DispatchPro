@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import type { Ride, RideStatus } from '@/lib/types';
+import type { Ride } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, User, Phone, CheckCircle2, Package, Users, MessageSquare, Edit, Milestone } from 'lucide-react';
@@ -12,20 +12,11 @@ import { cn } from '@/lib/utils';
 
 type DriverRideCardProps = {
     ride: Ride;
-    onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
     onEdit: (ride: Ride) => void;
     isQueued?: boolean;
 };
 
-export function DriverRideCard({ ride, onChangeStatus, onEdit, isQueued = false }: DriverRideCardProps) {
-    
-    const handleStartRide = () => {
-        onChangeStatus(ride.id, 'in-progress');
-    };
-    
-    const handleCompleteRide = () => {
-        onChangeStatus(ride.id, 'completed');
-    };
+export function DriverRideCard({ ride, onEdit, isQueued = false }: DriverRideCardProps) {
 
     return (
         <Card className={cn(
@@ -33,14 +24,21 @@ export function DriverRideCard({ ride, onChangeStatus, onEdit, isQueued = false 
             ride.status === 'completed' && "bg-secondary/70"
         )}>
             <CardHeader>
-                <CardTitle className="text-lg flex items-center justify-between">
-                    <span>{ride.pickup.name}</span>
-                    <span className="text-base font-medium text-primary">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ride.totalFare)}</span>
+                <CardTitle className="text-lg flex items-start justify-between">
+                    <div className='flex flex-col'>
+                        <span>{ride.pickup.name}</span>
+                        {ride.dropoff && <CardDescription>to {ride.dropoff.name}</CardDescription>}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => onEdit(ride)}>
+                        <Edit className="mr-2" /> Edit Details
+                    </Button>
                 </CardTitle>
-                 {ride.dropoff && <CardDescription>to {ride.dropoff.name}</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-3">
                  <div className="grid grid-cols-2 gap-4 text-sm">
+                     <div className="flex items-center gap-2 font-medium text-primary">
+                        <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ride.totalFare)}</span>
+                    </div>
                     <div className="flex items-center gap-2">
                         <Users className="text-muted-foreground" />
                         <span>{ride.passengerCount || 1} Passenger(s)</span>
@@ -88,25 +86,6 @@ export function DriverRideCard({ ride, onChangeStatus, onEdit, isQueued = false 
                     </>
                 )}
             </CardContent>
-            {!isQueued && (
-                <CardFooter>
-                    {ride.status === 'assigned' && (
-                        <Button className="w-full" onClick={handleStartRide}>
-                            <MapPin className="mr-2" /> Start Ride
-                        </Button>
-                    )}
-                    {ride.status === 'in-progress' && (
-                        <Button className="w-full" onClick={handleCompleteRide}>
-                             <CheckCircle2 className="mr-2" /> Complete Ride
-                        </Button>
-                    )}
-                    {ride.status === 'completed' && (
-                        <Button variant="secondary" className="w-full" onClick={() => onEdit(ride)}>
-                            <Edit className="mr-2" /> Add Details (Tip/Notes)
-                        </Button>
-                    )}
-                </CardFooter>
-            )}
         </Card>
     );
 }

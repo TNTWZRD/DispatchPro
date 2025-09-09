@@ -44,35 +44,6 @@ export function DriverDashboard() {
   const upcomingRides = useMemo(() => {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
-
-  const handleChangeStatus = (rideId: string, newStatus: RideStatus) => {
-    setRides(prevRides => {
-      const now = new Date();
-      const updatedRides = prevRides.map(ride => {
-        if (ride.id !== rideId) return ride;
-
-        const updatedRide = { ...ride, status: newStatus, updatedAt: now };
-
-        if (newStatus === 'in-progress') {
-          updatedRide.pickedUpAt = now;
-        } else if (newStatus === 'completed') {
-          updatedRide.droppedOffAt = now;
-        }
-        return updatedRide;
-      });
-
-      const activeRidesForDriver = updatedRides.filter(r => r.driverId === currentDriverId && ['assigned', 'in-progress'].includes(r.status));
-      
-      setDrivers(prevDrivers => prevDrivers.map(driver => {
-        if (driver.id === currentDriverId) {
-          return { ...driver, status: activeRidesForDriver.length > 0 ? 'on-ride' : 'available' };
-        }
-        return driver;
-      }));
-
-      return updatedRides;
-    });
-  };
   
   const handleEditRide = (rideId: string, details: { cashTip?: number, notes?: string }) => {
     setRides(prevRides =>
@@ -140,7 +111,6 @@ export function DriverDashboard() {
                         <h2 className="text-lg font-semibold mb-2">{currentRide.status === 'in-progress' ? 'Current Ride' : 'Next Ride'}</h2>
                         <DriverRideCard 
                             ride={currentRide}
-                            onChangeStatus={handleChangeStatus}
                             onEdit={handleOpenEdit}
                         />
                     </div>
@@ -156,7 +126,6 @@ export function DriverDashboard() {
                                     key={ride.id}
                                     ride={ride}
                                     isQueued={true}
-                                    onChangeStatus={handleChangeStatus}
                                     onEdit={handleOpenEdit}
                                 />
                             ))}
@@ -178,7 +147,6 @@ export function DriverDashboard() {
                             <DriverRideCard 
                                 key={ride.id}
                                 ride={ride}
-                                onChangeStatus={handleChangeStatus}
                                 onEdit={handleOpenEdit}
                             />
                         ))}
