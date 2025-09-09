@@ -4,6 +4,7 @@
 
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -82,6 +83,7 @@ export type Ride = {
   pickedUpAt?: Date;
   droppedOffAt?: Date;
   cancelledAt?: Date;
+  completionTime?: Date;
 };
 
 export type Message = {

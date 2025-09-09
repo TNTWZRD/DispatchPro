@@ -120,20 +120,21 @@ export async function createVehicle(prevState: any, formData: FormData) {
     try {
         const { make, model, year, licensePlate } = validatedFields.data;
 
-        const newVehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'> = {
+        const newVehicleRef = doc(collection(db, 'vehicles'));
+
+        const newVehicle: Vehicle = {
+            id: newVehicleRef.id,
             make,
             model,
             year,
             licensePlate,
             status: 'active',
             currentDriverId: null,
+            createdAt: serverTimestamp() as any,
+            updatedAt: serverTimestamp() as any,
         };
         
-        await addDoc(collection(db, 'vehicles'), {
-            ...newVehicle,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        });
+        await setDoc(newVehicleRef, newVehicle);
 
         return { type: "success", message: `Vehicle "${year} ${make} ${model}" created successfully.` };
     } catch (error) {
