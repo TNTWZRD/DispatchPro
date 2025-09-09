@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift } from 'lucide-react';
@@ -399,13 +398,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 A {formatCurrency(cardFee)} card processing fee will be applied.
               </p>
             )}
-
+             <div className="h-80" />
           </div>
-          <DialogFooter>
+          <div className="flex justify-end p-4">
             <Button onClick={handleSetFare} disabled={totalPayment <= 0}>
               Save Fare & Mark Completed
             </Button>
-          </DialogFooter>
+          </div>
       </ResponsiveDialog>
     </TooltipProvider>
   );

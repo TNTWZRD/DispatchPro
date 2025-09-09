@@ -346,7 +346,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
               )}
             />
             {/* Spacer for mobile keyboard */}
-            <div className="h-24" />
+            <div className="h-80" />
           </form>
         </Form>
     </div>
