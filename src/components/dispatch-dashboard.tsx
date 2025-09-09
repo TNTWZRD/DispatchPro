@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -24,6 +24,7 @@ import { CondensedModeProvider, useCondensedMode } from '@/context/condensed-mod
 import { useHotkey } from '@/hooks/use-hotkey';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ResponsiveDialog } from './responsive-dialog';
+import { useAuth } from '@/context/auth-context';
 
 
 function DispatchDashboardUI() {
@@ -37,7 +38,8 @@ function DispatchDashboardUI() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
-
+  
+  const { logout } = useAuth();
   const isMobile = useIsMobile();
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
@@ -55,7 +57,7 @@ function DispatchDashboardUI() {
 
   const scheduledRides = allPendingRides
     .filter(r => r.scheduledTime)
-    .sort((a, b) => (r.scheduledTime?.getTime() ?? 0) - (b.scheduledTime?.getTime() ?? 0));
+    .sort((a, b) => (a.scheduledTime?.getTime() ?? 0) - (b.scheduledTime?.getTime() ?? 0));
 
   const cancelledRides = rides
     .filter(r => r.status === 'cancelled')
@@ -651,6 +653,9 @@ function DispatchDashboardUI() {
             <PlusCircle />
             Log New Call
           </Button>
+           <Button variant="ghost" size="icon" onClick={logout}>
+              <LogOut />
+           </Button>
           
           <ResponsiveDialog 
             open={isFormOpen} 

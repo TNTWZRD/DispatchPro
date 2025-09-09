@@ -8,12 +8,13 @@ import type { Ride, Driver, Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
-import { Truck, CheckCircle, MessageCircle } from 'lucide-react';
+import { Truck, CheckCircle, MessageCircle, LogOut } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ResponsiveDialog } from './responsive-dialog';
 import { DriverEditForm } from './driver-edit-form';
 import { ChatView } from './chat-view';
 import { Button } from './ui/button';
+import { useAuth } from '@/context/auth-context';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
@@ -21,26 +22,34 @@ export function DriverDashboard() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  const { user, logout } = useAuth();
 
-  // In a real app, you'd get this from auth
-  const currentDriverId = 'driver-3';
-  const currentDriver = useMemo(() => drivers.find(d => d.id === currentDriverId), [drivers, currentDriverId]);
+  // In a real app, you'd get this from auth and a database lookup
+  // We find a driver whose name might be in the user's display name or email
+  const currentDriver = useMemo(() => {
+    if (!user) return null;
+    return drivers.find(d => user.displayName?.includes(d.name.split(' ')[0]) || user.email?.includes(d.name.split(' ')[0].toLowerCase()));
+  }, [drivers, user]);
+
 
   const driverRides = useMemo(() => {
+    if (!currentDriver) return [];
     return rides
-      .filter(r => r.driverId === currentDriverId && ['assigned', 'in-progress'].includes(r.status))
+      .filter(r => r.driverId === currentDriver.id && ['assigned', 'in-progress'].includes(r.status))
       .sort((a, b) => {
         if (a.status === 'in-progress') return -1;
         if (b.status === 'in-progress') return 1;
         return (a.assignedAt?.getTime() ?? 0) - (b.assignedAt?.getTime() ?? 0);
       });
-  }, [rides, currentDriverId]);
+  }, [rides, currentDriver]);
 
   const completedRides = useMemo(() => {
+    if (!currentDriver) return [];
     return rides
-      .filter(r => r.driverId === currentDriverId && r.status === 'completed')
+      .filter(r => r.driverId === currentDriver.id && r.status === 'completed')
       .sort((a,b) => (b.droppedOffAt?.getTime() ?? 0) - (a.droppedOffAt?.getTime() ?? 0));
-  }, [rides, currentDriverId]);
+  }, [rides, currentDriver]);
 
   const currentRide = useMemo(() => {
     return driverRides.find(r => r.status === 'in-progress') || driverRides[0] || null;
@@ -51,8 +60,9 @@ export function DriverDashboard() {
   }, [driverRides, currentRide]);
 
   const driverMessages = useMemo(() => {
-    return messages.filter(m => m.driverId === currentDriverId);
-  }, [messages, currentDriverId]);
+    if (!currentDriver) return [];
+    return messages.filter(m => m.driverId === currentDriver.id);
+  }, [messages, currentDriver]);
 
   const unreadMessagesCount = useMemo(() => {
     return driverMessages.filter(m => m.sender === 'dispatcher' && !m.isRead).length;
@@ -93,9 +103,10 @@ export function DriverDashboard() {
   
   const handleChatOpen = (isOpen: boolean) => {
     if(isOpen) {
+        if (!currentDriver) return;
         // Mark messages from dispatcher as read
         setMessages(prev => prev.map(m => (
-            m.driverId === currentDriverId && m.sender === 'dispatcher' ? { ...m, isRead: true } : m
+            m.driverId === currentDriver.id && m.sender === 'dispatcher' ? { ...m, isRead: true } : m
         )));
     }
     setIsChatOpen(isOpen);
@@ -103,8 +114,18 @@ export function DriverDashboard() {
 
   if (!currentDriver) {
     return (
-      <div className="flex h-screen items-center justify-center bg-secondary">
-        <p>Driver not found.</p>
+      <div className="flex h-screen items-center justify-center bg-secondary p-4 text-center">
+        <Card>
+          <CardHeader>
+            <CardTitle>Driver Profile Not Found</CardTitle>
+            <CardDescription>We could not find a driver profile associated with your account ({user?.email}). Please contact your dispatcher.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={logout}>
+              <LogOut className="mr-2"/> Sign Out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -133,6 +154,9 @@ export function DriverDashboard() {
             <AvatarImage src={`https://i.pravatar.cc/40?u=${currentDriver.id}`} />
             <AvatarFallback>{currentDriver.name.charAt(0)}</AvatarFallback>
           </Avatar>
+           <Button variant="ghost" size="icon" onClick={logout}>
+              <LogOut />
+           </Button>
         </div>
       </header>
       
