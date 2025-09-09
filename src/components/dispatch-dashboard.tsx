@@ -149,6 +149,7 @@ function DispatchDashboardUI() {
   }, [carouselApi, activeDrivers, hasScheduledRides]);
 
   const handleAddRide = async (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => {
+    if (!db) return;
     const newRide: Omit<Ride, 'id'> = {
       ...newRideData,
       status: 'pending',
@@ -161,11 +162,13 @@ function DispatchDashboardUI() {
     setIsFormOpen(false);
     
     setTimeout(async () => {
+        if (!db) return;
         await updateDoc(doc(db, 'rides', docRef.id), { isNew: false });
     }, 5000);
   };
   
   const handleEditRide = async (updatedRide: Ride) => {
+    if (!db) return;
     const { id, ...rideData } = updatedRide;
     await updateDoc(doc(db, 'rides', id), {
         ...rideData,
@@ -176,6 +179,7 @@ function DispatchDashboardUI() {
   }
 
   const handleAssignDriver = async (rideId: string, driverId: string) => {
+    if (!db) return;
     const rideToAssign = rides.find(r => r.id === rideId);
     if (!rideToAssign) return;
 
@@ -205,6 +209,7 @@ function DispatchDashboardUI() {
   };
   
   const handleUnassignDriver = async (rideId: string) => {
+    if (!db) return;
     const ride = rides.find(r => r.id === rideId);
     if (!ride || !ride.driverId) return;
 
@@ -224,6 +229,7 @@ function DispatchDashboardUI() {
   };
 
   const handleUnscheduleRide = async (rideId: string) => {
+    if (!db) return;
     await updateDoc(doc(db, 'rides', rideId), {
         scheduledTime: null,
         updatedAt: serverTimestamp()
@@ -254,6 +260,7 @@ function DispatchDashboardUI() {
 
 
   const handleChangeStatus = async (rideId: string, newStatus: RideStatus) => {
+    if (!db) return;
     const rideToUpdate = rides.find(ride => ride.id === rideId);
     if (!rideToUpdate) return;
     
@@ -294,6 +301,7 @@ function DispatchDashboardUI() {
   };
 
   const handleSetFare = async (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => {
+    if (!db) return;
     await updateDoc(doc(db, 'rides', rideId), {
         totalFare: details.totalFare,
         paymentDetails: details.paymentDetails,
@@ -312,6 +320,7 @@ function DispatchDashboardUI() {
   }
 
   const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
+    if (!db) return;
     await addDoc(collection(db, 'messages'), {
         ...message,
         timestamp: serverTimestamp(),
@@ -320,6 +329,7 @@ function DispatchDashboardUI() {
   };
   
   const handleMarkMessagesAsRead = async (driverId: string) => {
+    if (!db) return;
     const unreadMessages = messages.filter(m => m.driverId === driverId && m.sender === 'driver' && !m.isRead);
     for (const message of unreadMessages) {
         await updateDoc(doc(db, 'messages', message.id), { isRead: true });
@@ -333,7 +343,7 @@ function DispatchDashboardUI() {
     return (
      <DragDropContext onDragEnd={onDragEnd}>
         <div 
-          className="flex flex-1 items-stretch gap-2 overflow-x-auto pb-2 transition-transform origin-top-left"
+          className="flex-1 flex items-stretch gap-2 overflow-x-auto pb-2 transition-transform origin-top-left"
           style={{ 
             transform: `scale(${zoom})`,
             width: `${100 / zoom}%`,
@@ -654,7 +664,7 @@ function DispatchDashboardUI() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 overflow-hidden lg:flex-row p-2">
+      <main className="flex flex-1 flex-row gap-4 overflow-hidden p-2">
         <Sidebar 
             rides={rides} 
             drivers={drivers}
@@ -686,3 +696,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
