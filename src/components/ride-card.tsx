@@ -145,7 +145,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                {isCondensed && (
                  <div className="flex items-center text-xs text-muted-foreground">
                     <Clock className="mr-1.5 h-3 w-3" />
-                    <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
+                    <span>{formatDistanceToNow(ride.updatedAt, { addSuffix: true })}</span>
                 </div>
                )}
             </div>
@@ -261,13 +261,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
             </div>
           </div>
           
-           {assignedDriver && ride.status !== 'pending' && (
-            <div className="flex items-center pt-2 text-xs">
-              <Truck className="mr-2 h-4 w-4 text-primary" />
-              <span className="font-medium">Driver:</span>
-              <span className="ml-2 text-muted-foreground">{assignedDriver.name}</span>
-            </div>
-          )}
           {!isCondensed && ride.notes && (
             <div className="flex items-start pt-2 text-xs text-muted-foreground">
               <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
@@ -281,7 +274,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
              {!isCondensed && (
                 <div className="flex items-center text-xs text-muted-foreground">
                     <Clock className="mr-1.5 h-3 w-3" />
-                    <span>{formatDistanceToNow(ride.requestTime, { addSuffix: true })}</span>
+                    <span>{formatDistanceToNow(ride.updatedAt, { addSuffix: true })}</span>
                 </div>
              )}
              <div className="flex items-center gap-1.5 ml-auto">
@@ -290,18 +283,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                         <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
                         <TooltipContent><p>Moving Fee</p></TooltipContent>
                     </Tooltip>
-                )}
-                 {ride.isReturnTrip && (
-                    <Tooltip>
-                        <TooltipTrigger><Repeat className="h-4 w-4 text-primary" /></TooltipTrigger>
-                        <TooltipContent><p>Return Trip</p></TooltipContent>
-                    </Tooltip>
-                )}
-                 {ride.isPrepaid && (
-                     <Tooltip>
-                        <TooltipTrigger><Gift className="h-4 w-4 text-primary" /></TooltipTrigger>
-                        <TooltipContent><p>Prepaid</p></TooltipContent>
-                     </Tooltip>
                 )}
              </div>
           </div>
@@ -319,7 +300,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     <div className="flex justify-between"><span>Passengers:</span> <span className="font-medium text-foreground">{ride.passengerCount || 1}</span></div>
                     <div className="flex justify-between"><span>Stops:</span> <span className="font-medium text-foreground">{ride.stops?.length || 0}</span></div>
-                    <div className="flex justify-between"><span>Return Trip:</span> <span className="font-medium text-foreground">{ride.isReturnTrip ? 'Yes' : 'No'}</span></div>
                     <div className="flex justify-between"><span>Moving Fee:</span> <span className="font-medium text-foreground">{ride.movingFee ? 'Yes' : 'No'}</span></div>
                 </div>
             </div>

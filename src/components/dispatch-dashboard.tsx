@@ -107,13 +107,15 @@ function DispatchDashboardUI() {
     return () => clearInterval(movementInterval);
   }, []);
 
-  const handleAddRide = (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'requestTime' | 'isNew'>) => {
+  const handleAddRide = (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => {
+    const now = new Date();
     const newRide: Ride = {
       ...newRideData,
       id: `ride-${Date.now()}`,
       status: 'pending',
       driverId: null,
-      requestTime: new Date(),
+      createdAt: now,
+      updatedAt: now,
       isNew: true,
     };
     setRides(prev => [newRide, ...prev]);
@@ -124,7 +126,7 @@ function DispatchDashboardUI() {
   };
   
   const handleEditRide = (updatedRide: Ride) => {
-    setRides(prev => prev.map(r => r.id === updatedRide.id ? updatedRide : r));
+    setRides(prev => prev.map(r => r.id === updatedRide.id ? { ...updatedRide, updatedAt: new Date() } : r));
     setEditingRide(null);
     setIsFormOpen(false);
   }
@@ -146,9 +148,10 @@ function DispatchDashboardUI() {
 
         const originalRide = newRides[rideIndex];
         const originalDriverId = originalRide.driverId;
+        const now = new Date();
 
         // Update the ride with the new driver and status
-        newRides[rideIndex] = { ...originalRide, status: 'assigned' };
+        newRides[rideIndex] = { ...originalRide, status: 'assigned', updatedAt: now, assignedAt: now };
         
         // If the ride has a scheduled time, we don't immediately assign a driver
         if (!originalRide.scheduledTime) {
@@ -192,7 +195,7 @@ function DispatchDashboardUI() {
     const driverId = ride.driverId;
 
     // Set ride back to pending and remove driver
-    setRides(prev => prev.map(r => r.id === rideId ? { ...r, status: 'pending', driverId: null } : r));
+    setRides(prev => prev.map(r => r.id === rideId ? { ...r, status: 'pending', driverId: null, updatedAt: new Date(), assignedAt: undefined } : r));
 
     // Check if the driver has any other active rides
     const otherRides = rides.filter(r => r.driverId === driverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
@@ -227,8 +230,19 @@ function DispatchDashboardUI() {
       const rideToUpdate = prevRides.find(ride => ride.id === rideId);
       if (!rideToUpdate) return prevRides;
 
+      const now = new Date();
+      const updatedRide = { ...rideToUpdate, status: newStatus, updatedAt: now };
+
+      if (newStatus === 'in-progress') {
+        updatedRide.pickedUpAt = now;
+      } else if (newStatus === 'completed') {
+        updatedRide.droppedOffAt = now;
+      } else if (newStatus === 'cancelled') {
+        updatedRide.cancelledAt = now;
+      }
+
       const updatedRides = prevRides.map(ride => 
-        ride.id === rideId ? { ...ride, status: newStatus, completionTime: (newStatus === 'completed' || newStatus === 'cancelled') ? new Date() : undefined } : ride
+        ride.id === rideId ? updatedRide : ride
       );
 
       // If ride is completed or cancelled, check driver status
@@ -257,7 +271,7 @@ function DispatchDashboardUI() {
     setRides(prevRides =>
       prevRides.map(ride => {
         if (ride.id !== rideId) return ride;
-        return { ...ride, totalFare: details.totalFare, paymentDetails: details.paymentDetails };
+        return { ...ride, totalFare: details.totalFare, paymentDetails: details.paymentDetails, updatedAt: new Date() };
       })
     );
   };
@@ -527,11 +541,14 @@ function DispatchDashboardUI() {
             onOpenChange={setIsFormOpen}
             title={editingRide ? 'Edit Ride Details' : 'Log New Call'}
           >
+            <div className="p-1">
               <CallLoggerForm 
+                key={editingRide?.id || 'new'}
                 onAddRide={handleAddRide} 
                 onEditRide={handleEditRide}
                 rideToEdit={editingRide}
               />
+            </div>
           </ResponsiveDialog>
         </div>
       </header>

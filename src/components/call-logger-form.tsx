@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import type { Ride } from '@/lib/types';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, MapPin, Edit } from 'lucide-react';
-import { format, set, parse } from 'date-fns';
+import { format, set } from 'date-fns';
 
 const formSchema = z.object({
   pickupLocation: z.string().min(3, { message: 'Enter a pickup location.' }),
@@ -23,8 +23,6 @@ const formSchema = z.object({
   passengerCount: z.coerce.number().optional(),
   scheduledTime: z.string().optional(),
   movingFee: z.boolean().default(false),
-  isReturnTrip: z.boolean().default(false),
-  isPrepaid: z.boolean().default(false),
   notes: z.string().optional(),
 });
 
@@ -32,32 +30,17 @@ type CallLoggerFormValues = z.infer<typeof formSchema>;
 
 type CallLoggerFormProps = {
   rideToEdit?: Ride | null;
-  onAddRide: (rideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'requestTime' | 'isNew'>) => void;
+  onAddRide: (rideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => void;
   onEditRide: (rideData: Ride) => void;
 };
 
-// By splitting the form into its own component, we can use a `key` prop on it.
-// When the key changes (e.g., when we switch from editing one ride to another, or to a new ride),
-// React will unmount the old component and mount a new one. This forces react-hook-form
-// to re-initialize with the correct defaultValues, which is the most reliable way
-// to handle dynamic forms with useFieldArray.
-export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
-  return (
-    <CallLoggerFormContent
-        key={rideToEdit?.id || 'new'}
-        onAddRide={onAddRide}
-        onEditRide={onEditRide}
-        rideToEdit={rideToEdit}
-    />
-  )
-}
 
-function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
+export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
   const isEditMode = !!rideToEdit;
   
   const form = useForm<CallLoggerFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: useMemo(() => ({
       pickupLocation: rideToEdit?.pickup.name || '',
       dropoffLocation: rideToEdit?.dropoff?.name || '',
       stops: rideToEdit?.stops?.map(s => ({ name: s.name })) || [],
@@ -65,11 +48,9 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
       passengerPhone: rideToEdit?.passengerPhone || '',
       passengerCount: rideToEdit?.passengerCount ?? 1,
       movingFee: rideToEdit?.movingFee || false,
-      isReturnTrip: rideToEdit?.isReturnTrip || false,
-      isPrepaid: rideToEdit?.isPrepaid || false,
       notes: rideToEdit?.notes || '',
       scheduledTime: rideToEdit?.scheduledTime ? format(new Date(rideToEdit.scheduledTime), "HH:mm") : '',
-    },
+    }), [rideToEdit]),
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -98,8 +79,6 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
       passengerPhone: values.passengerPhone,
       passengerCount: passengerCount,
       movingFee: values.movingFee,
-      isReturnTrip: values.isReturnTrip,
-      isPrepaid: values.isPrepaid,
       notes: values.notes,
       scheduledTime: scheduledTimeDate,
     };
@@ -128,6 +107,20 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
     }
     form.reset();
   }
+  
+  useEffect(() => {
+    form.reset({
+      pickupLocation: rideToEdit?.pickup.name || '',
+      dropoffLocation: rideToEdit?.dropoff?.name || '',
+      stops: rideToEdit?.stops?.map(s => ({ name: s.name })) || [],
+      totalFare: rideToEdit?.totalFare ?? 5,
+      passengerPhone: rideToEdit?.passengerPhone || '',
+      passengerCount: rideToEdit?.passengerCount ?? 1,
+      movingFee: rideToEdit?.movingFee || false,
+      notes: rideToEdit?.notes || '',
+      scheduledTime: rideToEdit?.scheduledTime ? format(new Date(rideToEdit.scheduledTime), "HH:mm") : '',
+    });
+  }, [rideToEdit, form]);
 
   return (
     <div className="max-h-[80vh] overflow-y-auto pr-2">
@@ -263,7 +256,7 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 </FormItem>
             )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
                 <FormField
                 control={form.control}
                 name="movingFee"
@@ -283,48 +276,7 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
                     </FormItem>
                 )}
                 />
-                <FormField
-                control={form.control}
-                name="isReturnTrip"
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                        <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                        <FormLabel>
-                        Return Trip
-                        </FormLabel>
-                    </div>
-                    </FormItem>
-                )}
-                />
             </div>
-            <FormField
-            control={form.control}
-            name="isPrepaid"
-            render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                    <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                    <FormLabel>
-                    Mark as Prepaid
-                    </FormLabel>
-                    <FormDescription>
-                        Indicates the fare has been paid in advance.
-                    </FormDescription>
-                </div>
-                </FormItem>
-            )}
-            />
             <div className="h-80 sm:h-0" />
         </form>
         </Form>

@@ -28,14 +28,9 @@ export type Ride = {
   stops?: Location[];
   status: RideStatus;
   driverId: string | null;
-  requestTime: Date;
-  scheduledTime?: Date;
-  completionTime?: Date;
   isNew?: boolean;
   passengerCount?: number;
   movingFee: boolean;
-  isReturnTrip?: boolean;
-  isPrepaid?: boolean;
   notes?: string;
   paymentDetails?: {
     cash?: number;
@@ -43,4 +38,14 @@ export type Ride = {
     check?: number;
     tip?: number;
   };
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+  scheduledTime?: Date;
+  assignedAt?: Date;
+  pickedUpAt?: Date;
+  droppedOffAt?: Date;
+  cancelledAt?: Date;
 };
+
