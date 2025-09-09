@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import Link from 'next/link';
 
 
 const getStatusVariant = (status: Vehicle['status']) => {
@@ -126,10 +127,14 @@ export function VehicleManagementTable() {
         <TableBody>
           {vehicles.map((vehicle) => (
             <TableRow key={vehicle.id}>
-              <TableCell className="font-medium">{vehicle.nickname}</TableCell>
+              <TableCell className="font-medium">
+                <Link href={`/admin/vehicles/${vehicle.id}`} className="text-primary hover:underline">
+                    {vehicle.nickname}
+                </Link>
+              </TableCell>
               <TableCell>{vehicle.year} {vehicle.make} {vehicle.model}</TableCell>
               <TableCell>{vehicle.vin}</TableCell>
-              <TableCell>{vehicle.mileage.toLocaleString()}</TableCell>
+              <TableCell>{vehicle.mileage?.toLocaleString()}</TableCell>
               <TableCell>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -39,13 +39,25 @@ export type Driver = {
 export type Vehicle = {
     id: string;
     nickname: string;
-    make: string;
-    model: string;
-    year: number | null;
-    vin: string;
-    mileage: number | null;
+    make?: string;
+    model?: string;
+    year?: number | null;
+    vin?: string;
+    mileage?: number | null;
     status: 'active' | 'maintenance' | 'decommissioned';
     currentDriverId?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export type MaintenanceTicket = {
+    id: string;
+    vehicleId: string;
+    title: string;
+    description: string;
+    status: 'open' | 'in-progress' | 'closed';
+    priority: 'low' | 'medium' | 'high';
+    reportedById: string;
     createdAt: Date;
     updatedAt: Date;
 }

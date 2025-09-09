@@ -5,8 +5,8 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import type { Driver, Vehicle } from '@/lib/types';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import type { Driver, MaintenanceTicket, Vehicle } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 const INVITE_CODE = 'KBT04330';
@@ -140,7 +140,7 @@ export async function deleteDriver(driverId: string) {
         await deleteDoc(driverRef);
         revalidatePath('/admin');
         return { type: "success", message: "Driver deleted successfully." };
-    } catch (error: any) {
+    } catch (error: any) => {
         return { type: "error", message: `Failed to delete driver: ${error.message}` };
     }
 }
@@ -198,4 +198,52 @@ export async function createVehicle(prevState: any, formData: FormData) {
         console.error("Failed to create vehicle:", error);
         return { type: "error", message: "Failed to create the vehicle. Please try again later." };
     }
+}
+
+const createTicketSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  description: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high']),
+  vehicleId: z.string(),
+  reportedById: z.string(),
+});
+
+export async function createTicket(prevState: any, formData: FormData) {
+  const validatedFields = createTicketSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+
+  if (!validatedFields.success) {
+    return {
+      type: "error",
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Invalid ticket details provided.",
+    };
+  }
+
+  try {
+    const { vehicleId, title, description, priority, reportedById } = validatedFields.data;
+    
+    const newTicket: Omit<MaintenanceTicket, 'id' | 'createdAt' | 'updatedAt'> = {
+      vehicleId,
+      title,
+      description: description || '',
+      priority,
+      status: 'open',
+      reportedById,
+    };
+
+    await addDoc(collection(db, 'tickets'), {
+      ...newTicket,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    revalidatePath(`/admin/vehicles/${vehicleId}`);
+    return { type: 'success', message: 'Maintenance ticket created successfully.' };
+
+  } catch (error: any) {
+    console.error("Failed to create ticket:", error);
+    return { type: "error", message: `Failed to create ticket: ${error.message}` };
+  }
 }
