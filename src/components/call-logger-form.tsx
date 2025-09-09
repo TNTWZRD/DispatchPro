@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import type { Ride } from '@/lib/types';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,58 +40,42 @@ type CallLoggerFormProps = {
   onEditRide: (rideData: Ride) => void;
 };
 
+// By splitting the form into its own component, we can use a `key` prop on it.
+// When the key changes (e.g., when we switch from editing one ride to another, or to a new ride),
+// React will unmount the old component and mount a new one. This forces react-hook-form
+// to re-initialize with the correct defaultValues, which is the most reliable way
+// to handle dynamic forms with useFieldArray.
 export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
+  return (
+    <CallLoggerFormContent
+        key={rideToEdit?.id || 'new'}
+        onAddRide={onAddRide}
+        onEditRide={onEditRide}
+        rideToEdit={rideToEdit}
+    />
+  )
+}
+
+
+function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
   const isEditMode = !!rideToEdit;
   
   const form = useForm<CallLoggerFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      pickupLocation: '',
-      dropoffLocation: '',
-      stops: [],
-      totalFare: 5,
-      passengerPhone: '',
-      passengerCount: 1,
-      movingFee: false,
-      isReturnTrip: false,
-      isPrepaid: false,
-      notes: '',
+      pickupLocation: rideToEdit?.pickup.name || '',
+      dropoffLocation: rideToEdit?.dropoff?.name || '',
+      stops: rideToEdit?.stops?.map(s => ({ name: s.name })) || [],
+      totalFare: rideToEdit?.totalFare ?? 5,
+      passengerPhone: rideToEdit?.passengerPhone || '',
+      passengerCount: rideToEdit?.passengerCount ?? 1,
+      movingFee: rideToEdit?.movingFee || false,
+      isReturnTrip: rideToEdit?.isReturnTrip || false,
+      isPrepaid: rideToEdit?.isPrepaid || false,
+      notes: rideToEdit?.notes || '',
+      scheduledTime: rideToEdit?.scheduledTime,
     },
   });
-  
-  useEffect(() => {
-    if (isEditMode && rideToEdit) {
-      const stopsData = rideToEdit.stops?.map(s => ({ name: s.name })) || [];
-      form.reset({
-        pickupLocation: rideToEdit.pickup.name,
-        dropoffLocation: rideToEdit.dropoff?.name || '',
-        stops: stopsData,
-        totalFare: rideToEdit.totalFare,
-        passengerPhone: rideToEdit.passengerPhone || '',
-        passengerCount: rideToEdit.passengerCount,
-        movingFee: rideToEdit.movingFee,
-        isReturnTrip: rideToEdit.isReturnTrip,
-        isPrepaid: rideToEdit.isPrepaid,
-        notes: rideToEdit.notes,
-        scheduledTime: rideToEdit.scheduledTime,
-      });
-    } else {
-      form.reset({
-        pickupLocation: '',
-        dropoffLocation: '',
-        stops: [],
-        totalFare: 5,
-        passengerPhone: '',
-        passengerCount: 1,
-        movingFee: false,
-        isReturnTrip: false,
-        isPrepaid: false,
-        notes: '',
-        scheduledTime: undefined,
-      });
-    }
-  }, [rideToEdit, isEditMode, form]);
-
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
