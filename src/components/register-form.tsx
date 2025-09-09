@@ -21,22 +21,25 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
+  CardFooter,
 } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
 import { Loader2, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+const VALID_INVITE_CODE = 'KBT04330';
+
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  inviteCode: z.string().min(1, { message: 'Invite code is required.' }),
 });
 
-export function LoginForm() {
+export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signInWithEmailAndPassword, signInWithGoogle } = useAuth();
+  const { createUserWithEmailAndPassword, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,31 +47,50 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
+      inviteCode: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setError(null);
+    if (values.inviteCode !== VALID_INVITE_CODE) {
+        form.setError('inviteCode', { type: 'manual', message: 'Invalid invite code.' });
+        return;
+    }
+
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(values.email, values.password);
+      await createUserWithEmailAndPassword(values.email, values.password);
       router.push('/');
     } catch (err: any) {
-      setError('Invalid login credentials. Please try again.');
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email address is already in use.');
+      } else {
+        setError('Could not create account. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function handleGoogleSignIn() {
+   async function handleGoogleSignIn() {
     setError(null);
+    const inviteCode = form.getValues('inviteCode');
+    if (!inviteCode) {
+        form.setError('inviteCode', { type: 'manual', message: 'Please enter an invite code before using Google Sign-In.' });
+        return;
+    }
+    if (inviteCode !== VALID_INVITE_CODE) {
+        form.setError('inviteCode', { type: 'manual', message: 'Invalid invite code.' });
+        return;
+    }
+      
     setIsLoading(true);
     try {
         await signInWithGoogle();
         // The context handles redirection
     } catch(err) {
         setError('Could not sign in with Google. Please try again.');
-    } finally {
         setIsLoading(false);
     }
   }
@@ -80,11 +102,24 @@ export function LoginForm() {
             <Truck className="h-8 w-8 text-primary" />
             <CardTitle className="text-3xl">DispatchPro</CardTitle>
         </div>
-        <CardDescription>Sign in to your account</CardDescription>
+        <CardDescription>Enter your invite code and create an account</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" suppressHydrationWarning>
+            <FormField
+              control={form.control}
+              name="inviteCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invite Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your invite code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
@@ -114,7 +149,7 @@ export function LoginForm() {
             {error && <p className="text-sm font-medium text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Create Account
             </Button>
           </form>
         </Form>
@@ -137,11 +172,11 @@ export function LoginForm() {
             Google
         </Button>
       </CardContent>
-      <CardFooter>
+       <CardFooter>
         <div className="text-sm text-muted-foreground w-full text-center">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-primary hover:underline">
-                Register
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary hover:underline">
+                Sign In
             </Link>
         </div>
       </CardFooter>
