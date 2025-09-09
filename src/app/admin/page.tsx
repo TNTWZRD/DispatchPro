@@ -34,7 +34,7 @@ export default function AdminPage() {
         const body = encodeURIComponent(
             `You have been invited to join DispatchPro.\n\nPlease register at:\n${registrationUrl}\n\nUse the following invite code:\n${INVITE_CODE}`
         );
-        return `mailto:?subject=${subject}&body=${body}`;
+        return `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
     }
 
     if (loading || !user || !canAccess) {
@@ -54,7 +54,7 @@ export default function AdminPage() {
                 </h1>
                 <div className="ml-auto flex items-center gap-2">
                     <Button asChild variant="outline">
-                        <a href={generateInviteLink()}>
+                        <a href={generateInviteLink()} target="_blank" rel="noopener noreferrer">
                            <Mail className="mr-2 h-4 w-4" /> Invite User
                         </a>
                     </Button>
