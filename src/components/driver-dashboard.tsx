@@ -271,7 +271,7 @@ export function DriverDashboard() {
       >
           <ChatView
             messages={driverMessages}
-            onSendMessage={onSendMessage}
+            onSendMessage={handleSendMessage}
             sender='driver'
             driverId={currentDriver.id}
             driverName="Me"
