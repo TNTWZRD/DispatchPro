@@ -30,7 +30,7 @@ export function ResponsiveDialog({ open, onOpenChange, title, children }: Respon
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
+        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto p-4">
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
           </SheetHeader>
@@ -51,3 +51,4 @@ export function ResponsiveDialog({ open, onOpenChange, title, children }: Respon
     </Dialog>
   )
 }
+

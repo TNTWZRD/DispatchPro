@@ -398,7 +398,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 A {formatCurrency(cardFee)} card processing fee will be applied.
               </p>
             )}
-             <div className="h-80" />
+             <div className="sm:h-80 md:h-0" />
           </div>
           <div className="flex justify-end p-4">
             <Button onClick={handleSetFare} disabled={totalPayment <= 0}>
