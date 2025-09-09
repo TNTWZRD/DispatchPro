@@ -67,7 +67,11 @@ export function LoginForm() {
         await signInWithGoogle();
         router.push('/');
     } catch(err: any) {
-        setError('Could not sign in with Google. Please try again.');
+        if (err.code === "auth/user-not-found") {
+            setError('Account not found. Please register first.');
+        } else {
+            setError('Could not sign in with Google. Please try again.');
+        }
     } finally {
         setIsLoading(false);
     }

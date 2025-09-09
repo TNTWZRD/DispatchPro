@@ -39,7 +39,7 @@ const formSchema = z.object({
 export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { createUserWithEmailAndPassword, signInWithGoogle } = useAuth();
+  const { createUserWithEmailAndPassword, registerWithGoogle } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -87,7 +87,7 @@ export function RegisterForm() {
       
     setIsLoading(true);
     try {
-        await signInWithGoogle();
+        await registerWithGoogle(inviteCode);
         router.push('/');
     } catch(err) {
         setError('Could not sign in with Google. Please try again.');

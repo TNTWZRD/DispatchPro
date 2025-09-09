@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { User as FirebaseAuthUser } from 'firebase/auth';
 import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword, getAdditionalUserInfo } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { AppUser, Driver } from '@/lib/types';
 import { Role } from '@/lib/types';
@@ -15,6 +15,7 @@ interface AuthContextType {
   firebaseUser: FirebaseAuthUser | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  registerWithGoogle: (inviteCode: string) => Promise<void>;
   signInWithEmailAndPassword: (email: string, pass: string) => Promise<void>;
   createUserWithEmailAndPassword: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
@@ -28,6 +29,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const fetchAppUser = useCallback(async (fbUser: FirebaseAuthUser): Promise<AppUser | null> => {
     const userDocRef = doc(db, 'users', fbUser.uid);
@@ -61,6 +64,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setFirebaseUser(fbUser);
         const appUser = await fetchAppUser(fbUser);
         setUser(appUser);
+        
+        // Centralized redirection logic
+        if (appUser && (pathname === '/login' || pathname === '/register')) {
+            const roleParam = searchParams.get('role');
+            if (roleParam === 'driver' && (appUser.role & Role.DRIVER)) {
+                router.push('/driver');
+            } else if (appUser.role & Role.DISPATCHER || appUser.role & Role.ADMIN || appUser.role & Role.OWNER) {
+                router.push('/');
+            } else if (appUser.role & Role.DRIVER) { // Fallback for driver if no role param
+                router.push('/driver');
+            }
+        }
       } else {
         setFirebaseUser(null);
         setUser(null);
@@ -68,34 +83,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [fetchAppUser]);
-
+  }, [fetchAppUser, pathname, router, searchParams]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      const fbUser = result.user;
-      const additionalInfo = getAdditionalUserInfo(result);
+      const appUser = await fetchAppUser(result.user);
 
-      // Check if user is new and create a document if so
-      if (additionalInfo?.isNewUser) {
-        const newAppUser: AppUser = {
-          uid: fbUser.uid,
-          email: fbUser.email,
-          displayName: fbUser.displayName,
-          role: Role.DISPATCHER, // Default role
-          photoURL: fbUser.photoURL,
-        };
-        await setDoc(doc(db, "users", fbUser.uid), {
-          ...newAppUser,
-          createdAt: serverTimestamp()
-        });
-        setUser(newAppUser); // Set user in context immediately
+      if (!appUser) {
+          // This case is for when a user signs in with Google but isn't in our DB.
+          // We sign them out and throw an error to be caught by the form.
+          await signOut(auth);
+          const error = new Error("Account not found. Please register first.") as any;
+          error.code = "auth/user-not-found";
+          throw error;
       }
-      // For existing users, the onAuthStateChanged listener will handle setting the user state.
+      // Redirection is handled by the onAuthStateChanged effect
     } catch (error) {
       console.error("Error signing in with Google", error);
+      throw error;
+    }
+  };
+  
+  const registerWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+       const fbUser = result.user;
+       const additionalInfo = getAdditionalUserInfo(result);
+
+       if (additionalInfo?.isNewUser) {
+         const newAppUser: AppUser = {
+           uid: fbUser.uid,
+           email: fbUser.email,
+           displayName: fbUser.displayName,
+           role: Role.DISPATCHER, 
+           photoURL: fbUser.photoURL,
+         };
+         await setDoc(doc(db, "users", fbUser.uid), {
+             ...newAppUser,
+             createdAt: serverTimestamp()
+         });
+         setUser(newAppUser);
+       }
+      // Redirection is handled by the onAuthStateChanged effect
+    } catch (error) {
+      console.error("Error registering with Google", error);
       throw error;
     }
   };
@@ -103,7 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithEmailAndPassword = async (email: string, pass: string) => {
     try {
       await firebaseSignInWithEmailAndPassword(auth, email, pass);
-      // Let onAuthStateChanged handle the rest
+      // Redirection is handled by the onAuthStateChanged effect
     } catch (error) {
        console.error("Error signing in with email and password", error);
        throw error;
@@ -144,7 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, signInWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, firebaseUser, loading, signInWithGoogle, registerWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );
