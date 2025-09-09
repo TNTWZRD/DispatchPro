@@ -73,8 +73,7 @@ export async function createDriver(prevState: any, formData: FormData) {
         const { name, phoneNumber } = validatedFields.data;
         const newDriverRef = doc(collection(db, 'drivers'));
 
-        const newDriver: Omit<Driver, 'createdAt' | 'updatedAt'> = {
-            id: newDriverRef.id,
+        const newDriver: Omit<Driver, 'id'> = {
             name,
             phoneNumber,
             rating: 5,
@@ -84,6 +83,7 @@ export async function createDriver(prevState: any, formData: FormData) {
 
         await setDoc(newDriverRef, {
             ...newDriver,
+            id: newDriverRef.id,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
