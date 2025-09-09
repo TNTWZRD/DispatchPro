@@ -160,8 +160,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           {/* Header Row */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-base">#{ride.id.split('-')[1]}</span>
-              {ride.status !== 'pending' && getStatusBadge(ride.status)}
+              {ride.status !== 'pending' ? getStatusBadge(ride.status) : <div className='font-bold text-base'>Waiting...</div>}
               {isCondensed && ride.scheduledTime && (
                 <Tooltip>
                   <TooltipTrigger>
