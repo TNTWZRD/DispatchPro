@@ -1,9 +1,10 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { initialRides, initialDrivers } from '@/lib/data';
-import type { Ride, Driver, RideStatus } from '@/lib/types';
+import { initialRides, initialDrivers, initialMessages } from '@/lib/data';
+import type { Ride, Driver, Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
@@ -15,6 +16,7 @@ import { DriverEditForm } from './driver-edit-form';
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
 
   // In a real app, you'd get this from auth
@@ -68,6 +70,21 @@ export function DriverDashboard() {
     setEditingRide(ride);
   }
 
+  const handleSendMessage = (message: Omit<Message, 'id' | 'timestamp'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: `msg-${Date.now()}`,
+      timestamp: new Date(),
+      isNew: true,
+    };
+    setMessages(prev => [...prev, newMessage]);
+
+    // Mark as read after a delay
+    setTimeout(() => {
+      setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, isNew: false } : m));
+    }, 5000);
+  };
+
   if (!currentDriver) {
     return (
       <div className="flex h-screen items-center justify-center bg-secondary">
@@ -111,7 +128,9 @@ export function DriverDashboard() {
                         <h2 className="text-lg font-semibold mb-2">{currentRide.status === 'in-progress' ? 'Current Ride' : 'Next Ride'}</h2>
                         <DriverRideCard 
                             ride={currentRide}
+                            messages={messages.filter(m => m.rideId === currentRide.id)}
                             onEdit={handleOpenEdit}
+                            onSendMessage={handleSendMessage}
                         />
                     </div>
                 )}
@@ -125,8 +144,10 @@ export function DriverDashboard() {
                                 <DriverRideCard 
                                     key={ride.id}
                                     ride={ride}
+                                    messages={messages.filter(m => m.rideId === ride.id)}
                                     isQueued={true}
                                     onEdit={handleOpenEdit}
+                                    onSendMessage={handleSendMessage}
                                 />
                             ))}
                         </div>
@@ -147,7 +168,9 @@ export function DriverDashboard() {
                             <DriverRideCard 
                                 key={ride.id}
                                 ride={ride}
+                                messages={messages.filter(m => m.rideId === ride.id)}
                                 onEdit={handleOpenEdit}
+                                onSendMessage={handleSendMessage}
                             />
                         ))}
                     </div>

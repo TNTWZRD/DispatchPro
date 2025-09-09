@@ -1,4 +1,5 @@
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -48,4 +49,15 @@ export type Ride = {
   pickedUpAt?: Date;
   droppedOffAt?: Date;
   cancelledAt?: Date;
+};
+
+export type Message = {
+  id: string;
+  rideId: string;
+  sender: 'driver' | 'dispatcher';
+  text?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  timestamp: Date;
+  isNew?: boolean;
 };

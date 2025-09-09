@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import type { Ride, Driver, RideStatus } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
@@ -17,12 +18,14 @@ type DriverColumnProps = {
   driver: Driver;
   rides: Ride[];
   allDrivers: Driver[];
+  messages: Message[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
   onUnscheduleRide: (rideId: string) => void;
+  onSendMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   style?: React.CSSProperties;
 };
 
@@ -34,7 +37,7 @@ const statusSortOrder: Record<RideStatus, number> = {
   'cancelled': 5,
 };
 
-export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, onUnscheduleRide, style }: DriverColumnProps) {
+export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, onUnscheduleRide, onSendMessage, style }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   
   const isMobile = useIsMobile();
@@ -77,12 +80,14 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
               key={ride.id}
               ride={ride}
               drivers={allDrivers}
+              messages={messages.filter(m => m.rideId === ride.id)}
               onAssignDriver={onAssignDriver}
               onChangeStatus={onChangeStatus}
               onSetFare={onSetFare}
               onUnassignDriver={onUnassignDriver}
               onEdit={onEditRide}
               onUnschedule={onUnscheduleRide}
+              onSendMessage={onSendMessage}
             />
           ))
         )}
@@ -99,12 +104,14 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
                   key={ride.id}
                   ride={ride}
                   drivers={allDrivers}
+                  messages={messages.filter(m => m.rideId === ride.id)}
                   onAssignDriver={onAssignDriver}
                   onChangeStatus={onChangeStatus}
                   onSetFare={onSetFare}
                   onUnassignDriver={onUnassignDriver}
                   onEdit={onEditRide}
                   onUnschedule={onUnscheduleRide}
+                  onSendMessage={onSendMessage}
                 />
               ))}
             </div>

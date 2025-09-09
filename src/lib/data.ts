@@ -1,5 +1,6 @@
 
-import type { Ride, Driver } from './types';
+
+import type { Ride, Driver, Message } from './types';
 
 export const initialDrivers: Driver[] = [
   { id: 'driver-1', name: 'John Doe', vehicle: 'Toyota Prius - ABC-123', rating: 4.8, status: 'available', location: { x: 20, y: 30 } },
@@ -326,4 +327,29 @@ export const initialRides: Ride[] = [
     movingFee: false,
     totalFare: 0,
   },
+];
+
+
+export const initialMessages: Message[] = [
+  {
+    id: 'msg-1',
+    rideId: 'ride-17',
+    sender: 'dispatcher',
+    text: "Mike, there's been a traffic alert on the main bridge. Can you confirm your route?",
+    timestamp: new Date(now.getTime() - 4 * 60 * 1000),
+  },
+  {
+    id: 'msg-2',
+    rideId: 'ride-17',
+    sender: 'driver',
+    text: "Confirmed. I'm taking the bypass. No problem.",
+    timestamp: new Date(now.getTime() - 3 * 60 * 1000),
+  },
+  {
+    id: 'msg-3',
+    rideId: 'ride-17',
+    sender: 'dispatcher',
+    text: "Great, thanks for the update.",
+    timestamp: new Date(now.getTime() - 3 * 60 * 1000 + 5000),
+  }
 ];

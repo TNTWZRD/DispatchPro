@@ -1,9 +1,10 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import type { Ride, Driver, RideStatus } from '@/lib/types';
-import { initialRides, initialDrivers } from '@/lib/data';
+import type { Ride, Driver, RideStatus, Message } from '@/lib/types';
+import { initialRides, initialDrivers, initialMessages } from '@/lib/data';
 import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import { ResponsiveDialog } from './responsive-dialog';
 function DispatchDashboardUI() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [time, setTime] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -324,6 +326,21 @@ function DispatchDashboardUI() {
     setIsFormOpen(true);
   }
 
+  const handleSendMessage = (message: Omit<Message, 'id' | 'timestamp'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: `msg-${Date.now()}`,
+      timestamp: new Date(),
+      isNew: true,
+    };
+    setMessages(prev => [...prev, newMessage]);
+
+    // Mark as read after a delay
+    setTimeout(() => {
+      setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, isNew: false } : m));
+    }, 5000);
+  };
+
   const renderDesktopView = () => {
     const totalColumns = activeDrivers.length + (hasScheduledRides ? 2 : 1) + (showCancelled ? 1 : 0);
     const columnWidth = Math.max(280, 100 / totalColumns * 20); // Dynamic width with a minimum
@@ -359,12 +376,14 @@ function DispatchDashboardUI() {
                           key={ride.id}
                           ride={ride}
                           drivers={drivers}
+                          messages={messages.filter(m => m.rideId === ride.id)}
                           onAssignDriver={handleAssignDriver}
                           onChangeStatus={handleChangeStatus}
                           onSetFare={handleSetFare}
                           onUnassignDriver={handleUnassignDriver}
                           onEdit={handleOpenEdit}
                           onUnschedule={handleUnscheduleRide}
+                          onSendMessage={handleSendMessage}
                         />
                       ))}
                       {provided.placeholder}
@@ -403,12 +422,14 @@ function DispatchDashboardUI() {
                             <RideCard
                               ride={ride}
                               drivers={drivers}
+                              messages={messages.filter(m => m.rideId === ride.id)}
                               onAssignDriver={handleAssignDriver}
                               onChangeStatus={handleChangeStatus}
                               onSetFare={handleSetFare}
                               onUnassignDriver={handleUnassignDriver}
                               onEdit={handleOpenEdit}
                               onUnschedule={handleUnscheduleRide}
+                              onSendMessage={handleSendMessage}
                             />
                           </div>
                         )}
@@ -455,12 +476,14 @@ function DispatchDashboardUI() {
                               <RideCard
                                 ride={ride}
                                 drivers={drivers}
+                                messages={messages.filter(m => m.rideId === ride.id)}
                                 onAssignDriver={handleAssignDriver}
                                 onChangeStatus={handleChangeStatus}
                                 onSetFare={handleSetFare}
                                 onUnassignDriver={handleUnassignDriver}
                                 onEdit={handleOpenEdit}
                                 onUnschedule={handleUnscheduleRide}
+                                onSendMessage={handleSendMessage}
                               />
                             </div>
                           )}
@@ -481,12 +504,14 @@ function DispatchDashboardUI() {
               driver={driver}
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.driverId === driver.id)}
               allDrivers={drivers}
+              messages={messages}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
               onUnassignDriver={handleUnassignDriver}
               onEditRide={handleOpenEdit}
               onUnscheduleRide={handleUnscheduleRide}
+              onSendMessage={handleSendMessage}
               style={{ width: `${columnWidth}px` }}
             />
           ))}
@@ -516,12 +541,14 @@ function DispatchDashboardUI() {
                         key={ride.id}
                         ride={ride}
                         drivers={drivers}
+                        messages={messages.filter(m => m.rideId === ride.id)}
                         onAssignDriver={handleAssignDriver}
                         onChangeStatus={handleChangeStatus}
                         onSetFare={handleSetFare}
                         onUnassignDriver={handleUnassignDriver}
                         onEdit={handleOpenEdit}
                         onUnschedule={handleUnscheduleRide}
+                        onSendMessage={handleSendMessage}
                       />
                     ))}
                     {pendingRides.length === 0 && (
@@ -541,12 +568,14 @@ function DispatchDashboardUI() {
                           key={ride.id}
                           ride={ride}
                           drivers={drivers}
+                          messages={messages.filter(m => m.rideId === ride.id)}
                           onAssignDriver={handleAssignDriver}
                           onChangeStatus={handleChangeStatus}
                           onSetFare={handleSetFare}
                           onUnassignDriver={handleUnassignDriver}
                           onEdit={handleOpenEdit}
                           onUnschedule={handleUnscheduleRide}
+                          onSendMessage={handleSendMessage}
                         />
                       ))}
                     </div>
@@ -562,12 +591,14 @@ function DispatchDashboardUI() {
                             driver={driver}
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.driverId === driver.id)}
                             allDrivers={drivers}
+                            messages={messages}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
                             onUnassignDriver={handleUnassignDriver}
                             onEditRide={handleOpenEdit}
                             onUnscheduleRide={handleUnscheduleRide}
+                            onSendMessage={handleSendMessage}
                           />
                       </div>
                   </CarouselItem>
