@@ -57,7 +57,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-2 p-2">
-        {hasActiveRides ? (
+        {hasActiveRides && (
           activeRides.map(ride => (
             <RideCard
               key={ride.id}
@@ -70,14 +70,10 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
               onEdit={onEditRide}
             />
           ))
-        ) : (
-            <div className="flex h-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 text-center text-muted-foreground p-4">
-              <p>Available for rides. Drag a pending ride here to assign.</p>
-            </div>
         )}
         
         {showCompleted && hasCompletedRides && (
-          <div className="pt-4 mt-4 border-t">
+          <div className={cn(!hasActiveRides && 'pt-4 mt-4 border-t')}>
             <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-muted-foreground">
               <CheckCircle2 className="h-4 w-4" />
               Completed Rides
@@ -98,6 +94,13 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
             </div>
           </div>
         )}
+        
+        {!hasActiveRides && !showCompleted && (
+            <div className="flex h-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 text-center text-muted-foreground p-4">
+              <p>Available for rides. Drag a pending ride here to assign.</p>
+            </div>
+        )}
+        
       </CardContent>
       {hasCompletedRides && (
         <CardFooter className="p-2">
@@ -140,5 +143,3 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
     </StrictModeDroppable>
   );
 }
-
-    
