@@ -17,15 +17,13 @@ import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronDown, Check } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -80,29 +78,25 @@ export function VehicleManagementTable() {
         unsubDrivers();
     };
   }, []);
-  
-  const getDriverName = (driverId?: string | null) => {
-    if (!driverId) return 'Unassigned';
-    return drivers.find(d => d.id === driverId)?.name || 'Unknown Driver';
-  }
 
   const handleStatusChange = async (vehicleId: string, status: Vehicle['status']) => {
     const vehicleRef = doc(db, 'vehicles', vehicleId);
     try {
-        await updateDoc(vehicleRef, { status });
+        await updateDoc(vehicleRef, { status, updatedAt: serverTimestamp() });
         toast({ title: "Status Updated", description: "Vehicle status changed successfully."});
     } catch(e) {
         toast({ variant: 'destructive', title: "Update Failed", description: "Could not update vehicle status."});
     }
   }
 
-  const handleDriverAssignment = async (vehicleId: string, driverId: string | 'unassign') => {
+  const handleDriverAssignment = async (vehicleId: string, driverId: string) => {
      const vehicleRef = doc(db, 'vehicles', vehicleId);
-     const newDriverId = driverId === 'unassign' ? null : driverId;
+     const newDriverId = driverId === 'unassigned' ? null : driverId;
     try {
-        await updateDoc(vehicleRef, { currentDriverId: newDriverId });
+        await updateDoc(vehicleRef, { currentDriverId: newDriverId, updatedAt: serverTimestamp() });
         toast({ title: "Driver Assigned", description: "Vehicle has been assigned to the new driver."});
     } catch(e) {
+        console.error("Assignment failed: ", e)
         toast({ variant: 'destructive', title: "Assignment Failed", description: "Could not assign driver."});
     }
   }
@@ -124,7 +118,7 @@ export function VehicleManagementTable() {
             <TableHead>License Plate</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Current Driver</TableHead>
-            <TableHead>Added On</TableHead>
+            <TableHead>Last Updated</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -137,7 +131,7 @@ export function VehicleManagementTable() {
               <TableCell>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full min-w-[150px] justify-between">
+                        <Button variant="outline" className="w-full min-w-[150px] justify-between capitalize">
                             <Badge className={getStatusVariant(vehicle.status)}>{vehicle.status}</Badge>
                             <ChevronDown className="ml-2 h-4 w-4" />
                         </Button>
@@ -160,7 +154,7 @@ export function VehicleManagementTable() {
                         <SelectValue placeholder="Assign driver..." />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="unassign">Unassigned</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                          <DropdownMenuSeparator />
                         {drivers.map(driver => (
                             <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
@@ -169,7 +163,7 @@ export function VehicleManagementTable() {
                  </Select>
               </TableCell>
               <TableCell>
-                {format(vehicle.createdAt, 'PP')}
+                {format(vehicle.updatedAt, 'PP')}
               </TableCell>
             </TableRow>
           ))}

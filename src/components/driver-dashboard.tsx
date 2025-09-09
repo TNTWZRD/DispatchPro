@@ -4,10 +4,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Ride, Driver, Message } from '@/lib/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
-import { Truck, CheckCircle, MessageCircle, LogOut } from 'lucide-react';
+import { CheckCircle, MessageCircle, LogOut } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ResponsiveDialog } from './responsive-dialog';
 import { DriverEditForm } from './driver-edit-form';
@@ -15,31 +14,30 @@ import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, orderBy, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [currentDriver, setCurrentDriver] = useState<Driver | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const { user, logout } = useAuth();
 
-  const currentDriver = useMemo(() => {
-    if (!user) return null;
-    return drivers.find(d => user.displayName?.includes(d.name.split(' ')[0]) || user.email?.includes(d.name.split(' ')[0].toLowerCase()));
-  }, [drivers, user]);
-
   useEffect(() => {
-      if (!user) return;
+    if (!user) return;
 
-      const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
-          const driversData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver));
-          setDrivers(driversData);
-      });
+    const driverRef = doc(db, "drivers", user.uid);
+    const unsubDriver = onSnapshot(driverRef, (doc) => {
+        if (doc.exists()) {
+            setCurrentDriver({ ...doc.data(), id: doc.id } as Driver);
+        } else {
+            setCurrentDriver(null);
+        }
+    });
 
-      return () => driversUnsub();
+    return () => unsubDriver();
   }, [user]);
 
   useEffect(() => {
@@ -273,7 +271,7 @@ export function DriverDashboard() {
       >
           <ChatView
             messages={driverMessages}
-            onSendMessage={handleSendMessage}
+            onSendMessage={onSendMessage}
             sender='driver'
             driverId={currentDriver.id}
             driverName="Me"
