@@ -2,8 +2,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -19,12 +18,13 @@ const firebaseConfig = {
 // Initialize Firebase for client-side and export it
 let app: FirebaseApp;
 let auth: Auth;
+let db: Firestore;
 
 // Ensure that Firebase is only initialized on the client side
 if (typeof window !== 'undefined') {
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     auth = getAuth(app);
+    db = getFirestore(app);
 }
 
-// @ts-ignore
-export { app, auth };
+export { app, auth, db };
