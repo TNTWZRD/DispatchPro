@@ -4,26 +4,12 @@
 import React, { useEffect } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Label } from '@/components/ui/label';
 import { sendInviteEmail } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Mail, Loader2, Send } from 'lucide-react';
-
-const inviteSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email.' }),
-});
 
 const initialState = {
   message: '',
@@ -34,7 +20,7 @@ const initialState = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
+    <Button type="submit" disabled={pending} className="w-full">
       {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
       Send Invite
     </Button>
@@ -77,14 +63,14 @@ export function InviteUserForm() {
               Enter the email address to send an invitation to.
             </p>
           </div>
-          <form ref={formRef} action={formAction} className="grid gap-2">
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="email" className="col-span-1">Email</Label>
+          <form ref={formRef} action={formAction} className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                className="col-span-2 h-8"
+                placeholder="name@example.com"
                 required
               />
             </div>
@@ -98,12 +84,3 @@ export function InviteUserForm() {
     </Popover>
   );
 }
-
-// Minimal Label component for use inside the popover form
-const Label = React.forwardRef<
-  HTMLLabelElement,
-  React.LabelHTMLAttributes<HTMLLabelElement>
->(({ className, ...props }, ref) => (
-  <label ref={ref} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" {...props} />
-));
-Label.displayName = "Label";
