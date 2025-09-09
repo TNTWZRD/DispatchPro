@@ -313,7 +313,7 @@ function DispatchDashboardUI() {
                    style={{ width: `${columnWidth}px` }}
                 >
                   <CardHeader>
-                    <CardTitle>Waiting ({pendingRides.length})</CardTitle>
+                    <CardTitle className="text-base">Waiting ({pendingRides.length})</CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-y-auto space-y-2">
                     {pendingRides.map((ride, index) => (
@@ -362,7 +362,7 @@ function DispatchDashboardUI() {
                     style={{ width: `${columnWidth}px` }}
                   >
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 text-base">
                         <Calendar className="h-5 w-5" /> Scheduled ({scheduledRides.length})
                       </CardTitle>
                     </CardHeader>

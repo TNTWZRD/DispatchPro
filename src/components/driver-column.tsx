@@ -48,7 +48,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto space-y-4">
+      <CardContent className="flex-1 overflow-y-auto space-y-2">
         {hasRides ? (
           rides.map(ride => (
             <RideCard
