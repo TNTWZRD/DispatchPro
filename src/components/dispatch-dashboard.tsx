@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
@@ -24,7 +25,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp } from 'firebase/firestore';
 
 
 function DispatchDashboardUI() {
@@ -53,16 +54,17 @@ function DispatchDashboardUI() {
     const ridesUnsub = onSnapshot(ridesQuery, (snapshot) => {
         const ridesData = snapshot.docs.map(doc => {
             const data = doc.data();
+            const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
             return {
                 ...data,
                 id: doc.id,
-                createdAt: data.createdAt?.toDate(),
-                updatedAt: data.updatedAt?.toDate(),
-                scheduledTime: data.scheduledTime?.toDate(),
-                assignedAt: data.assignedAt?.toDate(),
-                pickedUpAt: data.pickedUpAt?.toDate(),
-                droppedOffAt: data.droppedOffAt?.toDate(),
-                cancelledAt: data.cancelledAt?.toDate(),
+                createdAt: toDate(data.createdAt),
+                updatedAt: toDate(data.updatedAt),
+                scheduledTime: data.scheduledTime ? toDate(data.scheduledTime) : undefined,
+                assignedAt: data.assignedAt ? toDate(data.assignedAt) : undefined,
+                pickedUpAt: data.pickedUpAt ? toDate(data.pickedUpAt) : undefined,
+                droppedOffAt: data.droppedOffAt ? toDate(data.droppedOffAt) : undefined,
+                cancelledAt: data.cancelledAt ? toDate(data.cancelledAt) : undefined,
             } as Ride;
         });
         setRides(ridesData);
@@ -337,9 +339,6 @@ function DispatchDashboardUI() {
   };
 
   const renderDesktopView = () => {
-    const totalColumns = activeDrivers.length + (hasScheduledRides ? 2 : 1) + (showCancelled ? 1 : 0);
-    const columnWidth = Math.max(280, 100 / totalColumns * 20); // Dynamic width with a minimum
-
     return (
      <DragDropContext onDragEnd={onDragEnd}>
         <div 
@@ -357,8 +356,7 @@ function DispatchDashboardUI() {
                   <Card
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="shrink-0 flex flex-col bg-muted/50"
-                    style={{ width: `${columnWidth}px` }}
+                    className="shrink-0 flex flex-col bg-muted/50 w-full lg:w-[350px] xl:w-[400px]"
                   >
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -393,10 +391,9 @@ function DispatchDashboardUI() {
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   className={cn(
-                    "shrink-0 flex flex-col",
+                    "shrink-0 flex flex-col w-full lg:w-[350px] xl:w-[400px]",
                     snapshot.isDraggingOver && "bg-accent/20"
                   )}
-                   style={{ width: `${columnWidth}px` }}
                 >
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -445,10 +442,9 @@ function DispatchDashboardUI() {
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     className={cn(
-                      "shrink-0 flex flex-col",
+                      "shrink-0 flex flex-col w-full lg:w-[350px] xl:w-[400px]",
                       snapshot.isDraggingOver && "bg-accent/20"
                     )}
-                    style={{ width: `${columnWidth}px` }}
                   >
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -502,7 +498,7 @@ function DispatchDashboardUI() {
               onUnscheduleRide={handleUnscheduleRide}
               onSendMessage={handleSendMessage}
               onMarkMessagesAsRead={handleMarkMessagesAsRead}
-              style={{ width: `${columnWidth}px` }}
+              className="w-full lg:w-[350px] xl:w-[400px]"
             />
           ))}
         </div>
@@ -696,5 +692,3 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    

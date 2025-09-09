@@ -28,7 +28,7 @@ type DriverColumnProps = {
   onUnscheduleRide: (rideId: string) => void;
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
   onMarkMessagesAsRead: (driverId: string) => void;
-  style?: React.CSSProperties;
+  className?: string;
 };
 
 const statusSortOrder: Record<RideStatus, number> = {
@@ -52,7 +52,7 @@ export function DriverColumn({
     onUnscheduleRide, 
     onSendMessage,
     onMarkMessagesAsRead,
-    style 
+    className
 }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -207,9 +207,9 @@ export function DriverColumn({
           className={cn(
             "shrink-0 flex flex-col",
             snapshot.isDraggingOver && "bg-primary/20",
-            driver.status === 'offline' && "bg-muted/50"
+            driver.status === 'offline' && "bg-muted/50",
+            className
           )}
-          style={style}
         >
           {renderContent()}
           {provided.placeholder}
