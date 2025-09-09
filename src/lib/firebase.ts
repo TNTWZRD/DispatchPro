@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
@@ -20,7 +19,6 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
-// Ensure that Firebase is only initialized on the client side
 if (typeof window !== 'undefined') {
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     auth = getAuth(app);

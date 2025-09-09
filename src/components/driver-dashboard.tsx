@@ -3,7 +3,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { initialRides, initialDrivers, initialMessages } from '@/lib/data';
 import type { Ride, Driver, Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,28 +14,80 @@ import { DriverEditForm } from './driver-edit-form';
 import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, where, orderBy, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export function DriverDashboard() {
-  const [rides, setRides] = useState<Ride[]>(initialRides);
-  const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const { user, logout } = useAuth();
 
-  // In a real app, you'd get this from auth and a database lookup
-  // We find a driver whose name might be in the user's display name or email
   const currentDriver = useMemo(() => {
     if (!user) return null;
     return drivers.find(d => user.displayName?.includes(d.name.split(' ')[0]) || user.email?.includes(d.name.split(' ')[0].toLowerCase()));
   }, [drivers, user]);
 
+  useEffect(() => {
+      if (!user) return;
+
+      const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
+          const driversData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver));
+          setDrivers(driversData);
+      });
+
+      return () => driversUnsub();
+  }, [user]);
+
+  useEffect(() => {
+    if (!currentDriver) return;
+
+    const ridesQuery = query(collection(db, "rides"), where("driverId", "==", currentDriver.id));
+    const ridesUnsub = onSnapshot(ridesQuery, (snapshot) => {
+        const ridesData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                id: doc.id,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+                scheduledTime: data.scheduledTime?.toDate(),
+                assignedAt: data.assignedAt?.toDate(),
+                pickedUpAt: data.pickedUpAt?.toDate(),
+                droppedOffAt: data.droppedOffAt?.toDate(),
+                cancelledAt: data.cancelledAt?.toDate(),
+            } as Ride;
+        });
+        setRides(ridesData);
+    });
+
+    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id));
+    const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
+        const messagesData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                id: doc.id,
+                timestamp: data.timestamp?.toDate(),
+            } as Message;
+        });
+        setMessages(messagesData);
+    });
+
+    return () => {
+        ridesUnsub();
+        messagesUnsub();
+    }
+  }, [currentDriver]);
+
 
   const driverRides = useMemo(() => {
     if (!currentDriver) return [];
     return rides
-      .filter(r => r.driverId === currentDriver.id && ['assigned', 'in-progress'].includes(r.status))
+      .filter(r => ['assigned', 'in-progress'].includes(r.status))
       .sort((a, b) => {
         if (a.status === 'in-progress') return -1;
         if (b.status === 'in-progress') return 1;
@@ -68,22 +119,19 @@ export function DriverDashboard() {
     return driverMessages.filter(m => m.sender === 'dispatcher' && !m.isRead).length;
   }, [driverMessages]);
   
-  const handleEditRide = (rideId: string, details: { cashTip?: number, notes?: string }) => {
-    setRides(prevRides =>
-      prevRides.map(ride => {
-        if (ride.id !== rideId) return ride;
-        
-        const newPaymentDetails = { ...(ride.paymentDetails || {}), cashTip: details.cashTip };
-        const newNotes = details.notes;
+  const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
+    const rideToUpdate = rides.find(ride => ride.id === rideId);
+    if (!rideToUpdate) return;
+    
+    const newPaymentDetails = { ...(rideToUpdate.paymentDetails || {}), cashTip: details.cashTip };
+    const newNotes = details.notes;
 
-        return {
-          ...ride,
-          notes: newNotes,
-          paymentDetails: newPaymentDetails,
-          updatedAt: new Date()
-        };
-      })
-    );
+    await updateDoc(doc(db, 'rides', rideId), {
+        notes: newNotes,
+        paymentDetails: newPaymentDetails,
+        updatedAt: serverTimestamp()
+    });
+
     setEditingRide(null);
   };
   
@@ -91,23 +139,21 @@ export function DriverDashboard() {
     setEditingRide(ride);
   }
 
-  const handleSendMessage = (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
-    const newMessage: Message = {
-      ...message,
-      id: `msg-${Date.now()}`,
-      timestamp: new Date(),
-      isRead: true, // Messages sent by self are always read
-    };
-    setMessages(prev => [...prev, newMessage]);
+  const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
+    await addDoc(collection(db, 'messages'), {
+        ...message,
+        timestamp: serverTimestamp(),
+        isRead: true, // Messages sent by self are always read
+    });
   };
   
-  const handleChatOpen = (isOpen: boolean) => {
+  const handleChatOpen = async (isOpen: boolean) => {
     if(isOpen) {
         if (!currentDriver) return;
-        // Mark messages from dispatcher as read
-        setMessages(prev => prev.map(m => (
-            m.driverId === currentDriver.id && m.sender === 'dispatcher' ? { ...m, isRead: true } : m
-        )));
+        const unread = driverMessages.filter(m => m.sender === 'dispatcher' && !m.isRead);
+        for(const message of unread) {
+            await updateDoc(doc(db, 'messages', message.id), { isRead: true });
+        }
     }
     setIsChatOpen(isOpen);
   };
