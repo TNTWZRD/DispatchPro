@@ -46,9 +46,18 @@ function DispatchDashboardUI() {
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
   
   const allPendingRides = rides.filter(r => r.status === 'pending');
-  const pendingRides = allPendingRides.filter(r => !r.scheduledTime);
-  const scheduledRides = allPendingRides.filter(r => r.scheduledTime);
-  const cancelledRides = rides.filter(r => r.status === 'cancelled');
+  
+  const pendingRides = allPendingRides
+    .filter(r => !r.scheduledTime)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+  const scheduledRides = allPendingRides
+    .filter(r => r.scheduledTime)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+  const cancelledRides = rides
+    .filter(r => r.status === 'cancelled')
+    .sort((a, b) => (b.cancelledAt?.getTime() ?? 0) - (a.cancelledAt?.getTime() ?? 0));
   
   const hasScheduledRides = scheduledRides.length > 0;
 
