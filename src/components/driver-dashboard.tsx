@@ -74,7 +74,7 @@ export function DriverDashboard() {
       prevRides.map(ride => {
         if (ride.id !== rideId) return ride;
         
-        const newPaymentDetails = { ...ride.paymentDetails, cashTip: details.cashTip };
+        const newPaymentDetails = { ...(ride.paymentDetails || {}), cashTip: details.cashTip };
         const newNotes = details.notes;
 
         return {
