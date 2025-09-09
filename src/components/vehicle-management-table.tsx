@@ -25,14 +25,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import Link from 'next/link';
 
 
@@ -80,6 +72,11 @@ export function VehicleManagementTable() {
     };
   }, []);
 
+  const getDriverName = (driverId: string | null | undefined) => {
+    if (!driverId) return 'Unassigned';
+    return drivers.find(d => d.id === driverId)?.name || 'Unknown Driver';
+  }
+
   const handleStatusChange = async (vehicleId: string, status: Vehicle['status']) => {
     const vehicleRef = doc(db, 'vehicles', vehicleId);
     try {
@@ -87,18 +84,6 @@ export function VehicleManagementTable() {
         toast({ title: "Status Updated", description: "Vehicle status changed successfully."});
     } catch(e) {
         toast({ variant: 'destructive', title: "Update Failed", description: "Could not update vehicle status."});
-    }
-  }
-
-  const handleDriverAssignment = async (vehicleId: string, driverId: string) => {
-     const vehicleRef = doc(db, 'vehicles', vehicleId);
-     const newDriverId = driverId === 'unassigned' ? null : driverId;
-    try {
-        await updateDoc(vehicleRef, { currentDriverId: newDriverId, updatedAt: serverTimestamp() });
-        toast({ title: "Driver Assigned", description: "Vehicle has been assigned to the new driver."});
-    } catch(e) {
-        console.error("Assignment failed: ", e)
-        toast({ variant: 'destructive', title: "Assignment Failed", description: "Could not assign driver."});
     }
   }
 
@@ -117,10 +102,9 @@ export function VehicleManagementTable() {
           <TableRow>
             <TableHead>Nickname</TableHead>
             <TableHead>Vehicle</TableHead>
-            <TableHead>VIN</TableHead>
+            <TableHead>Current Driver</TableHead>
             <TableHead>Mileage</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Current Driver</TableHead>
             <TableHead>Last Updated</TableHead>
           </TableRow>
         </TableHeader>
@@ -133,7 +117,7 @@ export function VehicleManagementTable() {
                 </Link>
               </TableCell>
               <TableCell>{vehicle.year} {vehicle.make} {vehicle.model}</TableCell>
-              <TableCell>{vehicle.vin}</TableCell>
+              <TableCell>{getDriverName(vehicle.currentDriverId)}</TableCell>
               <TableCell>{vehicle.mileage?.toLocaleString()}</TableCell>
               <TableCell>
                 <DropdownMenu>
@@ -151,23 +135,6 @@ export function VehicleManagementTable() {
                         </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                 </DropdownMenu>
-              </TableCell>
-               <TableCell>
-                 <Select
-                    value={vehicle.currentDriverId ?? 'unassigned'}
-                    onValueChange={(value) => handleDriverAssignment(vehicle.id, value)}
-                 >
-                    <SelectTrigger className="w-full min-w-[180px]">
-                        <SelectValue placeholder="Assign driver..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                         <SelectSeparator />
-                        {drivers.map(driver => (
-                            <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                 </Select>
               </TableCell>
               <TableCell>
                 {format(vehicle.updatedAt, 'PP')}
