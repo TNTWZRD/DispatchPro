@@ -29,7 +29,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  inviteCode: z.string().min(1, { message: 'Invite code is required.' }),
 });
+
+const VALID_INVITE_CODE = 'KBT04330';
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +46,18 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
+      inviteCode: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
     setError(null);
+    if (values.inviteCode !== VALID_INVITE_CODE) {
+        form.setError('inviteCode', { type: 'manual', message: 'Invalid invite code.' });
+        return;
+    }
+
+    setIsLoading(true);
     try {
       await signInWithEmailAndPassword(values.email, values.password);
       const role = searchParams.get('role');
@@ -61,8 +70,18 @@ export function LoginForm() {
   }
 
   async function handleGoogleSignIn() {
-    setIsLoading(true);
     setError(null);
+    const inviteCode = form.getValues('inviteCode');
+    if (!inviteCode) {
+        form.setError('inviteCode', { type: 'manual', message: 'Please enter an invite code before using Google Sign-In.' });
+        return;
+    }
+    if (inviteCode !== VALID_INVITE_CODE) {
+        form.setError('inviteCode', { type: 'manual', message: 'Invalid invite code.' });
+        return;
+    }
+      
+    setIsLoading(true);
     try {
         await signInWithGoogle();
         // The context handles redirection
@@ -79,11 +98,24 @@ export function LoginForm() {
             <Truck className="h-8 w-8 text-primary" />
             <CardTitle className="text-3xl">DispatchPro</CardTitle>
         </div>
-        <CardDescription>Enter your credentials to access the dashboard</CardDescription>
+        <CardDescription>Enter your invite code and credentials to access the dashboard</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" suppressHydrationWarning>
+            <FormField
+              control={form.control}
+              name="inviteCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invite Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your invite code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
