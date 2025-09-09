@@ -7,7 +7,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,7 +72,7 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
       isReturnTrip: rideToEdit?.isReturnTrip || false,
       isPrepaid: rideToEdit?.isPrepaid || false,
       notes: rideToEdit?.notes || '',
-      scheduledTime: rideToEdit?.scheduledTime,
+      scheduledTime: rideToEdit?.scheduledTime ? new Date(rideToEdit.scheduledTime) : undefined,
     },
   });
 
@@ -129,211 +128,171 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
   }
 
   return (
-    <Card className="flex flex-col border-0 shadow-none max-h-[80vh] overflow-y-auto">
-        <CardContent className="p-0">
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <Button type="submit" className="w-full">
-                {isEditMode ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-                {isEditMode ? 'Update Ride' : 'Log Ride Request'}
-                </Button>
+    <div className="max-h-[80vh] overflow-y-auto pr-2">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Button type="submit" className="w-full">
+            {isEditMode ? <Edit className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+            {isEditMode ? 'Update Ride' : 'Log Ride Request'}
+            </Button>
 
-                <FormField
-                control={form.control}
-                name="pickupLocation"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Pickup Location</FormLabel>
-                    <FormControl>
-                        <Input placeholder="123 Main St" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                
-                <FormField
-                control={form.control}
-                name="dropoffLocation"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Dropoff Location (Optional)</FormLabel>
-                    <FormControl>
-                        <Input placeholder="456 Oak Ave" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-
-                {fields.map((field, index) => (
-                <FormField
-                    key={field.id}
-                    control={form.control}
-                    name={`stops.${index}.name`}
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Stop {index + 1}</FormLabel>
-                        <div className="flex items-center gap-2">
-                            <FormControl>
-                            <Input placeholder="e.g., 789 Side Ave" {...field} onFocus={handleSelectOnFocus} />
-                            </FormControl>
-                            <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
-                                <Trash2 />
-                            </Button>
-                        </div>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                ))}
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => append({ name: "" })}
-                >
-                    <MapPin className="mr-2"/> Add Stop
-                </Button>
-                
-                <FormField
-                control={form.control}
-                name="totalFare"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Base Fare</FormLabel>
-                    <FormControl>
-                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                
-                <FormField
-                control={form.control}
-                name="passengerPhone"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Passenger Phone (Optional)</FormLabel>
-                    <FormControl>
-                        <Input placeholder="555-123-4567" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
+            <FormField
+            control={form.control}
+            name="pickupLocation"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Pickup Location</FormLabel>
+                <FormControl>
+                    <Input placeholder="123 Main St" {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
             
-                <FormField
+            <FormField
+            control={form.control}
+            name="dropoffLocation"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Dropoff Location (Optional)</FormLabel>
+                <FormControl>
+                    <Input placeholder="456 Oak Ave" {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+
+            {fields.map((field, index) => (
+            <FormField
+                key={field.id}
                 control={form.control}
-                name="passengerCount"
+                name={`stops.${index}.name`}
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Passengers (Optional)</FormLabel>
+                <FormItem>
+                    <FormLabel>Stop {index + 1}</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl>
+                        <Input placeholder="e.g., 789 Side Ave" {...field} onFocus={handleSelectOnFocus} />
+                        </FormControl>
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}>
+                            <Trash2 />
+                        </Button>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            ))}
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ name: "" })}
+            >
+                <MapPin className="mr-2"/> Add Stop
+            </Button>
+            
+            <FormField
+            control={form.control}
+            name="totalFare"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Base Fare</FormLabel>
+                <FormControl>
+                    <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            
+            <FormField
+            control={form.control}
+            name="passengerPhone"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Passenger Phone (Optional)</FormLabel>
+                <FormControl>
+                    <Input placeholder="555-123-4567" {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        
+            <FormField
+            control={form.control}
+            name="passengerCount"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Passengers (Optional)</FormLabel>
+                <FormControl>
+                    <Input type="number" min="1" {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="scheduledTime"
+            render={({ field }) => (
+                <FormItem className="flex flex-col">
+                <FormLabel>Scheduled Pickup (Optional)</FormLabel>
+                <Popover>
+                    <PopoverTrigger asChild>
                     <FormControl>
-                        <Input type="number" min="1" {...field} onFocus={handleSelectOnFocus} />
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                        )}
+                        >
+                        {field.value ? (
+                            format(field.value, "PPP p")
+                        ) : (
+                            <span>Pick a date and time</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                     </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="scheduledTime"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Scheduled Pickup (Optional)</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                            )}
-                            >
-                            {field.value ? (
-                                format(field.value, "PPP p")
-                            ) : (
-                                <span>Pick a date and time</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                            date < new Date()
-                            }
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                        <Textarea placeholder="e.g., Passenger requires assistance, has extra luggage." {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="movingFee"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                            <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                            <FormLabel>
-                            Moving Fee
-                            </FormLabel>
-                        </div>
-                        </FormItem>
-                    )}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                        date < new Date(new Date().setHours(0,0,0,0))
+                        }
+                        initialFocus
                     />
-                    <FormField
-                    control={form.control}
-                    name="isReturnTrip"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                            <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                            <FormLabel>
-                            Return Trip
-                            </FormLabel>
-                        </div>
-                        </FormItem>
-                    )}
-                    />
-                </div>
+                    </PopoverContent>
+                </Popover>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Notes (Optional)</FormLabel>
+                <FormControl>
+                    <Textarea placeholder="e.g., Passenger requires assistance, has extra luggage." {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <div className="grid grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
-                name="isPrepaid"
+                name="movingFee"
                 render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
@@ -344,19 +303,57 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
                     </FormControl>
                     <div className="space-y-1 leading-none">
                         <FormLabel>
-                        Mark as Prepaid
+                        Moving Fee
                         </FormLabel>
-                        <FormDescription>
-                            Indicates the fare has been paid in advance.
-                        </FormDescription>
                     </div>
                     </FormItem>
                 )}
                 />
-                <div className="h-80 sm:h-0" />
-            </form>
-            </Form>
-        </CardContent>
-    </Card>
+                <FormField
+                control={form.control}
+                name="isReturnTrip"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                        Return Trip
+                        </FormLabel>
+                    </div>
+                    </FormItem>
+                )}
+                />
+            </div>
+            <FormField
+            control={form.control}
+            name="isPrepaid"
+            render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                    <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                    <FormLabel>
+                    Mark as Prepaid
+                    </FormLabel>
+                    <FormDescription>
+                        Indicates the fare has been paid in advance.
+                    </FormDescription>
+                </div>
+                </FormItem>
+            )}
+            />
+            <div className="h-80 sm:h-0" />
+        </form>
+        </Form>
+    </div>
   );
 }
