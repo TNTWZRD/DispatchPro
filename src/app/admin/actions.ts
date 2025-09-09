@@ -5,8 +5,9 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Driver, Vehicle } from '@/lib/types';
+import { revalidatePath } from 'next/cache';
 
 const INVITE_CODE = 'KBT04330';
 
@@ -83,15 +84,64 @@ export async function createDriver(prevState: any, formData: FormData) {
 
         await setDoc(newDriverRef, {
             ...newDriver,
-            id: newDriverRef.id,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
+
+        revalidatePath('/admin');
         
         return { type: "success", message: `Driver "${name}" created successfully.` };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create driver in Firestore:", error);
-        return { type: "error", message: "Failed to create the driver. Please try again later." };
+        return { type: "error", message: `Failed to create driver: ${error.message}` };
+    }
+}
+
+const updateDriverSchema = z.object({
+    driverId: z.string(),
+    name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+    phoneNumber: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
+});
+
+export async function updateDriver(prevState: any, formData: FormData) {
+    const formValues = Object.fromEntries(formData.entries());
+    const validatedFields = updateDriverSchema.safeParse(formValues);
+
+    if (!validatedFields.success) {
+        return {
+            type: "error",
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Invalid driver details provided.",
+        };
+    }
+    
+    try {
+        const { driverId, name, phoneNumber } = validatedFields.data;
+        const driverRef = doc(db, 'drivers', driverId);
+
+        await updateDoc(driverRef, {
+            name,
+            phoneNumber,
+            updatedAt: serverTimestamp(),
+        });
+        
+        revalidatePath('/admin');
+
+        return { type: "success", message: "Driver updated successfully." };
+
+    } catch (error: any) {
+        return { type: "error", message: `Failed to update driver: ${error.message}` };
+    }
+}
+
+export async function deleteDriver(driverId: string) {
+    try {
+        const driverRef = doc(db, 'drivers', driverId);
+        await deleteDoc(driverRef);
+        revalidatePath('/admin');
+        return { type: "success", message: "Driver deleted successfully." };
+    } catch (error: any) {
+        return { type: "error", message: `Failed to delete driver: ${error.message}` };
     }
 }
 
@@ -136,7 +186,8 @@ export async function createVehicle(prevState: any, formData: FormData) {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
-
+        
+        revalidatePath('/admin/vehicles');
         return { type: "success", message: `Vehicle "${year} ${make} ${model}" created successfully.` };
     } catch (error) {
         console.error("Failed to create vehicle:", error);
