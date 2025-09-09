@@ -1,6 +1,7 @@
 
 "use server";
 
+import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 
