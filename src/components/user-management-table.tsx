@@ -82,7 +82,8 @@ export function UserManagementTable() {
         // User was just made a driver, create a driver document if it doesn't exist
         const driverDoc = await getDoc(driverRef);
         if (!driverDoc.exists()) {
-           const newDriver: Omit<Driver, 'id'> = {
+           const newDriver: Driver = {
+                id: user.uid,
                 name: user.displayName || user.email || 'Unnamed Driver',
                 phoneNumber: '',
                 rating: 5,

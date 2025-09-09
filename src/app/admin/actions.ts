@@ -5,7 +5,7 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import type { Driver, Vehicle } from '@/lib/types';
 
 const INVITE_CODE = 'KBT04330';
@@ -73,8 +73,10 @@ export async function createDriver(prevState: any, formData: FormData) {
 
     try {
         const { name, phoneNumber } = validatedFields.data;
+        const newDriverRef = doc(collection(db, 'drivers'));
 
-        const newDriver: Omit<Driver, 'id'> = {
+        const newDriver: Driver = {
+            id: newDriverRef.id,
             name,
             phoneNumber,
             rating: 5,
@@ -82,7 +84,7 @@ export async function createDriver(prevState: any, formData: FormData) {
             location: { x: 50, y: 50 },
         };
 
-        await addDoc(collection(db, 'drivers'), newDriver);
+        await setDoc(newDriverRef, newDriver);
 
         return { type: "success", message: `Driver "${name}" created successfully.` };
     } catch (error) {
