@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
@@ -144,7 +143,7 @@ function DispatchDashboardUI() {
   };
   
   const handleEditRide = (updatedRide: Ride) => {
-    setRides(prev => prev.map(r => r.id === updatedRide.id ? { ...updatedRide, updatedAt: new Date() } : r));
+    setRides(prev => prev.map(r => r.id === updatedRide.id ? { ...r, updatedAt: new Date() } : r));
     setEditingRide(null);
     setIsFormOpen(false);
   }
@@ -395,7 +394,7 @@ function DispatchDashboardUI() {
             )}
             
             {/* Waiting Column */}
-            <StrictModeDroppable droppableId="waiting">
+            <StrictModeDroppable droppableId="waiting" isDropDisabled={false}>
               {(provided, snapshot) => (
                 <Card
                   ref={provided.innerRef}
@@ -447,7 +446,7 @@ function DispatchDashboardUI() {
             
             {/* Scheduled Column */}
             {hasScheduledRides && (
-              <StrictModeDroppable droppableId="scheduled">
+              <StrictModeDroppable droppableId="scheduled" isDropDisabled={false}>
                 {(provided, snapshot) => (
                   <Card
                     ref={provided.innerRef}
@@ -704,3 +703,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
