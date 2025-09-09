@@ -65,13 +65,9 @@ export function LoginForm() {
     setIsLoading(true);
     try {
         await signInWithGoogle();
-        // The context handles redirection
+        router.push('/');
     } catch(err: any) {
-        if (err.code === 'auth/user-not-found') {
-          setError('Account not found. Please register first.');
-        } else {
-          setError('Could not sign in with Google. Please try again.');
-        }
+        setError('Could not sign in with Google. Please try again.');
     } finally {
         setIsLoading(false);
     }
