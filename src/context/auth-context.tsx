@@ -72,31 +72,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      const additionalUserInfo = getAdditionalUserInfo(result);
-      
-      if (additionalUserInfo?.isNewUser) {
-        // This is a sign-in attempt by a new user, which we want to prevent.
-        const userToDelete = result.user;
-        await signOut(auth); // Sign them out first.
-        if (userToDelete) {
-          // Then delete the newly created auth record.
-          await deleteUser(userToDelete);
-        }
-        // Inform the login form that the user doesn't exist.
-        const error = new Error("Account not found. Please register first.") as any;
-        error.code = "auth/user-not-found";
-        throw error;
-      }
-      
       const appUser = await fetchAppUser(result.user);
+
       if (appUser) {
           handleSuccessfulLogin(appUser);
       } else {
-          // This case is unlikely if isNewUser check is correct, but good for safety.
-          await signOut(auth);
-          throw new Error("User data not found in Firestore.");
+          // This covers both new users and existing auth users without a Firestore doc.
+          const userToDelete = result.user;
+          await signOut(auth); // Sign them out first.
+          // Check if it was a new user, and delete them if so.
+          const additionalUserInfo = getAdditionalUserInfo(result);
+          if (additionalUserInfo?.isNewUser && userToDelete) {
+            await deleteUser(userToDelete);
+          }
+          // Inform the login form that the user doesn't exist.
+          const error = new Error("Account not found. Please register first.") as any;
+          error.code = "auth/user-not-found";
+          throw error;
       }
-
     } catch (error) {
       console.error("Error signing in with Google", error);
       throw error;
