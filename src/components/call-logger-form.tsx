@@ -20,9 +20,9 @@ import { format } from 'date-fns';
 
 const formSchema = z.object({
   pickupLocation: z.string().min(3, { message: 'Enter a pickup location.' }),
+  dropoffLocation: z.string().optional(),
   totalFare: z.coerce.number().min(0, { message: 'Fare must be a positive number.'}),
   passengerPhone: z.string().optional(),
-  dropoffLocation: z.string().optional(),
   stops: z.array(z.object({ name: z.string().min(3, { message: 'Enter a stop location.' }) })).optional(),
   passengerCount: z.coerce.number().optional(),
   scheduledTime: z.date().optional(),
@@ -47,9 +47,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
     resolver: zodResolver(formSchema),
     defaultValues: {
       pickupLocation: '',
+      dropoffLocation: '',
       totalFare: 5,
       passengerPhone: '',
-      dropoffLocation: '',
       stops: [],
       passengerCount: 1,
       movingFee: false,
@@ -63,9 +63,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
     if (isEditMode && rideToEdit) {
       form.reset({
         pickupLocation: rideToEdit.pickup.name,
+        dropoffLocation: rideToEdit.dropoff?.name || '',
         totalFare: rideToEdit.totalFare,
         passengerPhone: rideToEdit.passengerPhone || '',
-        dropoffLocation: rideToEdit.dropoff?.name || '',
         stops: rideToEdit.stops?.map(s => ({ name: s.name })) || [],
         passengerCount: rideToEdit.passengerCount,
         movingFee: rideToEdit.movingFee,
@@ -77,9 +77,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
     } else {
       form.reset({
         pickupLocation: '',
+        dropoffLocation: '',
         totalFare: 5,
         passengerPhone: '',
-        dropoffLocation: '',
         stops: [],
         passengerCount: 1,
         movingFee: false,
@@ -157,19 +157,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                     </FormItem>
                 )}
                 />
-                <FormField
-                control={form.control}
-                name="totalFare"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Base Fare</FormLabel>
-                    <FormControl>
-                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
                 
                 <FormField
                 control={form.control}
@@ -185,6 +172,20 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 )}
                 />
                 
+                <FormField
+                control={form.control}
+                name="totalFare"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Base Fare</FormLabel>
+                    <FormControl>
+                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
                 {fields.map((field, index) => (
                 <FormField
                     key={field.id}
