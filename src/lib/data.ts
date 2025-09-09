@@ -302,7 +302,7 @@ export const initialRides: Ride[] = [
     pickup: { name: 'Wayne Manor', coords: { x: 5, y: 5 } },
     dropoff: { name: 'Wayne Tower', coords: { x: 95, y: 5 } },
     status: 'completed',
-    driverId: 'driver-1',
+    driverId: 'driver-3',
     createdAt: new Date(now.getTime() - 60 * 60 * 1000),
     updatedAt: new Date(now.getTime() - 40 * 60 * 1000),
     assignedAt: new Date(now.getTime() - 55 * 60 * 1000),

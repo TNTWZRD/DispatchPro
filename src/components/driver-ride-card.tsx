@@ -18,6 +18,10 @@ type DriverRideCardProps = {
 
 export function DriverRideCard({ ride, onEdit, isQueued = false }: DriverRideCardProps) {
 
+    const createMapLink = (address: string) => {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    }
+
     return (
         <Card className={cn(
             isQueued && "bg-muted/50 border-dashed", 
@@ -26,8 +30,16 @@ export function DriverRideCard({ ride, onEdit, isQueued = false }: DriverRideCar
             <CardHeader>
                 <CardTitle className="text-lg flex items-start justify-between">
                     <div className='flex flex-col'>
-                        <span>{ride.pickup.name}</span>
-                        {ride.dropoff && <CardDescription>to {ride.dropoff.name}</CardDescription>}
+                        <a href={createMapLink(ride.pickup.name)} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
+                            {ride.pickup.name}
+                        </a>
+                        {ride.dropoff && 
+                            <CardDescription>
+                                to <a href={createMapLink(ride.dropoff.name)} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
+                                    {ride.dropoff.name}
+                                </a>
+                            </CardDescription>
+                        }
                     </div>
                     <Button variant="outline" size="sm" onClick={() => onEdit(ride)}>
                         <Edit className="mr-2" /> Edit Details
@@ -70,7 +82,9 @@ export function DriverRideCard({ ride, onEdit, isQueued = false }: DriverRideCar
                             {ride.stops.map((stop, index) => (
                                 <div key={index} className="flex items-center gap-2 pl-2 text-muted-foreground">
                                     <Milestone className="h-4 w-4" />
-                                    <span>{stop.name}</span>
+                                    <a href={createMapLink(stop.name)} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary">
+                                        {stop.name}
+                                    </a>
                                 </div>
                             ))}
                         </div>
