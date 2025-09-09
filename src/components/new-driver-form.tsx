@@ -88,16 +88,16 @@ export function NewDriverForm() {
             )}
           </div>
            <div className="space-y-2">
-            <Label htmlFor="vehicle">Vehicle Description</Label>
+            <Label htmlFor="phoneNumber">Phone Number</Label>
             <Input
-              id="vehicle"
-              name="vehicle"
-              type="text"
-              placeholder="e.g., Toyota Camry"
+              id="phoneNumber"
+              name="phoneNumber"
+              type="tel"
+              placeholder="e.g., (555) 123-4567"
               required
             />
-             {state?.errors?.vehicle && (
-                <p className="text-sm font-medium text-destructive">{state.errors.vehicle[0]}</p>
+             {state?.errors?.phoneNumber && (
+                <p className="text-sm font-medium text-destructive">{state.errors.phoneNumber[0]}</p>
             )}
           </div>
           <DialogFooter>

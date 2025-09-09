@@ -3,6 +3,7 @@
 
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -34,7 +35,7 @@ export type AppUser = {
 export type Driver = {
   id: string;
   name: string;
-  vehicle: string; // This will now represent the vehicle ID
+  phoneNumber: string;
   rating: number;
   status: DriverStatus;
   location: { x: number; y: number };

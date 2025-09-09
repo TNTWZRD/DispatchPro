@@ -54,13 +54,13 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
 
 const createDriverSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  vehicle: z.string().min(2, { message: "Vehicle must be at least 2 characters." }),
+  phoneNumber: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
 });
 
 export async function createDriver(prevState: any, formData: FormData) {
     const validatedFields = createDriverSchema.safeParse({
         name: formData.get("name"),
-        vehicle: formData.get("vehicle"),
+        phoneNumber: formData.get("phoneNumber"),
     });
 
     if (!validatedFields.success) {
@@ -72,16 +72,14 @@ export async function createDriver(prevState: any, formData: FormData) {
     }
 
     try {
-        const { name, vehicle } = validatedFields.data;
+        const { name, phoneNumber } = validatedFields.data;
 
         const newDriver: Omit<Driver, 'id'> = {
             name,
-            vehicle,
+            phoneNumber,
             rating: 5,
             status: 'offline',
             location: { x: 50, y: 50 },
-            // This driver is not linked to a user account, so no uid.
-            // Firestore will auto-generate an ID.
         };
 
         await addDoc(collection(db, 'drivers'), newDriver);
