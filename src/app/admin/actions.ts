@@ -75,7 +75,7 @@ export async function createDriver(prevState: any, formData: FormData) {
         const { name, phoneNumber } = validatedFields.data;
         const newDriverRef = doc(collection(db, 'drivers'));
 
-        const newDriver: Driver = {
+        const newDriver: Omit<Driver, 'createdAt' | 'updatedAt'> = {
             id: newDriverRef.id,
             name,
             phoneNumber,
@@ -84,7 +84,11 @@ export async function createDriver(prevState: any, formData: FormData) {
             location: { x: 50, y: 50 },
         };
 
-        await setDoc(newDriverRef, newDriver);
+        await setDoc(newDriverRef, {
+            ...newDriver,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
 
         return { type: "success", message: `Driver "${name}" created successfully.` };
     } catch (error) {
@@ -122,19 +126,21 @@ export async function createVehicle(prevState: any, formData: FormData) {
 
         const newVehicleRef = doc(collection(db, 'vehicles'));
 
-        const newVehicle: Vehicle = {
-            id: newVehicleRef.id,
+        const newVehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'> = {
             make,
             model,
             year,
             licensePlate,
             status: 'active',
             currentDriverId: null,
-            createdAt: serverTimestamp() as any,
-            updatedAt: serverTimestamp() as any,
         };
         
-        await setDoc(newVehicleRef, newVehicle);
+        await setDoc(newVehicleRef, {
+            id: newVehicleRef.id,
+            ...newVehicle,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
 
         return { type: "success", message: `Vehicle "${year} ${make} ${model}" created successfully.` };
     } catch (error) {
