@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,6 +26,7 @@ type RideCardProps = {
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEdit: (ride: Ride) => void;
+  onUnschedule: (rideId: string) => void;
 };
 
 const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }> = {
@@ -36,7 +37,7 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
   cancelled: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
 };
 
-export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit }: RideCardProps) {
+export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
@@ -160,7 +161,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
           {/* Header Row */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2 flex-wrap">
-              {ride.status !== 'pending' ? getStatusBadge(ride.status) : <div className='font-bold text-base'>Waiting...</div>}
+              {getStatusBadge(ride.status)}
               {isCondensed && ride.scheduledTime && (
                 <Tooltip>
                   <TooltipTrigger>
@@ -197,6 +198,11 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                       <Edit className="mr-2 h-4 w-4" /> Edit Ride
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    {ride.status === 'pending' && ride.scheduledTime && (
+                        <DropdownMenuItem onClick={() => onUnschedule(ride.id)}>
+                            <CalendarX2 className="mr-2 h-4 w-4" /> Unschedule
+                        </DropdownMenuItem>
+                    )}
                     {ride.status === 'pending' && isMobile && (
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
@@ -329,7 +335,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
       <ResponsiveDialog
         open={isFareModalOpen}
         onOpenChange={setIsFareModalOpen}
-        title={`Set Final Fare for Ride #${ride.id.split('-').pop()}`}
+        title={`Finalize Fare`}
       >
           <div className="space-y-4 py-4">
              <div className="space-y-2 rounded-md border bg-muted/20 p-3">

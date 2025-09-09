@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -53,7 +53,7 @@ function DispatchDashboardUI() {
 
   const scheduledRides = allPendingRides
     .filter(r => r.scheduledTime)
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    .sort((a, b) => (r.scheduledTime?.getTime() ?? 0) - (b.scheduledTime?.getTime() ?? 0));
 
   const cancelledRides = rides
     .filter(r => r.status === 'cancelled')
@@ -165,16 +165,7 @@ function DispatchDashboardUI() {
         const now = new Date();
 
         // Update the ride with the new driver and status
-        newRides[rideIndex] = { ...originalRide, status: 'assigned', updatedAt: now, assignedAt: now };
-        
-        // If the ride has a scheduled time, we don't immediately assign a driver
-        if (!originalRide.scheduledTime) {
-            newRides[rideIndex].driverId = driverId;
-        } else {
-            // For scheduled rides, we just set the driverId, but status might remain 'pending' until pickup time
-            newRides[rideIndex].driverId = driverId;
-        }
-
+        newRides[rideIndex] = { ...originalRide, status: 'assigned', updatedAt: now, assignedAt: now, driverId: driverId };
 
         setDrivers(prevDrivers => {
             const newDrivers = [...prevDrivers];
@@ -218,6 +209,16 @@ function DispatchDashboardUI() {
     }
   };
 
+  const handleUnscheduleRide = (rideId: string) => {
+    setRides(prevRides =>
+      prevRides.map(ride =>
+        ride.id === rideId
+          ? { ...ride, scheduledTime: undefined, updatedAt: new Date() }
+          : ride
+      )
+    );
+  };
+
   const onDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
 
@@ -234,7 +235,9 @@ function DispatchDashboardUI() {
       const driverId = destination.droppableId;
       handleAssignDriver(ride.id, driverId);
     } else if (destination.droppableId === 'waiting' || destination.droppableId === 'scheduled') {
-      handleUnassignDriver(ride.id);
+      if (ride.driverId) {
+        handleUnassignDriver(ride.id);
+      }
     }
   };
 
@@ -264,7 +267,8 @@ function DispatchDashboardUI() {
         }, 5000);
 
         // Remove the old cancelled ride and add the new one to the top
-        return [newRide, ...prevRides.filter(r => r.id !== rideId)];
+        const remainingRides = prevRides.filter(r => r.id !== rideId);
+        return [newRide, ...remainingRides];
       }
 
 
@@ -360,6 +364,7 @@ function DispatchDashboardUI() {
                           onSetFare={handleSetFare}
                           onUnassignDriver={handleUnassignDriver}
                           onEdit={handleOpenEdit}
+                          onUnschedule={handleUnscheduleRide}
                         />
                       ))}
                       {provided.placeholder}
@@ -382,7 +387,9 @@ function DispatchDashboardUI() {
                    style={{ width: `${columnWidth}px` }}
                 >
                   <CardHeader>
-                    <CardTitle className="text-base">Waiting ({pendingRides.length})</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Siren className="h-5 w-5 text-yellow-500" /> Waiting ({pendingRides.length})
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                     {pendingRides.map((ride, index) => (
@@ -401,6 +408,7 @@ function DispatchDashboardUI() {
                               onSetFare={handleSetFare}
                               onUnassignDriver={handleUnassignDriver}
                               onEdit={handleOpenEdit}
+                              onUnschedule={handleUnscheduleRide}
                             />
                           </div>
                         )}
@@ -452,6 +460,7 @@ function DispatchDashboardUI() {
                                 onSetFare={handleSetFare}
                                 onUnassignDriver={handleUnassignDriver}
                                 onEdit={handleOpenEdit}
+                                onUnschedule={handleUnscheduleRide}
                               />
                             </div>
                           )}
@@ -477,6 +486,7 @@ function DispatchDashboardUI() {
               onSetFare={handleSetFare}
               onUnassignDriver={handleUnassignDriver}
               onEditRide={handleOpenEdit}
+              onUnscheduleRide={handleUnscheduleRide}
               style={{ width: `${columnWidth}px` }}
             />
           ))}
@@ -511,6 +521,7 @@ function DispatchDashboardUI() {
                         onSetFare={handleSetFare}
                         onUnassignDriver={handleUnassignDriver}
                         onEdit={handleOpenEdit}
+                        onUnschedule={handleUnscheduleRide}
                       />
                     ))}
                     {pendingRides.length === 0 && (
@@ -535,6 +546,7 @@ function DispatchDashboardUI() {
                           onSetFare={handleSetFare}
                           onUnassignDriver={handleUnassignDriver}
                           onEdit={handleOpenEdit}
+                          onUnschedule={handleUnscheduleRide}
                         />
                       ))}
                     </div>
@@ -555,6 +567,7 @@ function DispatchDashboardUI() {
                             onSetFare={handleSetFare}
                             onUnassignDriver={handleUnassignDriver}
                             onEditRide={handleOpenEdit}
+                            onUnscheduleRide={handleUnscheduleRide}
                           />
                       </div>
                   </CarouselItem>

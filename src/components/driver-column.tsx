@@ -22,6 +22,7 @@ type DriverColumnProps = {
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
+  onUnscheduleRide: (rideId: string) => void;
   style?: React.CSSProperties;
 };
 
@@ -33,7 +34,7 @@ const statusSortOrder: Record<RideStatus, number> = {
   'cancelled': 5,
 };
 
-export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, style }: DriverColumnProps) {
+export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, onUnscheduleRide, style }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   
   const isMobile = useIsMobile();
@@ -81,6 +82,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
               onSetFare={onSetFare}
               onUnassignDriver={onUnassignDriver}
               onEdit={onEditRide}
+              onUnschedule={onUnscheduleRide}
             />
           ))
         )}
@@ -102,6 +104,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
                   onSetFare={onSetFare}
                   onUnassignDriver={onUnassignDriver}
                   onEdit={onEditRide}
+                  onUnschedule={onUnscheduleRide}
                 />
               ))}
             </div>
@@ -116,7 +119,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
         
       </CardContent>
       {hasCompletedRides && (
-        <CardFooter className="p-2">
+        <CardFooter className="p-2 mt-auto">
           <Button variant="ghost" size="sm" className="w-full" onClick={() => setShowCompleted(!showCompleted)}>
             {showCompleted ? <ChevronUp/> : <ChevronDown/>}
             {showCompleted ? 'Hide' : 'Show'} Completed ({completedRides.length})
