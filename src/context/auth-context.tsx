@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  registerWithGoogle: () => Promise<void>;
   signInWithEmailAndPassword: (email: string, pass: string) => Promise<void>;
   createUserWithEmailAndPassword: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -43,7 +44,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Delete the user and throw an error.
         const userToDelete = result.user;
         await signOut(auth); // Sign out first
-        await deleteUser(userToDelete);
+        if (userToDelete) {
+          await deleteUser(userToDelete);
+        }
         const error = new Error("Account not found. Please register first.") as any;
         error.code = "auth/user-not-found";
         throw error;
@@ -54,6 +57,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     } catch (error) {
       console.error("Error signing in with Google", error);
+      throw error;
+    }
+  };
+  
+  const registerWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // Let onAuthStateChanged handle the redirect
+      router.push('/');
+    } catch (error) {
+      console.error("Error registering with Google", error);
       throw error;
     }
   };
@@ -86,7 +101,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, registerWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );
