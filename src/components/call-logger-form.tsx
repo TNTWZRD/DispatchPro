@@ -65,7 +65,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       form.reset({
         pickupLocation: rideToEdit.pickup.name,
         dropoffLocation: rideToEdit.dropoff?.name || '',
-        // stops are set below to ensure field array updates
+        stops: stopsData,
         totalFare: rideToEdit.totalFare,
         passengerPhone: rideToEdit.passengerPhone || '',
         passengerCount: rideToEdit.passengerCount,
@@ -75,8 +75,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         notes: rideToEdit.notes,
         scheduledTime: rideToEdit.scheduledTime,
       });
-      // Set stops value separately to correctly trigger useFieldArray
-      form.setValue('stops', stopsData);
     } else {
       form.reset({
         pickupLocation: '',
@@ -89,6 +87,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         isReturnTrip: false,
         isPrepaid: false,
         notes: '',
+        scheduledTime: undefined,
       });
     }
   }, [rideToEdit, isEditMode, form]);
@@ -127,7 +126,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         pickup: { ...rideToEdit.pickup, name: values.pickupLocation },
         dropoff: values.dropoffLocation ? { ...(rideToEdit.dropoff || { coords: { x: Math.random() * 100, y: Math.random() * 100 } }), name: values.dropoffLocation } : undefined,
         stops: values.stops?.map((stop, i) => {
-          // Try to preserve original coordinates if the stop existed before
           const originalStop = rideToEdit.stops?.[i];
           return {
             name: stop.name,
