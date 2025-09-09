@@ -236,6 +236,29 @@ function DispatchDashboardUI() {
       if (!rideToUpdate) return prevRides;
 
       const now = new Date();
+      
+      // Special case: un-cancelling a ride creates a new ride
+      if (rideToUpdate.status === 'cancelled' && newStatus === 'pending') {
+        const { id, createdAt, updatedAt, assignedAt, pickedUpAt, droppedOffAt, cancelledAt, status, ...restOfRide } = rideToUpdate;
+        const newRide: Ride = {
+            ...restOfRide,
+            id: `ride-${Date.now()}`, // New ID
+            status: 'pending',
+            driverId: null,
+            createdAt: now,
+            updatedAt: now,
+            isNew: true,
+        };
+
+        setTimeout(() => {
+            setRides(prev => prev.map(r => r.id === newRide.id ? { ...r, isNew: false } : r));
+        }, 5000);
+
+        // Remove the old cancelled ride and add the new one to the top
+        return [newRide, ...prevRides.filter(r => r.id !== rideId)];
+      }
+
+
       const updatedRide = { ...rideToUpdate, status: newStatus, updatedAt: now };
 
       if (newStatus === 'in-progress') {
@@ -245,8 +268,6 @@ function DispatchDashboardUI() {
       } else if (newStatus === 'cancelled') {
         updatedRide.cancelledAt = now;
         updatedRide.driverId = null; // Remove driver from cancelled ride
-      } else if (newStatus === 'pending' && rideToUpdate.status === 'cancelled') {
-        updatedRide.cancelledAt = undefined; // Clear cancellation time
       }
 
 
