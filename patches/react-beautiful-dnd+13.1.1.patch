@@ -1,0 +1,42 @@
+diff --git a/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.esm.js b/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.esm.js
+index 0a87a2d..70a44ae 100644
+--- a/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.esm.js
++++ b/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.esm.js
+@@ -7307,11 +7307,13 @@
+     value: function useValidation() {
+       var isGte18 = gte(React.version, '18.0.0');
+ 
+-      if (isGte18) {
+-        this.useStrictEffect(function () {
+-          warnOnce(getMessage(18));
+-        }, []);
+-      }
++      // if (isGte18) {
++      //   this.useStrictEffect(() => {
++      //     warnOnce(getMessage(18));
++      //   }, []);
++      // }
+     }
+   }, {
+     key: "componentDidMount",
+diff --git a/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.js b/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.js
+index 45579f1..c5208f3 100644
+--- a/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.js
++++ b/node_modules/react-beautiful-dnd/dist/react-beautiful-dnd.js
+@@ -7479,11 +7479,13 @@
+     value: function useValidation() {
+       var isGte18 = gte(React.version, '18.0.0');
+ 
+-      if (isGte18) {
+-        this.useStrictEffect(function () {
+-          warnOnce(getMessage(18));
+-        }, []);
+-      }
++      // if (isGte18) {
++      //   this.useStrictEffect(() => {
++      //     warnOnce(getMessage(18));
++      //   }, []);
++      // }
+     }
+   }, {
+     key: "componentDidMount",

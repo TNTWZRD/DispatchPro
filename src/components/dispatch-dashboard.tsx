@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import type { Ride, Driver, RideStatus, Message, AppUser } from '@/lib/types';
 import { Role } from '@/lib/types';
-import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
