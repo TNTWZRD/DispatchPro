@@ -248,6 +248,11 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                           <Undo2 className="mr-2 h-4 w-4" /> Re-open Ride
                       </DropdownMenuItem>
                     )}
+                    {ride.status === 'cancelled' && (
+                       <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'pending')}>
+                          <Undo2 className="mr-2 h-4 w-4" /> Uncancel Ride
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
             </div>

@@ -244,13 +244,17 @@ function DispatchDashboardUI() {
         updatedRide.droppedOffAt = now;
       } else if (newStatus === 'cancelled') {
         updatedRide.cancelledAt = now;
+        updatedRide.driverId = null; // Remove driver from cancelled ride
+      } else if (newStatus === 'pending' && rideToUpdate.status === 'cancelled') {
+        updatedRide.cancelledAt = undefined; // Clear cancellation time
       }
+
 
       const updatedRides = prevRides.map(ride => 
         ride.id === rideId ? updatedRide : ride
       );
 
-      // If ride is completed or cancelled, check driver status
+      // If ride is completed or cancelled, check if old driver should become available
       if ((newStatus === 'completed' || newStatus === 'cancelled') && rideToUpdate.driverId) {
         const driverId = rideToUpdate.driverId;
         const remainingRides = updatedRides.filter(r => r.driverId === driverId && ['assigned', 'in-progress'].includes(r.status));
@@ -261,11 +265,6 @@ function DispatchDashboardUI() {
             )
           );
         }
-      }
-      
-      // If ride is cancelled, it should lose its driver
-      if (newStatus === 'cancelled') {
-        return updatedRides.map(r => r.id === rideId ? {...r, driverId: null} : r);
       }
 
       return updatedRides;
@@ -320,7 +319,7 @@ function DispatchDashboardUI() {
                         <XCircle className="h-5 w-5" /> Cancelled ({cancelledRides.length})
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-y-auto space-y-2">
+                    <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                       {cancelledRides.map((ride, index) => (
                         <RideCard
                           key={ride.id}
@@ -355,7 +354,7 @@ function DispatchDashboardUI() {
                   <CardHeader>
                     <CardTitle className="text-base">Waiting ({pendingRides.length})</CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto space-y-2">
+                  <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                     {pendingRides.map((ride, index) => (
                       <Draggable key={ride.id} draggableId={ride.id} index={index}>
                         {(provided, snapshot) => (
@@ -406,7 +405,7 @@ function DispatchDashboardUI() {
                         <Calendar className="h-5 w-5" /> Scheduled ({scheduledRides.length})
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-y-auto space-y-2">
+                    <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                       {scheduledRides.map((ride, index) => (
                         <Draggable key={ride.id} draggableId={ride.id} index={index}>
                           {(provided, snapshot) => (
@@ -633,5 +632,3 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    
