@@ -80,7 +80,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       passengerCount: passengerCount,
       movingFee: values.movingFee,
       notes: values.notes,
-      scheduledTime: scheduledTimeDate,
+      scheduledTime: values.scheduledTime ? scheduledTimeDate : undefined,
     };
     
     if (isEditMode && rideToEdit) {

@@ -152,8 +152,15 @@ function DispatchDashboardUI() {
 
   const handleAddRide = async (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => {
     if (!db) return;
+    
+    // Ensure scheduledTime is null instead of undefined for Firestore
+    const rideToSave = {
+        ...newRideData,
+        scheduledTime: newRideData.scheduledTime || null,
+    };
+
     const newRide: Omit<Ride, 'id'> = {
-      ...newRideData,
+      ...rideToSave,
       status: 'pending',
       driverId: null,
       createdAt: serverTimestamp() as any,
