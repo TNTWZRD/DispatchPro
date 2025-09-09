@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,12 +25,25 @@ type DriverColumnProps = {
   style?: React.CSSProperties;
 };
 
+const statusSortOrder: Record<RideStatus, number> = {
+  'in-progress': 1,
+  'assigned': 2,
+  'pending': 3,
+  'completed': 4,
+  'cancelled': 5,
+};
+
 export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, style }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   
   const isMobile = useIsMobile();
   
-  const activeRides = rides.filter(r => r.status === 'assigned' || r.status === 'in-progress');
+  const activeRides = useMemo(() => {
+    return rides
+      .filter(r => r.status === 'assigned' || r.status === 'in-progress')
+      .sort((a, b) => statusSortOrder[a.status] - statusSortOrder[b.status]);
+  }, [rides]);
+
   const completedRides = rides.filter(r => r.status === 'completed');
   
   const hasActiveRides = activeRides.length > 0;
@@ -73,7 +86,7 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
         )}
         
         {showCompleted && hasCompletedRides && (
-          <div className={cn(!hasActiveRides && 'pt-4 mt-4 border-t')}>
+          <div className={cn(hasActiveRides && 'pt-4 mt-4 border-t')}>
             <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-muted-foreground">
               <CheckCircle2 className="h-4 w-4" />
               Completed Rides
