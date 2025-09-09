@@ -9,7 +9,8 @@ import { Mic, StopCircle, Loader2, AlertTriangle, Command, X } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { DialogTrigger } from './ui/dialog';
+import { ResponsiveDialog } from './responsive-dialog';
 
 type VoiceControlProps = {
   rides: Ride[];
@@ -217,22 +218,23 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
   if (!isClient) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      title="Unified Voice Control"
+    >
       <DialogTrigger asChild>
         <Button
           variant="default"
           size="icon"
           className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-50"
           disabled={!micAvailable}
+          onClick={() => setIsOpen(true)}
         >
           <Mic className="h-8 w-8" />
           <span className="sr-only">Voice Command</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="p-4 top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 sm:p-6">
-        <DialogHeader>
-          <DialogTitle>Unified Voice Control</DialogTitle>
-        </DialogHeader>
         {!micAvailable ? (
           <div className="flex items-center justify-center p-4 bg-destructive/10 text-destructive rounded-md">
             <AlertTriangle className="mr-2 h-5 w-5" />
@@ -263,9 +265,6 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
                 </AlertDescription>
             </Alert>
         )}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
-
-    

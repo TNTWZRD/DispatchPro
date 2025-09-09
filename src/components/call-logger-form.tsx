@@ -123,11 +123,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
   }
 
   return (
-    <Card className="overflow-y-auto max-h-[80vh] sm:max-h-auto sm:overflow-y-visible">
-      <CardHeader>
-        <CardTitle>{isEditMode ? 'Edit Ride Details' : 'Log New Call'}</CardTitle>
-      </CardHeader>
-      <CardContent className="pr-4">
+    <div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
              <Button type="submit" className="w-full">
@@ -351,7 +347,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
             />
           </form>
         </Form>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

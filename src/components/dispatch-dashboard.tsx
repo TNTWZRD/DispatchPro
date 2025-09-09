@@ -6,7 +6,6 @@ import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { initialRides, initialDrivers } from '@/lib/data';
 import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
@@ -23,6 +22,7 @@ import { ZoomProvider, ZoomContext } from '@/context/zoom-context';
 import { CondensedModeProvider, useCondensedMode } from '@/context/condensed-mode-context';
 import { useHotkey } from '@/hooks/use-hotkey';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { ResponsiveDialog } from './responsive-dialog';
 
 
 function DispatchDashboardUI() {
@@ -517,21 +517,22 @@ function DispatchDashboardUI() {
             </Button>
           </div>
 
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
-                <PlusCircle />
-                Log New Call
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl p-4 top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 sm:p-6">
+          <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
+            <PlusCircle />
+            Log New Call
+          </Button>
+          
+          <ResponsiveDialog 
+            open={isFormOpen} 
+            onOpenChange={setIsFormOpen}
+            title={editingRide ? 'Edit Ride Details' : 'Log New Call'}
+          >
               <CallLoggerForm 
                 onAddRide={handleAddRide} 
                 onEditRide={handleEditRide}
                 rideToEdit={editingRide}
               />
-            </DialogContent>
-          </Dialog>
+          </ResponsiveDialog>
         </div>
       </header>
 

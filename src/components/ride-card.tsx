@@ -16,6 +16,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useCondensedMode } from '@/context/condensed-mode-context';
+import { ResponsiveDialog } from './responsive-dialog';
 
 
 type RideCardProps = {
@@ -308,16 +309,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         </div>
       </Card>
       
-      <Dialog open={isFareModalOpen} onOpenChange={setIsFareModalOpen}>
-        <DialogContent className="sm:max-w-lg p-4 top-4 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Set Final Fare</DialogTitle>
-            <DialogDescription>
-              Enter the payment method(s) for ride #{ride.id.split('-').pop()}.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isFareModalOpen}
+        onOpenChange={setIsFareModalOpen}
+        title={`Set Final Fare for Ride #${ride.id.split('-').pop()}`}
+      >
           <div className="space-y-4 py-4">
-
              <div className="space-y-2 rounded-md border bg-muted/20 p-3">
                 <h4 className="font-medium">Ride Summary</h4>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -409,8 +406,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
               Save Fare & Mark Completed
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </TooltipProvider>
   );
 }
