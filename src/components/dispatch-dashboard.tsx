@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,6 +34,8 @@ function DispatchDashboardUI() {
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
+  const [showCancelled, setShowCancelled] = useState(false);
+
   const isMobile = useIsMobile();
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
@@ -42,9 +44,12 @@ function DispatchDashboardUI() {
   useHotkey('s', toggleCondensedMode, { alt: true });
   
   const activeDrivers = drivers.filter(d => d.status !== 'offline');
+  
   const allPendingRides = rides.filter(r => r.status === 'pending');
   const pendingRides = allPendingRides.filter(r => !r.scheduledTime);
   const scheduledRides = allPendingRides.filter(r => r.scheduledTime);
+  const cancelledRides = rides.filter(r => r.status === 'cancelled');
+  
   const hasScheduledRides = scheduledRides.length > 0;
 
   useEffect(() => {
@@ -287,7 +292,7 @@ function DispatchDashboardUI() {
   }
 
   const renderDesktopView = () => {
-    const totalColumns = activeDrivers.length + (hasScheduledRides ? 2 : 1);
+    const totalColumns = activeDrivers.length + (hasScheduledRides ? 2 : 1) + (showCancelled ? 1 : 0);
     const columnWidth = Math.max(280, 100 / totalColumns * 20); // Dynamic width with a minimum
 
     return (
@@ -300,6 +305,41 @@ function DispatchDashboardUI() {
             height: `${100 / zoom}%`,
            }}
         >
+            {/* Cancelled Column */}
+            {showCancelled && (
+              <StrictModeDroppable droppableId="cancelled" isDropDisabled={true}>
+                {(provided) => (
+                  <Card
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="shrink-0 flex flex-col bg-muted/50"
+                    style={{ width: `${columnWidth}px` }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <XCircle className="h-5 w-5" /> Cancelled ({cancelledRides.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto space-y-2">
+                      {cancelledRides.map((ride, index) => (
+                        <RideCard
+                          key={ride.id}
+                          ride={ride}
+                          drivers={drivers}
+                          onAssignDriver={handleAssignDriver}
+                          onChangeStatus={handleChangeStatus}
+                          onSetFare={handleSetFare}
+                          onUnassignDriver={handleUnassignDriver}
+                          onEdit={handleOpenEdit}
+                        />
+                      ))}
+                      {provided.placeholder}
+                    </CardContent>
+                  </Card>
+                )}
+              </StrictModeDroppable>
+            )}
+            
             {/* Waiting Column */}
             <StrictModeDroppable droppableId="waiting">
               {(provided, snapshot) => (
@@ -401,7 +441,7 @@ function DispatchDashboardUI() {
             <DriverColumn
               key={driver.id}
               driver={driver}
-              rides={rides.filter(r => r.driverId === driver.id && (r.status === 'assigned' || r.status === 'in-progress'))}
+              rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.driverId === driver.id)}
               allDrivers={drivers}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
@@ -479,7 +519,7 @@ function DispatchDashboardUI() {
                       <div className="pr-1">
                         <DriverColumn
                             driver={driver}
-                            rides={rides.filter(r => r.driverId === driver.id && ['assigned', 'in-progress'].includes(r.status))}
+                            rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.driverId === driver.id)}
                             allDrivers={drivers}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
@@ -512,6 +552,16 @@ function DispatchDashboardUI() {
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" onClick={() => setShowCancelled(prev => !prev)}>
+                        <History />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Toggle Cancelled Rides Column</p>
+                    </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
                         <Button variant="outline" size="icon" onClick={toggleCondensedMode}>
                             {isCondensed ? <Maximize2 /> : <Minimize2 />}
                         </Button>
@@ -541,14 +591,12 @@ function DispatchDashboardUI() {
             onOpenChange={setIsFormOpen}
             title={editingRide ? 'Edit Ride Details' : 'Log New Call'}
           >
-            <div className="p-1">
-              <CallLoggerForm 
-                key={editingRide?.id || 'new'}
-                onAddRide={handleAddRide} 
-                onEditRide={handleEditRide}
-                rideToEdit={editingRide}
-              />
-            </div>
+            <CallLoggerForm 
+              key={editingRide?.id || 'new'}
+              onAddRide={handleAddRide} 
+              onEditRide={handleEditRide}
+              rideToEdit={editingRide}
+            />
           </ResponsiveDialog>
         </div>
       </header>
@@ -585,3 +633,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    

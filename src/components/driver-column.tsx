@@ -1,15 +1,17 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Ride, Driver, RideStatus } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-
+import { CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Separator } from './ui/separator';
 
 type DriverColumnProps = {
   driver: Driver;
@@ -24,9 +26,15 @@ type DriverColumnProps = {
 };
 
 export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, style }: DriverColumnProps) {
-  const isAvailable = driver.status === 'available';
+  const [showCompleted, setShowCompleted] = useState(false);
+  
   const isMobile = useIsMobile();
-  const hasRides = rides.length > 0;
+  
+  const activeRides = rides.filter(r => r.status === 'assigned' || r.status === 'in-progress');
+  const completedRides = rides.filter(r => r.status === 'completed');
+  
+  const hasActiveRides = activeRides.length > 0;
+  const hasCompletedRides = completedRides.length > 0;
 
   const renderContent = () => (
     <>
@@ -49,8 +57,8 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-2">
-        {hasRides ? (
-          rides.map(ride => (
+        {hasActiveRides ? (
+          activeRides.map(ride => (
             <RideCard
               key={ride.id}
               ride={ride}
@@ -67,7 +75,38 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
               <p>Available for rides. Drag a pending ride here to assign.</p>
             </div>
         )}
+        
+        {showCompleted && hasCompletedRides && (
+          <div className="pt-4 mt-4 border-t">
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2 text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4" />
+              Completed Rides
+            </h4>
+            <div className="space-y-2">
+              {completedRides.map(ride => (
+                <RideCard
+                  key={ride.id}
+                  ride={ride}
+                  drivers={allDrivers}
+                  onAssignDriver={onAssignDriver}
+                  onChangeStatus={onChangeStatus}
+                  onSetFare={onSetFare}
+                  onUnassignDriver={onUnassignDriver}
+                  onEdit={onEditRide}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
+      {hasCompletedRides && (
+        <CardFooter className="p-2">
+          <Button variant="ghost" size="sm" className="w-full" onClick={() => setShowCompleted(!showCompleted)}>
+            {showCompleted ? <ChevronUp/> : <ChevronDown/>}
+            {showCompleted ? 'Hide' : 'Show'} Completed ({completedRides.length})
+          </Button>
+        </CardFooter>
+      )}
     </>
   );
 
@@ -101,3 +140,5 @@ export function DriverColumn({ driver, rides, allDrivers, onAssignDriver, onChan
     </StrictModeDroppable>
   );
 }
+
+    
