@@ -123,11 +123,11 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
   }
 
   return (
-    <Card>
+    <Card className="overflow-y-auto max-h-[80vh] sm:max-h-auto sm:overflow-y-visible">
       <CardHeader>
         <CardTitle>{isEditMode ? 'Edit Ride Details' : 'Log New Call'}</CardTitle>
       </CardHeader>
-      <CardContent className="max-h-[70vh] overflow-y-auto pr-4">
+      <CardContent className="pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
              <Button type="submit" className="w-full">
