@@ -160,7 +160,7 @@ export function DriverDashboard() {
 
   if (!currentDriver) {
     return (
-      <div className="flex h-screen items-center justify-center bg-secondary p-4 text-center">
+      <div className="flex h-full items-center justify-center bg-secondary p-4 text-center">
         <Card>
           <CardHeader>
             <CardTitle>Driver Profile Not Found</CardTitle>
@@ -177,34 +177,19 @@ export function DriverDashboard() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-secondary/50">
-       <header className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
-         <Truck className="h-6 w-6 text-primary" />
-        <h1 className="ml-3 text-xl md:text-2xl font-bold tracking-tight text-foreground">
-          Driver Dashboard
-        </h1>
-        <div className="ml-auto flex items-center gap-3">
-          <Button variant="outline" className="relative" onClick={() => handleChatOpen(true)}>
-            <MessageCircle className="mr-2" /> Chat
-            {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                {unreadMessagesCount}
-                </span>
-            )}
-          </Button>
-          <div className="text-right">
-            <div className="font-semibold">{currentDriver.name}</div>
-            <div className="text-xs text-muted-foreground">{currentDriver.vehicle}</div>
-          </div>
-          <Avatar>
-            <AvatarImage src={`https://i.pravatar.cc/40?u=${currentDriver.id}`} />
-            <AvatarFallback>{currentDriver.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-           <Button variant="ghost" size="icon" onClick={logout}>
-              <LogOut />
-           </Button>
+    <div className="h-full flex flex-col bg-secondary/50">
+      <div className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
+        <div className="flex items-center gap-3 ml-auto">
+            <Button variant="outline" className="relative" onClick={() => handleChatOpen(true)}>
+                <MessageCircle className="mr-2" /> Chat
+                {unreadMessagesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                    {unreadMessagesCount}
+                    </span>
+                )}
+            </Button>
         </div>
-      </header>
+      </div>
       
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="mx-auto max-w-2xl space-y-6">

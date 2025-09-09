@@ -34,14 +34,13 @@ function DispatchDashboardUI() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [time, setTime] = useState<Date | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
   
-  const { user, logout, hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const isMobile = useIsMobile();
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
@@ -89,13 +88,11 @@ function DispatchDashboardUI() {
         setMessages(messagesData);
     });
 
-    const timer = setInterval(() => setTime(new Date()), 1000 * 60);
 
     return () => {
         ridesUnsub();
         driversUnsub();
         messagesUnsub();
-        clearInterval(timer);
     };
   }, [user]);
   
@@ -603,18 +600,27 @@ function DispatchDashboardUI() {
   )};
 
   return (
-    <div className="flex h-screen flex-col bg-secondary/50">
-      <header className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
-        <Truck className="h-6 w-6 text-primary" />
-        <h1 className="ml-3 text-xl md:text-2xl font-bold tracking-tight text-foreground">
-          DispatchPro
-        </h1>
-        <div className="ml-auto flex items-center gap-2">
-           <div className="text-sm text-muted-foreground hidden md:block">
-            {time && <>{time.toLocaleDateString()} {time.toLocaleTimeString()}</>}
-          </div>
-          
-          <div className="items-center gap-2 hidden md:flex">
+    <div className="flex h-full flex-col bg-secondary/50">
+      <div className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
+        <div className="flex items-center gap-2">
+            <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
+                <PlusCircle />
+                Log New Call
+            </Button>
+            <ResponsiveDialog 
+                open={isFormOpen} 
+                onOpenChange={setIsFormOpen}
+                title={editingRide ? 'Edit Ride Details' : 'Log New Call'}
+            >
+                <CallLoggerForm 
+                key={editingRide?.id || 'new'}
+                onAddRide={handleAddRide} 
+                onEditRide={handleEditRide}
+                rideToEdit={editingRide}
+                />
+            </ResponsiveDialog>
+        </div>
+        <div className="ml-auto items-center gap-2 hidden md:flex">
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -645,50 +651,10 @@ function DispatchDashboardUI() {
             <Button variant="outline" size="icon" onClick={zoomIn}>
               <ZoomIn />
             </Button>
-          </div>
-
-          <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
-            <PlusCircle />
-            Log New Call
-          </Button>
-
-          {canAdmin && (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button asChild variant="outline" size="icon">
-                            <Link href="/admin">
-                                <Shield />
-                            </Link>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Admin Panel</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-          )}
-
-           <Button variant="ghost" size="icon" onClick={logout}>
-              <LogOut />
-           </Button>
-          
-          <ResponsiveDialog 
-            open={isFormOpen} 
-            onOpenChange={setIsFormOpen}
-            title={editingRide ? 'Edit Ride Details' : 'Log New Call'}
-          >
-            <CallLoggerForm 
-              key={editingRide?.id || 'new'}
-              onAddRide={handleAddRide} 
-              onEditRide={handleEditRide}
-              rideToEdit={editingRide}
-            />
-          </ResponsiveDialog>
         </div>
-      </header>
+      </div>
 
-      <main className="flex flex-1 flex-row gap-4 overflow-hidden p-2">
+      <div className="flex flex-1 flex-row gap-4 overflow-hidden p-2">
         <Sidebar 
             rides={rides} 
             drivers={drivers}
@@ -698,7 +664,7 @@ function DispatchDashboardUI() {
         <div className='flex-1 flex flex-col min-w-0'>
           {isMobile ? renderMobileView() : renderDesktopView()}
         </div>
-      </main>
+      </div>
       <VoiceControl
           rides={rides}
           drivers={drivers}

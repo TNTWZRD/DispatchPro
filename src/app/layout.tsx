@@ -3,6 +3,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
+import { MainHeader } from '@/components/main-header';
 
 export const metadata: Metadata = {
   title: 'DispatchPro',
@@ -23,8 +24,13 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased h-full")}>
         <AuthProvider>
-          {children}
-          <Toaster />
+            <div className="flex flex-col h-full">
+                <MainHeader />
+                <main className="flex-1 overflow-hidden">
+                    {children}
+                </main>
+            </div>
+            <Toaster />
         </AuthProvider>
       </body>
     </html>

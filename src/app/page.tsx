@@ -34,8 +34,6 @@ export default function Home() {
     }
 
     return (
-        <main className="h-full">
-            <DispatchDashboard />
-        </main>
+        <DispatchDashboard />
     );
 }

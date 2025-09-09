@@ -31,8 +31,6 @@ export default function DriverPage() {
     }
 
   return (
-    <main className="h-full">
       <DriverDashboard />
-    </main>
   );
 }
