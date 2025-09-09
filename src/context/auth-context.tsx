@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword, getAdditionalUserInfo, deleteUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -35,9 +35,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-       const role = searchParams.get('role');
-       router.push(role === 'driver' ? '/driver' : '/');
+      const result = await signInWithPopup(auth, provider);
+      const additionalUserInfo = getAdditionalUserInfo(result);
+      
+      if (additionalUserInfo?.isNewUser) {
+        // If the user is new, they haven't been invited.
+        // Delete the user and throw an error.
+        const userToDelete = result.user;
+        await signOut(auth); // Sign out first
+        await deleteUser(userToDelete);
+        const error = new Error("Account not found. Please register first.") as any;
+        error.code = "auth/user-not-found";
+        throw error;
+      }
+      
+      const role = searchParams.get('role');
+      router.push(role === 'driver' ? '/driver' : '/');
+
     } catch (error) {
       console.error("Error signing in with Google", error);
       throw error;

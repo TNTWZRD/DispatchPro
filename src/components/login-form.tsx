@@ -66,8 +66,12 @@ export function LoginForm() {
     try {
         await signInWithGoogle();
         // The context handles redirection
-    } catch(err) {
-        setError('Could not sign in with Google. Please try again.');
+    } catch(err: any) {
+        if (err.code === 'auth/user-not-found') {
+          setError('Account not found. Please register first.');
+        } else {
+          setError('Could not sign in with Google. Please try again.');
+        }
     } finally {
         setIsLoading(false);
     }
