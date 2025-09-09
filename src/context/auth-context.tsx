@@ -7,7 +7,7 @@ import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, creat
 import { auth, db } from '@/lib/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, Driver } from '@/lib/types';
 import { Role } from '@/lib/types';
 
 interface AuthContextType {
@@ -35,7 +35,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const userDocRef = doc(db, 'users', fbUser.uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
-      return userDoc.data() as AppUser;
+      const appUser = userDoc.data() as AppUser;
+
+      // If user has DRIVER role, ensure their driver doc exists
+      if (appUser.role & Role.DRIVER) {
+        const driverDocRef = doc(db, 'drivers', fbUser.uid);
+        const driverDoc = await getDoc(driverDocRef);
+        if (!driverDoc.exists()) {
+          const newDriver: Driver = {
+            id: fbUser.uid,
+            name: appUser.displayName || appUser.email || 'Unnamed Driver',
+            vehicle: 'Default Vehicle',
+            rating: 5,
+            status: 'offline',
+            location: { x: 50, y: 50 },
+          };
+          await setDoc(driverDocRef, newDriver);
+        }
+      }
+      return appUser;
     }
     return null;
   }, []);

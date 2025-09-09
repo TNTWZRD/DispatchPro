@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import type { AppUser } from '@/lib/types';
+import { collection, onSnapshot, doc, updateDoc, Timestamp, setDoc, getDoc } from 'firebase/firestore';
+import type { AppUser, Driver } from '@/lib/types';
 import { Role } from '@/lib/types';
 import {
   Table,
@@ -69,10 +69,41 @@ export function UserManagementTable() {
     return () => unsub();
   }, []);
 
-  const handleRoleChange = async (uid: string, newRoles: Role) => {
-    const userRef = doc(db, 'users', uid);
+  const handleRoleChange = async (user: AppUser, newRoles: Role) => {
+    const userRef = doc(db, 'users', user.uid);
     try {
       await updateDoc(userRef, { role: newRoles });
+
+      const wasDriver = (user.role & Role.DRIVER) > 0;
+      const isDriver = (newRoles & Role.DRIVER) > 0;
+      const driverRef = doc(db, 'drivers', user.uid);
+
+      if (isDriver && !wasDriver) {
+        // User was just made a driver, create a driver document if it doesn't exist
+        const driverDoc = await getDoc(driverRef);
+        if (!driverDoc.exists()) {
+           const newDriver: Driver = {
+                id: user.uid,
+                name: user.displayName || user.email || 'Unnamed Driver',
+                vehicle: 'Default Vehicle',
+                rating: 5,
+                status: 'offline',
+                location: { x: 50, y: 50 },
+            };
+            await setDoc(driverRef, newDriver);
+             toast({
+                title: "Driver Created",
+                description: `A new driver profile has been created for ${user.displayName}.`,
+            });
+        } else {
+            // Re-activate an existing driver if they were offline
+            await updateDoc(driverRef, { status: 'offline' });
+        }
+      } else if (!isDriver && wasDriver) {
+        // User had driver role removed, set driver to offline
+        await updateDoc(driverRef, { status: 'offline' });
+      }
+
       toast({
         title: "Success",
         description: "User role updated successfully.",
@@ -91,7 +122,7 @@ export function UserManagementTable() {
     const toggleRole = (roleToToggle: Role) => {
         const currentRoles = user.role;
         const newRoles = currentRoles ^ roleToToggle; // XOR to toggle the bit
-        handleRoleChange(user.uid, newRoles);
+        handleRoleChange(user, newRoles);
     };
 
     return (
