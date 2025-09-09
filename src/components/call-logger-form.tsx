@@ -61,10 +61,11 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
   
   useEffect(() => {
     if (isEditMode && rideToEdit) {
+      const stopsData = rideToEdit.stops?.map(s => ({ name: s.name })) || [];
       form.reset({
         pickupLocation: rideToEdit.pickup.name,
         dropoffLocation: rideToEdit.dropoff?.name || '',
-        stops: rideToEdit.stops?.map(s => ({ name: s.name })) || [],
+        // stops are set below to ensure field array updates
         totalFare: rideToEdit.totalFare,
         passengerPhone: rideToEdit.passengerPhone || '',
         passengerCount: rideToEdit.passengerCount,
@@ -74,6 +75,8 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         notes: rideToEdit.notes,
         scheduledTime: rideToEdit.scheduledTime,
       });
+      // Set stops value separately to correctly trigger useFieldArray
+      form.setValue('stops', stopsData);
     } else {
       form.reset({
         pickupLocation: '',
@@ -123,10 +126,14 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         ...baseRideData,
         pickup: { ...rideToEdit.pickup, name: values.pickupLocation },
         dropoff: values.dropoffLocation ? { ...(rideToEdit.dropoff || { coords: { x: Math.random() * 100, y: Math.random() * 100 } }), name: values.dropoffLocation } : undefined,
-        stops: values.stops?.map((stop, i) => ({
-          name: stop.name,
-          coords: rideToEdit.stops?.[i]?.coords || { x: Math.random() * 100, y: Math.random() * 100 }
-        })),
+        stops: values.stops?.map((stop, i) => {
+          // Try to preserve original coordinates if the stop existed before
+          const originalStop = rideToEdit.stops?.[i];
+          return {
+            name: stop.name,
+            coords: originalStop?.coords || { x: Math.random() * 100, y: Math.random() * 100 }
+          }
+        }),
       });
     } else {
       onAddRide({
@@ -177,6 +184,20 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 )}
                 />
 
+                <FormField
+                control={form.control}
+                name="totalFare"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Base Fare</FormLabel>
+                    <FormControl>
+                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
                 {fields.map((field, index) => (
                 <FormField
                     key={field.id}
@@ -206,20 +227,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 >
                     <MapPin className="mr-2"/> Add Stop
                 </Button>
-                
-                <FormField
-                control={form.control}
-                name="totalFare"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Base Fare</FormLabel>
-                    <FormControl>
-                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
                 
                 <FormField
                 control={form.control}
