@@ -7,10 +7,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2, Shield } from 'lucide-react';
 import { Role } from '@/lib/types';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { InviteUserForm } from '@/components/invite-user-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { NewDriverForm } from '@/components/new-driver-form';
 
 export default function AdminPage() {
     const { user, loading, hasRole } = useAuth();
@@ -42,14 +41,15 @@ export default function AdminPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Shield className="h-6 w-6 text-primary" />
-                        User Management
+                        User & Driver Management
                     </CardTitle>
                     <CardDescription>
-                        View and manage user roles in the system.
+                        Manage user roles and create driver profiles.
                     </CardDescription>
                 </CardHeader>
                  <CardContent className="flex flex-col gap-4">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                        <NewDriverForm />
                         <InviteUserForm />
                     </div>
                     <UserManagementTable />

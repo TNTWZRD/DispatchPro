@@ -4,6 +4,9 @@
 import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
+import { db } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import type { Driver } from '@/lib/types';
 
 const INVITE_CODE = 'KBT04330';
 
@@ -47,4 +50,45 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
     console.error("Failed to send email:", error);
     return { type: "error", message: "Failed to send the invitation email. Please try again later." };
   }
+}
+
+const createDriverSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  vehicle: z.string().min(2, { message: "Vehicle must be at least 2 characters." }),
+});
+
+export async function createDriver(prevState: any, formData: FormData) {
+    const validatedFields = createDriverSchema.safeParse({
+        name: formData.get("name"),
+        vehicle: formData.get("vehicle"),
+    });
+
+    if (!validatedFields.success) {
+        return {
+            type: "error",
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Invalid driver details provided.",
+        };
+    }
+
+    try {
+        const { name, vehicle } = validatedFields.data;
+
+        const newDriver: Omit<Driver, 'id'> = {
+            name,
+            vehicle,
+            rating: 5,
+            status: 'offline',
+            location: { x: 50, y: 50 },
+            // This driver is not linked to a user account, so no uid.
+            // Firestore will auto-generate an ID.
+        };
+
+        await addDoc(collection(db, 'drivers'), newDriver);
+
+        return { type: "success", message: `Driver "${name}" created successfully.` };
+    } catch (error) {
+        console.error("Failed to create driver:", error);
+        return { type: "error", message: "Failed to create the driver. Please try again later." };
+    }
 }
