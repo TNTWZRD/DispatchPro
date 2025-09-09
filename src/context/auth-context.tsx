@@ -37,15 +37,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (userDoc.exists()) {
       const appUser = userDoc.data() as AppUser;
 
-      // If user has DRIVER role, ensure their driver doc exists
       if (appUser.role & Role.DRIVER) {
         const driverDocRef = doc(db, 'drivers', fbUser.uid);
         const driverDoc = await getDoc(driverDocRef);
         if (!driverDoc.exists()) {
-          const newDriver: Driver = {
-            id: fbUser.uid,
+          const newDriver: Omit<Driver, 'id'> = {
             name: appUser.displayName || appUser.email || 'Unnamed Driver',
-            vehicle: 'Default Vehicle',
+            phoneNumber: '',
             rating: 5,
             status: 'offline',
             location: { x: 50, y: 50 },
@@ -81,7 +79,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (appUser.role & Role.DISPATCHER) {
           router.push('/');
       } else {
-          // Default redirect if role doesn't match query or is something else
           router.push('/login');
       }
   };
@@ -95,15 +92,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (appUser) {
           handleSuccessfulLogin(appUser);
       } else {
-          // This covers both new users and existing auth users without a Firestore doc.
           const userToDelete = result.user;
-          await signOut(auth); // Sign them out first.
-          // Check if it was a new user, and delete them if so.
+          await signOut(auth); 
           const additionalUserInfo = getAdditionalUserInfo(result);
           if (additionalUserInfo?.isNewUser && userToDelete) {
             await deleteUser(userToDelete);
           }
-          // Inform the login form that the user doesn't exist.
           const error = new Error("Account not found. Please register first.") as any;
           error.code = "auth/user-not-found";
           throw error;
@@ -126,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
            uid: fbUser.uid,
            email: fbUser.email,
            displayName: fbUser.displayName,
-           role: Role.DISPATCHER, // Default role for new sign-ups
+           role: Role.DISPATCHER, 
            photoURL: fbUser.photoURL,
          };
          await setDoc(doc(db, "users", fbUser.uid), {
@@ -165,8 +159,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const newAppUser: AppUser = {
         uid: fbUser.uid,
         email: fbUser.email,
-        displayName: fbUser.displayName, // Will be null for email signup initially
-        role: Role.DISPATCHER, // Default role
+        displayName: fbUser.displayName, 
+        role: Role.DISPATCHER, 
     };
     await setDoc(doc(db, 'users', fbUser.uid), {
         ...newAppUser,
