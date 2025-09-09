@@ -21,9 +21,9 @@ import { format } from 'date-fns';
 const formSchema = z.object({
   pickupLocation: z.string().min(3, { message: 'Enter a pickup location.' }),
   dropoffLocation: z.string().optional(),
+  stops: z.array(z.object({ name: z.string().min(3, { message: 'Enter a stop location.' }) })).optional(),
   totalFare: z.coerce.number().min(0, { message: 'Fare must be a positive number.'}),
   passengerPhone: z.string().optional(),
-  stops: z.array(z.object({ name: z.string().min(3, { message: 'Enter a stop location.' }) })).optional(),
   passengerCount: z.coerce.number().optional(),
   scheduledTime: z.date().optional(),
   movingFee: z.boolean().default(false),
@@ -48,9 +48,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
     defaultValues: {
       pickupLocation: '',
       dropoffLocation: '',
+      stops: [],
       totalFare: 5,
       passengerPhone: '',
-      stops: [],
       passengerCount: 1,
       movingFee: false,
       isReturnTrip: false,
@@ -64,9 +64,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       form.reset({
         pickupLocation: rideToEdit.pickup.name,
         dropoffLocation: rideToEdit.dropoff?.name || '',
+        stops: rideToEdit.stops?.map(s => ({ name: s.name })) || [],
         totalFare: rideToEdit.totalFare,
         passengerPhone: rideToEdit.passengerPhone || '',
-        stops: rideToEdit.stops?.map(s => ({ name: s.name })) || [],
         passengerCount: rideToEdit.passengerCount,
         movingFee: rideToEdit.movingFee,
         isReturnTrip: rideToEdit.isReturnTrip,
@@ -78,9 +78,9 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       form.reset({
         pickupLocation: '',
         dropoffLocation: '',
+        stops: [],
         totalFare: 5,
         passengerPhone: '',
-        stops: [],
         passengerCount: 1,
         movingFee: false,
         isReturnTrip: false,
@@ -108,10 +108,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
 
     const baseRideData = {
       totalFare: calculatedFare,
-      pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
       passengerPhone: values.passengerPhone,
-      dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
-      stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
       passengerCount: passengerCount,
       movingFee: values.movingFee,
       isReturnTrip: values.isReturnTrip,
@@ -125,11 +122,19 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         ...rideToEdit,
         ...baseRideData,
         pickup: { ...rideToEdit.pickup, name: values.pickupLocation },
-        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: rideToEdit.dropoff?.coords || { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
-        stops: values.stops?.map((stop, i) => ({ name: stop.name, coords: rideToEdit.stops?.[i]?.coords || { x: Math.random() * 100, y: Math.random() * 100 } })),
+        dropoff: values.dropoffLocation ? { ...(rideToEdit.dropoff || { coords: { x: Math.random() * 100, y: Math.random() * 100 } }), name: values.dropoffLocation } : undefined,
+        stops: values.stops?.map((stop, i) => ({
+          name: stop.name,
+          coords: rideToEdit.stops?.[i]?.coords || { x: Math.random() * 100, y: Math.random() * 100 }
+        })),
       });
     } else {
-      onAddRide(baseRideData);
+      onAddRide({
+        ...baseRideData,
+        pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
+        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
+        stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
+      });
     }
     form.reset();
   }
