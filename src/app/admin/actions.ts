@@ -6,7 +6,7 @@ import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import type { Driver } from '@/lib/types';
+import type { Driver, Vehicle } from '@/lib/types';
 
 const INVITE_CODE = 'KBT04330';
 
@@ -90,5 +90,54 @@ export async function createDriver(prevState: any, formData: FormData) {
     } catch (error) {
         console.error("Failed to create driver:", error);
         return { type: "error", message: "Failed to create the driver. Please try again later." };
+    }
+}
+
+
+const createVehicleSchema = z.object({
+  make: z.string().min(2, { message: "Make is required." }),
+  model: z.string().min(2, { message: "Model is required." }),
+  year: z.coerce.number().min(1980, { message: "Year must be after 1980." }).max(new Date().getFullYear() + 1, { message: "Year cannot be in the distant future." }),
+  licensePlate: z.string().min(2, { message: "License plate is required." }),
+});
+
+export async function createVehicle(prevState: any, formData: FormData) {
+    const validatedFields = createVehicleSchema.safeParse({
+        make: formData.get("make"),
+        model: formData.get("model"),
+        year: formData.get("year"),
+        licensePlate: formData.get("licensePlate"),
+    });
+
+    if (!validatedFields.success) {
+        return {
+            type: "error",
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Invalid vehicle details provided.",
+        };
+    }
+
+    try {
+        const { make, model, year, licensePlate } = validatedFields.data;
+
+        const newVehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'> = {
+            make,
+            model,
+            year,
+            licensePlate,
+            status: 'active',
+            currentDriverId: null,
+        };
+        
+        await addDoc(collection(db, 'vehicles'), {
+            ...newVehicle,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        return { type: "success", message: `Vehicle "${year} ${make} ${model}" created successfully.` };
+    } catch (error) {
+        console.error("Failed to create vehicle:", error);
+        return { type: "error", message: "Failed to create the vehicle. Please try again later." };
     }
 }

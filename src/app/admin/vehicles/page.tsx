@@ -1,19 +1,16 @@
 
 "use client";
 
-import { UserManagementTable } from '@/components/user-management-table';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, Shield, Truck } from 'lucide-react';
+import { Loader2, Truck } from 'lucide-react';
 import { Role } from '@/lib/types';
-import { InviteUserForm } from '@/components/invite-user-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { NewDriverForm } from '@/components/new-driver-form';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { VehicleManagementTable } from '@/components/vehicle-management-table';
+import { NewVehicleForm } from '@/components/new-vehicle-form';
 
-export default function AdminPage() {
+export default function VehiclesPage() {
     const { user, loading, hasRole } = useAuth();
     const router = useRouter();
 
@@ -39,30 +36,21 @@ export default function AdminPage() {
 
     return (
         <div className="h-full overflow-y-auto p-4 md:p-6 bg-secondary/50">
-            <Card className="max-w-4xl mx-auto">
+            <Card className="max-w-6xl mx-auto">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-6 w-6 text-primary" />
-                        User & Driver Management
+                        <Truck className="h-6 w-6 text-primary" />
+                        Fleet Vehicle Management
                     </CardTitle>
                     <CardDescription>
-                        Manage user roles and create driver profiles.
+                        Add, view, and manage all vehicles in your fleet.
                     </CardDescription>
                 </CardHeader>
                  <CardContent className="flex flex-col gap-4">
-                    <div className="flex justify-between items-center gap-2">
-                         <Link href="/admin/vehicles" passHref>
-                            <Button variant="outline">
-                                <Truck className="mr-2" />
-                                Manage Vehicles
-                            </Button>
-                        </Link>
-                        <div className="flex gap-2">
-                            <NewDriverForm />
-                            <InviteUserForm />
-                        </div>
+                    <div className="flex justify-end gap-2">
+                        <NewVehicleForm />
                     </div>
-                    <UserManagementTable />
+                    <VehicleManagementTable />
                  </CardContent>
             </Card>
         </div>

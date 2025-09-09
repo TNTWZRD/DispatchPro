@@ -2,6 +2,7 @@
 
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -33,11 +34,23 @@ export type AppUser = {
 export type Driver = {
   id: string;
   name: string;
-  vehicle: string;
+  vehicle: string; // This will now represent the vehicle ID
   rating: number;
   status: DriverStatus;
   location: { x: number; y: number };
 };
+
+export type Vehicle = {
+    id: string;
+    make: string;
+    model: string;
+    year: number;
+    licensePlate: string;
+    status: 'active' | 'maintenance' | 'decommissioned';
+    currentDriverId?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 export type Ride = {
   id: string;
