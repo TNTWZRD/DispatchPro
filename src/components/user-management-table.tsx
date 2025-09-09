@@ -99,8 +99,11 @@ export function UserManagementTable() {
             await updateDoc(driverRef, { status: 'offline' });
         }
       } else if (!isDriver && wasDriver) {
-        // User had driver role removed, set driver to offline
-        await updateDoc(driverRef, { status: 'offline' });
+        // User had driver role removed, set driver to offline if the doc exists
+        const driverDoc = await getDoc(driverRef);
+        if (driverDoc.exists()) {
+            await updateDoc(driverRef, { status: 'offline' });
+        }
       }
 
       toast({
