@@ -3,14 +3,15 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import type { Ride, Driver, RideStatus, Message } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message, AppUser } from '@/lib/types';
+import { Role } from '@/lib/types';
 import { DragDropContext, Draggable, type DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,6 +27,7 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp } from 'firebase/firestore';
+import Link from 'next/link';
 
 
 function DispatchDashboardUI() {
@@ -39,7 +41,7 @@ function DispatchDashboardUI() {
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
   
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole } = useAuth();
   const isMobile = useIsMobile();
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
@@ -153,7 +155,6 @@ function DispatchDashboardUI() {
   const handleAddRide = async (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => {
     if (!db) return;
     
-    // Ensure scheduledTime is null instead of undefined for Firestore
     const rideToSave = {
         ...newRideData,
         scheduledTime: newRideData.scheduledTime || null,
@@ -344,6 +345,8 @@ function DispatchDashboardUI() {
         await updateDoc(doc(db, 'messages', message.id), { isRead: true });
     }
   };
+  
+  const canAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
   const renderDesktopView = () => {
     return (
@@ -648,6 +651,24 @@ function DispatchDashboardUI() {
             <PlusCircle />
             Log New Call
           </Button>
+
+          {canAdmin && (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button asChild variant="outline" size="icon">
+                            <Link href="/admin">
+                                <Shield />
+                            </Link>
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Admin Panel</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+          )}
+
            <Button variant="ghost" size="icon" onClick={logout}>
               <LogOut />
            </Button>

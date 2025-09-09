@@ -1,6 +1,7 @@
 
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -26,6 +27,7 @@ export type AppUser = {
     displayName: string | null;
     role: Role;
     photoURL?: string | null;
+    createdAt?: Date;
 }
 
 export type Driver = {
