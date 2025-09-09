@@ -5,7 +5,7 @@ import React from 'react';
 import type { Ride, RideStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, Phone, CheckCircle2, Package, Users, MessageSquare, Edit } from 'lucide-react';
+import { MapPin, User, Phone, CheckCircle2, Package, Users, MessageSquare, Edit, Milestone } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -28,10 +28,14 @@ export function DriverRideCard({ ride, onChangeStatus, onEdit, isQueued = false 
     };
 
     return (
-        <Card className={cn(isQueued && "bg-muted/50", ride.status === 'completed' && "bg-secondary/70")}>
+        <Card className={cn(
+            isQueued && "bg-muted/50 border-dashed", 
+            ride.status === 'completed' && "bg-secondary/70"
+        )}>
             <CardHeader>
-                <CardTitle className="text-lg">
-                    {ride.pickup.name}
+                <CardTitle className="text-lg flex items-center justify-between">
+                    <span>{ride.pickup.name}</span>
+                    <span className="text-base font-medium text-primary">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ride.totalFare)}</span>
                 </CardTitle>
                  {ride.dropoff && <CardDescription>to {ride.dropoff.name}</CardDescription>}
             </CardHeader>
@@ -60,11 +64,25 @@ export function DriverRideCard({ ride, onChangeStatus, onEdit, isQueued = false 
                         </div>
                     )}
                 </div>
+                 {ride.stops && ride.stops.length > 0 && (
+                     <>
+                        <Separator />
+                        <div className="space-y-1 text-sm">
+                            <p className="font-medium">Stops:</p>
+                            {ride.stops.map((stop, index) => (
+                                <div key={index} className="flex items-center gap-2 pl-2 text-muted-foreground">
+                                    <Milestone className="h-4 w-4" />
+                                    <span>{stop.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                     </>
+                 )}
                 {ride.notes && (
                     <>
                         <Separator />
                         <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <MessageSquare className="mt-1" />
+                            <MessageSquare className="mt-1 flex-shrink-0" />
                             <p className="italic">{ride.notes}</p>
                         </div>
                     </>

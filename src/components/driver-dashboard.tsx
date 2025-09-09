@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { initialRides, initialDrivers } from '@/lib/data';
 import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,19 +17,24 @@ export function DriverDashboard() {
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
 
+  // In a real app, you'd get this from auth
   const currentDriverId = 'driver-3';
-  const currentDriver = useMemo(() => drivers.find(d => d.id === currentDriverId), [drivers]);
+  const currentDriver = useMemo(() => drivers.find(d => d.id === currentDriverId), [drivers, currentDriverId]);
 
   const driverRides = useMemo(() => {
     return rides
       .filter(r => r.driverId === currentDriverId && ['assigned', 'in-progress'].includes(r.status))
-      .sort((a, b) => (a.status === 'in-progress' ? -1 : 1));
+      .sort((a, b) => {
+        if (a.status === 'in-progress') return -1;
+        if (b.status === 'in-progress') return 1;
+        return (a.assignedAt?.getTime() ?? 0) - (b.assignedAt?.getTime() ?? 0);
+      });
   }, [rides, currentDriverId]);
-  
+
   const completedRides = useMemo(() => {
-      return rides
-        .filter(r => r.driverId === currentDriverId && r.status === 'completed')
-        .sort((a,b) => (b.droppedOffAt?.getTime() ?? 0) - (a.droppedOffAt?.getTime() ?? 0));
+    return rides
+      .filter(r => r.driverId === currentDriverId && r.status === 'completed')
+      .sort((a,b) => (b.droppedOffAt?.getTime() ?? 0) - (a.droppedOffAt?.getTime() ?? 0));
   }, [rides, currentDriverId]);
 
   const currentRide = useMemo(() => {
@@ -37,35 +42,35 @@ export function DriverDashboard() {
   }, [driverRides]);
   
   const upcomingRides = useMemo(() => {
-      return driverRides.filter(r => r.id !== currentRide?.id)
+    return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
 
   const handleChangeStatus = (rideId: string, newStatus: RideStatus) => {
     setRides(prevRides => {
-        const now = new Date();
-        const updatedRides = prevRides.map(ride => {
-            if (ride.id !== rideId) return ride;
+      const now = new Date();
+      const updatedRides = prevRides.map(ride => {
+        if (ride.id !== rideId) return ride;
 
-            const updatedRide = { ...ride, status: newStatus, updatedAt: now };
+        const updatedRide = { ...ride, status: newStatus, updatedAt: now };
 
-            if (newStatus === 'in-progress') {
-                updatedRide.pickedUpAt = now;
-            } else if (newStatus === 'completed') {
-                updatedRide.droppedOffAt = now;
-            }
-            return updatedRide;
-        });
+        if (newStatus === 'in-progress') {
+          updatedRide.pickedUpAt = now;
+        } else if (newStatus === 'completed') {
+          updatedRide.droppedOffAt = now;
+        }
+        return updatedRide;
+      });
 
-        const activeRidesForDriver = updatedRides.filter(r => r.driverId === currentDriverId && ['assigned', 'in-progress'].includes(r.status));
-        
-        setDrivers(prevDrivers => prevDrivers.map(driver => {
-            if (driver.id === currentDriverId) {
-                return { ...driver, status: activeRidesForDriver.length > 0 ? 'on-ride' : 'available' };
-            }
-            return driver;
-        }));
+      const activeRidesForDriver = updatedRides.filter(r => r.driverId === currentDriverId && ['assigned', 'in-progress'].includes(r.status));
+      
+      setDrivers(prevDrivers => prevDrivers.map(driver => {
+        if (driver.id === currentDriverId) {
+          return { ...driver, status: activeRidesForDriver.length > 0 ? 'on-ride' : 'available' };
+        }
+        return driver;
+      }));
 
-        return updatedRides;
+      return updatedRides;
     });
   };
   
@@ -89,7 +94,7 @@ export function DriverDashboard() {
   };
   
   const handleOpenEdit = (ride: Ride) => {
-      setEditingRide(ride);
+    setEditingRide(ride);
   }
 
   if (!currentDriver) {
