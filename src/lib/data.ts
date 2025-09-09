@@ -207,6 +207,7 @@ export const initialRides: Ride[] = [
     passengerCount: 1,
     movingFee: true,
     isReturnTrip: true,
+    isPrepaid: false,
     stops: [{ name: 'Grocery Store', coords: { x: 50, y: 50 } }],
     totalFare: 45,
   },

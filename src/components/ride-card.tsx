@@ -291,13 +291,13 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                         <TooltipContent><p>Moving Fee</p></TooltipContent>
                     </Tooltip>
                 )}
-                 {!isCondensed && ride.isReturnTrip && (
+                 {ride.isReturnTrip && (
                     <Tooltip>
                         <TooltipTrigger><Repeat className="h-4 w-4 text-primary" /></TooltipTrigger>
                         <TooltipContent><p>Return Trip</p></TooltipContent>
                     </Tooltip>
                 )}
-                 {!isCondensed && ride.isPrepaid && (
+                 {ride.isPrepaid && (
                      <Tooltip>
                         <TooltipTrigger><Gift className="h-4 w-4 text-primary" /></TooltipTrigger>
                         <TooltipContent><p>Prepaid</p></TooltipContent>
