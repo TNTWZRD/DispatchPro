@@ -360,7 +360,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 )}
                 />
                 {/* Spacer for mobile keyboard */}
-                <div className="h-80" />
+                <div className="sm:h-80 md:h-0" />
             </form>
             </Form>
         </CardContent>
