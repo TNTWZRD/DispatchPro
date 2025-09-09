@@ -5,7 +5,7 @@ import React from 'react';
 import type { Ride, RideStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, Phone, CheckCircle2, Package, Users, MessageSquare } from 'lucide-react';
+import { MapPin, User, Phone, CheckCircle2, Package, Users, MessageSquare, Edit } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -13,10 +13,11 @@ import { cn } from '@/lib/utils';
 type DriverRideCardProps = {
     ride: Ride;
     onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
+    onEdit: (ride: Ride) => void;
     isQueued?: boolean;
 };
 
-export function DriverRideCard({ ride, onChangeStatus, isQueued = false }: DriverRideCardProps) {
+export function DriverRideCard({ ride, onChangeStatus, onEdit, isQueued = false }: DriverRideCardProps) {
     
     const handleStartRide = () => {
         onChangeStatus(ride.id, 'in-progress');
@@ -27,7 +28,7 @@ export function DriverRideCard({ ride, onChangeStatus, isQueued = false }: Drive
     };
 
     return (
-        <Card className={cn(isQueued && "bg-muted/50")}>
+        <Card className={cn(isQueued && "bg-muted/50", ride.status === 'completed' && "bg-secondary/70")}>
             <CardHeader>
                 <CardTitle className="text-lg">
                     {ride.pickup.name}
@@ -52,6 +53,12 @@ export function DriverRideCard({ ride, onChangeStatus, isQueued = false }: Drive
                             <span>Moving Fee Applies</span>
                         </div>
                     )}
+                     {ride.paymentDetails?.cashTip && ride.paymentDetails.cashTip > 0 && (
+                         <div className="flex items-center gap-2">
+                            <span className="font-semibold text-green-600">Cash Tip:</span>
+                            <span>${ride.paymentDetails.cashTip.toFixed(2)}</span>
+                        </div>
+                    )}
                 </div>
                 {ride.notes && (
                     <>
@@ -73,6 +80,11 @@ export function DriverRideCard({ ride, onChangeStatus, isQueued = false }: Drive
                     {ride.status === 'in-progress' && (
                         <Button className="w-full" onClick={handleCompleteRide}>
                              <CheckCircle2 className="mr-2" /> Complete Ride
+                        </Button>
+                    )}
+                    {ride.status === 'completed' && (
+                        <Button variant="secondary" className="w-full" onClick={() => onEdit(ride)}>
+                            <Edit className="mr-2" /> Add Details (Tip/Notes)
                         </Button>
                     )}
                 </CardFooter>

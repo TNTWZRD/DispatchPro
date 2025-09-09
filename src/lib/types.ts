@@ -37,6 +37,7 @@ export type Ride = {
     card?: number;
     check?: number;
     tip?: number;
+    cashTip?: number;
   };
   
   // Timestamps
@@ -48,4 +49,3 @@ export type Ride = {
   droppedOffAt?: Date;
   cancelledAt?: Date;
 };
-
