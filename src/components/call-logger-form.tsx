@@ -10,12 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Calendar as CalendarIcon, Trash2, MapPin, Edit } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { Plus, Trash2, MapPin, Edit } from 'lucide-react';
+import { format, set, parse } from 'date-fns';
 
 const formSchema = z.object({
   pickupLocation: z.string().min(3, { message: 'Enter a pickup location.' }),
@@ -24,7 +21,7 @@ const formSchema = z.object({
   totalFare: z.coerce.number().min(0, { message: 'Fare must be a positive number.'}),
   passengerPhone: z.string().optional(),
   passengerCount: z.coerce.number().optional(),
-  scheduledTime: z.date().optional(),
+  scheduledTime: z.string().optional(),
   movingFee: z.boolean().default(false),
   isReturnTrip: z.boolean().default(false),
   isPrepaid: z.boolean().default(false),
@@ -55,7 +52,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
   )
 }
 
-
 function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLoggerFormProps) {
   const isEditMode = !!rideToEdit;
   
@@ -72,7 +68,7 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
       isReturnTrip: rideToEdit?.isReturnTrip || false,
       isPrepaid: rideToEdit?.isPrepaid || false,
       notes: rideToEdit?.notes || '',
-      scheduledTime: rideToEdit?.scheduledTime ? new Date(rideToEdit.scheduledTime) : undefined,
+      scheduledTime: rideToEdit?.scheduledTime ? format(new Date(rideToEdit.scheduledTime), "HH:mm") : '',
     },
   });
 
@@ -91,6 +87,12 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
       + (values.movingFee ? 10 : 0) 
       + (passengerCount > 1 ? (passengerCount - 1) : 0);
 
+    let scheduledTimeDate: Date | undefined = undefined;
+    if (values.scheduledTime) {
+      const [hours, minutes] = values.scheduledTime.split(':').map(Number);
+      scheduledTimeDate = set(new Date(), { hours, minutes, seconds: 0, milliseconds: 0 });
+    }
+
     const baseRideData = {
       totalFare: calculatedFare,
       passengerPhone: values.passengerPhone,
@@ -99,7 +101,7 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
       isReturnTrip: values.isReturnTrip,
       isPrepaid: values.isPrepaid,
       notes: values.notes,
-      scheduledTime: values.scheduledTime,
+      scheduledTime: scheduledTimeDate,
     };
     
     if (isEditMode && rideToEdit) {
@@ -163,6 +165,20 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 </FormItem>
             )}
             />
+            
+            <FormField
+            control={form.control}
+            name="totalFare"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Base Fare</FormLabel>
+                <FormControl>
+                    <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
 
             {fields.map((field, index) => (
             <FormField
@@ -196,20 +212,6 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
             
             <FormField
             control={form.control}
-            name="totalFare"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Base Fare</FormLabel>
-                <FormControl>
-                    <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            
-            <FormField
-            control={form.control}
             name="passengerPhone"
             render={({ field }) => (
                 <FormItem>
@@ -239,39 +241,11 @@ function CallLoggerFormContent({ onAddRide, onEditRide, rideToEdit }: CallLogger
             control={form.control}
             name="scheduledTime"
             render={({ field }) => (
-                <FormItem className="flex flex-col">
-                <FormLabel>Scheduled Pickup (Optional)</FormLabel>
-                <Popover>
-                    <PopoverTrigger asChild>
-                    <FormControl>
-                        <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                        )}
-                        >
-                        {field.value ? (
-                            format(field.value, "PPP p")
-                        ) : (
-                            <span>Pick a date and time</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                    </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                        date < new Date(new Date().setHours(0,0,0,0))
-                        }
-                        initialFocus
-                    />
-                    </PopoverContent>
-                </Popover>
+                <FormItem>
+                <FormLabel>Scheduled Pickup Time (Optional)</FormLabel>
+                <FormControl>
+                    <Input type="time" {...field} />
+                </FormControl>
                 <FormMessage />
                 </FormItem>
             )}
