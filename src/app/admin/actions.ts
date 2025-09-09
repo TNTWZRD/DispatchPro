@@ -147,10 +147,12 @@ export async function deleteDriver(driverId: string) {
 
 
 const createVehicleSchema = z.object({
+  nickname: z.string().min(2, { message: "Nickname is required." }),
   make: z.string().min(2, { message: "Make is required." }),
   model: z.string().min(2, { message: "Model is required." }),
   year: z.coerce.number().min(1980, { message: "Year must be after 1980." }).max(new Date().getFullYear() + 1, { message: "Year cannot be in the distant future." }),
-  licensePlate: z.string().min(2, { message: "License plate is required." }),
+  vin: z.string().min(11, { message: "VIN must be at least 11 characters." }),
+  mileage: z.coerce.number().min(0, { message: "Mileage must be a positive number." }),
 });
 
 export async function createVehicle(prevState: any, formData: FormData) {
@@ -167,15 +169,17 @@ export async function createVehicle(prevState: any, formData: FormData) {
     }
 
     try {
-        const { make, model, year, licensePlate } = validatedFields.data;
+        const { nickname, make, model, year, vin, mileage } = validatedFields.data;
 
         const newVehicleRef = doc(collection(db, 'vehicles'));
 
         const newVehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'> = {
+            nickname,
             make,
             model,
             year,
-            licensePlate,
+            vin,
+            mileage,
             status: 'active',
             currentDriverId: null,
         };
@@ -188,7 +192,7 @@ export async function createVehicle(prevState: any, formData: FormData) {
         });
         
         revalidatePath('/admin/vehicles');
-        return { type: "success", message: `Vehicle "${year} ${make} ${model}" created successfully.` };
+        return { type: "success", message: `Vehicle "${nickname}" created successfully.` };
     } catch (error) {
         console.error("Failed to create vehicle:", error);
         return { type: "error", message: "Failed to create the vehicle. Please try again later." };

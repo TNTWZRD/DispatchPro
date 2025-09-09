@@ -23,10 +23,12 @@ import { Loader2, PlusCircle } from 'lucide-react';
 const initialState = {
   message: '',
   errors: {
+    nickname: [],
     make: [],
     model: [],
     year: [],
-    licensePlate: [],
+    vin: [],
+    mileage: [],
   },
   type: '',
 };
@@ -71,7 +73,7 @@ export function NewVehicleForm() {
           <PlusCircle className="mr-2 h-4 w-4" /> Add Vehicle
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Add New Vehicle</DialogTitle>
           <DialogDescription>
@@ -79,7 +81,17 @@ export function NewVehicleForm() {
           </DialogDescription>
         </DialogHeader>
         <form ref={formRef} action={formAction} className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="nickname">Nickname</Label>
+                <Input id="nickname" name="nickname" placeholder="e.g., Car 01, The Beast" />
+                {state.errors?.nickname && <p className="text-destructive text-sm">{state.errors.nickname[0]}</p>}
+            </div>
+             <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="year">Year</Label>
+                    <Input id="year" name="year" type="number" placeholder="e.g., 2023" />
+                    {state.errors?.year && <p className="text-destructive text-sm">{state.errors.year[0]}</p>}
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="make">Make</Label>
                     <Input id="make" name="make" placeholder="e.g., Toyota" />
@@ -93,14 +105,14 @@ export function NewVehicleForm() {
             </div>
              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="year">Year</Label>
-                    <Input id="year" name="year" type="number" placeholder="e.g., 2023" />
-                    {state.errors?.year && <p className="text-destructive text-sm">{state.errors.year[0]}</p>}
+                    <Label htmlFor="vin">VIN</Label>
+                    <Input id="vin" name="vin" placeholder="Vehicle Identification Number" />
+                    {state.errors?.vin && <p className="text-destructive text-sm">{state.errors.vin[0]}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="licensePlate">License Plate</Label>
-                    <Input id="licensePlate" name="licensePlate" placeholder="e.g., ABC-123" />
-                    {state.errors?.licensePlate && <p className="text-destructive text-sm">{state.errors.licensePlate[0]}</p>}
+                    <Label htmlFor="mileage">Mileage</Label>
+                    <Input id="mileage" name="mileage" type="number" placeholder="e.g., 50000" />
+                    {state.errors?.mileage && <p className="text-destructive text-sm">{state.errors.mileage[0]}</p>}
                 </div>
             </div>
           <DialogFooter>

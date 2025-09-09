@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
@@ -44,10 +38,12 @@ export type Driver = {
 
 export type Vehicle = {
     id: string;
+    nickname: string;
     make: string;
     model: string;
     year: number;
-    licensePlate: string;
+    vin: string;
+    mileage: number;
     status: 'active' | 'maintenance' | 'decommissioned';
     currentDriverId?: string | null;
     createdAt: Date;

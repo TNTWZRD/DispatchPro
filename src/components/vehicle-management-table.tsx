@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import type { Vehicle, Driver } from '@/lib/types';
 import {
   Table,
@@ -59,8 +59,8 @@ export function VehicleManagementTable() {
         return {
           ...docData,
           id: doc.id,
-          createdAt: docData.createdAt instanceof Timestamp ? docData.createdAt.toDate() : new Date(),
-          updatedAt: docData.updatedAt instanceof Timestamp ? docData.updatedAt.toDate() : new Date(),
+          createdAt: docData.createdAt?.toDate(),
+          updatedAt: docData.updatedAt?.toDate(),
         } as Vehicle;
       });
       setVehicles(data);
@@ -114,8 +114,10 @@ export function VehicleManagementTable() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Nickname</TableHead>
             <TableHead>Vehicle</TableHead>
-            <TableHead>License Plate</TableHead>
+            <TableHead>VIN</TableHead>
+            <TableHead>Mileage</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Current Driver</TableHead>
             <TableHead>Last Updated</TableHead>
@@ -124,10 +126,10 @@ export function VehicleManagementTable() {
         <TableBody>
           {vehicles.map((vehicle) => (
             <TableRow key={vehicle.id}>
-              <TableCell>
-                <div className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</div>
-              </TableCell>
-              <TableCell>{vehicle.licensePlate}</TableCell>
+              <TableCell className="font-medium">{vehicle.nickname}</TableCell>
+              <TableCell>{vehicle.year} {vehicle.make} {vehicle.model}</TableCell>
+              <TableCell>{vehicle.vin}</TableCell>
+              <TableCell>{vehicle.mileage.toLocaleString()}</TableCell>
               <TableCell>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
