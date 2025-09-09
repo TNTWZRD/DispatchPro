@@ -75,11 +75,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const additionalUserInfo = getAdditionalUserInfo(result);
       
       if (additionalUserInfo?.isNewUser) {
+        // This is a sign-in attempt by a new user, which we want to prevent.
         const userToDelete = result.user;
-        await signOut(auth);
+        await signOut(auth); // Sign them out first.
         if (userToDelete) {
+          // Then delete the newly created auth record.
           await deleteUser(userToDelete);
         }
+        // Inform the login form that the user doesn't exist.
         const error = new Error("Account not found. Please register first.") as any;
         error.code = "auth/user-not-found";
         throw error;
@@ -89,6 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (appUser) {
           handleSuccessfulLogin(appUser);
       } else {
+          // This case is unlikely if isNewUser check is correct, but good for safety.
           await signOut(auth);
           throw new Error("User data not found in Firestore.");
       }
