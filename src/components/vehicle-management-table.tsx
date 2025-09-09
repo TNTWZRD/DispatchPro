@@ -18,7 +18,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
 } from '@/components/ui/dropdown-menu';
@@ -30,6 +29,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -162,7 +162,7 @@ export function VehicleManagementTable() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                         <DropdownMenuSeparator />
+                         <SelectSeparator />
                         {drivers.map(driver => (
                             <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
                         ))}
