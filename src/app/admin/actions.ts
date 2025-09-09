@@ -140,7 +140,7 @@ export async function deleteDriver(driverId: string) {
         await deleteDoc(driverRef);
         revalidatePath('/admin');
         return { type: "success", message: "Driver deleted successfully." };
-    } catch (error: any) => {
+    } catch (error: any) {
         return { type: "error", message: `Failed to delete driver: ${error.message}` };
     }
 }
