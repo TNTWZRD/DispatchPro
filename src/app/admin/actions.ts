@@ -5,7 +5,7 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import type { Driver, Vehicle } from '@/lib/types';
 
 const INVITE_CODE = 'KBT04330';
