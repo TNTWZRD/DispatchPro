@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +29,7 @@ function SubmitButton() {
 }
 
 export function InviteUserForm() {
-  const [state, formAction] = useFormState(sendInviteEmail, initialState);
+  const [state, formAction] = useActionState(sendInviteEmail, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
