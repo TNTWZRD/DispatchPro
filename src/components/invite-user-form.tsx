@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { sendInviteEmail } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Mail, Loader2, Send } from 'lucide-react';
 
 const initialState = {
@@ -21,7 +29,7 @@ const initialState = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="w-full">
+    <Button type="submit" disabled={pending} className="w-full sm:w-auto">
       {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
       Send Invite
     </Button>
@@ -29,6 +37,7 @@ function SubmitButton() {
 }
 
 export function InviteUserForm() {
+  const [isOpen, setIsOpen] = useState(false);
   const [state, formAction] = useActionState(sendInviteEmail, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -40,6 +49,7 @@ export function InviteUserForm() {
         description: state.message,
       });
       formRef.current?.reset();
+      setIsOpen(false);
     } else if (state.type === 'error' && state.message) {
       toast({
         variant: 'destructive',
@@ -50,38 +60,40 @@ export function InviteUserForm() {
   }, [state, toast]);
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
         <Button variant="outline">
           <Mail className="mr-2 h-4 w-4" /> Invite User
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80">
-        <div className="grid gap-4">
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Invite New User</DialogTitle>
+          <DialogDescription>
+            Enter the email address to send an invitation to. They will receive a link to register.
+          </DialogDescription>
+        </DialogHeader>
+        <form ref={formRef} action={formAction} className="grid gap-4 py-4">
           <div className="space-y-2">
-            <h4 className="font-medium leading-none">Invite New User</h4>
-            <p className="text-sm text-muted-foreground">
-              Enter the email address to send an invitation to.
-            </p>
+            <Label htmlFor="email" className="text-right">
+              Email
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="name@example.com"
+              required
+            />
           </div>
-          <form ref={formRef} action={formAction} className="grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="name@example.com"
-                required
-              />
-            </div>
-            {state?.errors?.email && (
-              <p className="text-sm font-medium text-destructive">{state.errors.email[0]}</p>
-            )}
+          {state?.errors?.email && (
+            <p className="text-sm font-medium text-destructive">{state.errors.email[0]}</p>
+          )}
+          <DialogFooter>
             <SubmitButton />
-          </form>
-        </div>
-      </PopoverContent>
-    </Popover>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
