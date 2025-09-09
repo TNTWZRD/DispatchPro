@@ -11,8 +11,9 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Separator } from './ui/separator';
+import { CheckCircle2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import { ResponsiveDialog } from './responsive-dialog';
+import { ChatView } from './chat-view';
 
 type DriverColumnProps = {
   driver: Driver;
@@ -25,7 +26,8 @@ type DriverColumnProps = {
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
   onUnscheduleRide: (rideId: string) => void;
-  onSendMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
+  onMarkMessagesAsRead: (driverId: string) => void;
   style?: React.CSSProperties;
 };
 
@@ -37,8 +39,23 @@ const statusSortOrder: Record<RideStatus, number> = {
   'cancelled': 5,
 };
 
-export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEditRide, onUnscheduleRide, onSendMessage, style }: DriverColumnProps) {
+export function DriverColumn({ 
+    driver, 
+    rides, 
+    allDrivers, 
+    messages, 
+    onAssignDriver, 
+    onChangeStatus, 
+    onSetFare, 
+    onUnassignDriver, 
+    onEditRide, 
+    onUnscheduleRide, 
+    onSendMessage,
+    onMarkMessagesAsRead,
+    style 
+}: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   
   const isMobile = useIsMobile();
   
@@ -52,25 +69,46 @@ export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriv
   
   const hasActiveRides = activeRides.length > 0;
   const hasCompletedRides = completedRides.length > 0;
+  
+  const unreadMessagesCount = useMemo(() => {
+    return messages.filter(m => m.sender === 'driver' && !m.isRead).length;
+  }, [messages]);
+  
+  const handleChatOpen = (isOpen: boolean) => {
+    if(isOpen) {
+        onMarkMessagesAsRead(driver.id);
+    }
+    setIsChatOpen(isOpen);
+  }
 
   const renderContent = () => (
     <>
       <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={`https://i.pravatar.cc/40?u=${driver.id}`} />
-            <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className='flex flex-col'>
-            <span>{driver.name}</span>
-              <span className={cn(
-                "text-xs font-medium capitalize",
-                driver.status === 'available' && 'text-green-500',
-                driver.status === 'on-ride' && 'text-blue-500',
-              )}>
-                {driver.status.replace('-', ' ')}
-              </span>
-          </div>
+        <CardTitle className="flex items-center justify-between">
+            <div className='flex items-center gap-3'>
+              <Avatar>
+                <AvatarImage src={`https://i.pravatar.cc/40?u=${driver.id}`} />
+                <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className='flex flex-col'>
+                <span>{driver.name}</span>
+                  <span className={cn(
+                    "text-xs font-medium capitalize",
+                    driver.status === 'available' && 'text-green-500',
+                    driver.status === 'on-ride' && 'text-blue-500',
+                  )}>
+                    {driver.status.replace('-', ' ')}
+                  </span>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="relative" onClick={() => handleChatOpen(true)}>
+                <MessageCircle />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                    {unreadMessagesCount}
+                  </span>
+                )}
+            </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-2 p-2">
@@ -80,14 +118,12 @@ export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriv
               key={ride.id}
               ride={ride}
               drivers={allDrivers}
-              messages={messages.filter(m => m.rideId === ride.id)}
               onAssignDriver={onAssignDriver}
               onChangeStatus={onChangeStatus}
               onSetFare={onSetFare}
               onUnassignDriver={onUnassignDriver}
               onEdit={onEditRide}
               onUnschedule={onUnscheduleRide}
-              onSendMessage={onSendMessage}
             />
           ))
         )}
@@ -104,14 +140,12 @@ export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriv
                   key={ride.id}
                   ride={ride}
                   drivers={allDrivers}
-                  messages={messages.filter(m => m.rideId === ride.id)}
                   onAssignDriver={onAssignDriver}
                   onChangeStatus={onChangeStatus}
                   onSetFare={onSetFare}
                   onUnassignDriver={onUnassignDriver}
                   onEdit={onEditRide}
                   onUnschedule={onUnscheduleRide}
-                  onSendMessage={onSendMessage}
                 />
               ))}
             </div>
@@ -136,17 +170,35 @@ export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriv
     </>
   );
 
+  const ChatDialog = (
+    <ResponsiveDialog
+        open={isChatOpen}
+        onOpenChange={handleChatOpen}
+        title={`Chat with ${driver.name}`}
+    >
+        <ChatView
+          messages={messages}
+          onSendMessage={onSendMessage}
+          sender='dispatcher'
+          driverId={driver.id}
+          driverName={driver.name}
+        />
+    </ResponsiveDialog>
+  );
+
   if (isMobile) {
     return (
       <div className="w-full shrink-0 flex flex-col space-y-4">
         <Card>
           {renderContent()}
         </Card>
+        {ChatDialog}
       </div>
     );
   }
 
   return (
+    <>
     <StrictModeDroppable droppableId={driver.id} isDropDisabled={driver.status === 'offline'}>
       {(provided, snapshot) => (
         <Card
@@ -164,5 +216,7 @@ export function DriverColumn({ driver, rides, allDrivers, messages, onAssignDriv
         </Card>
       )}
     </StrictModeDroppable>
+    {ChatDialog}
+    </>
   );
 }

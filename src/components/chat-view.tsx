@@ -15,14 +15,14 @@ import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
 
 type ChatViewProps = {
-  rideId: string;
+  driverId: string;
+  driverName: string;
   messages: Message[];
-  onSendMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
   sender: 'driver' | 'dispatcher';
-  driverName?: string;
 };
 
-export function ChatView({ rideId, messages, onSendMessage, sender, driverName = 'Driver' }: ChatViewProps) {
+export function ChatView({ driverId, driverName, messages, onSendMessage, sender }: ChatViewProps) {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,7 +35,7 @@ export function ChatView({ rideId, messages, onSendMessage, sender, driverName =
 
   const handleSendMessage = () => {
     if (text.trim()) {
-      onSendMessage({ rideId, sender, text });
+      onSendMessage({ driverId, sender, text });
       setText('');
     }
   };
@@ -45,7 +45,7 @@ export function ChatView({ rideId, messages, onSendMessage, sender, driverName =
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        onSendMessage({ rideId, sender, imageUrl: reader.result as string });
+        onSendMessage({ driverId, sender, imageUrl: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
@@ -68,7 +68,7 @@ export function ChatView({ rideId, messages, onSendMessage, sender, driverName =
             const audioDataUri = reader.result as string;
             try {
                 const result = await processChatMessage({ audioDataUri });
-                onSendMessage({ rideId, sender, text: result.responseText, audioUrl: audioDataUri });
+                onSendMessage({ driverId, sender, text: result.responseText, audioUrl: audioDataUri });
             } catch (error) {
                 console.error("Audio processing failed", error);
                 toast({ variant: 'destructive', title: "Audio processing failed" });
@@ -110,7 +110,7 @@ export function ChatView({ rideId, messages, onSendMessage, sender, driverName =
             >
               {message.sender !== sender && (
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={message.sender === 'driver' ? `https://i.pravatar.cc/40?u=${rideId}` : undefined} />
+                  <AvatarImage src={message.sender === 'driver' ? `https://i.pravatar.cc/40?u=${driverId}` : undefined} />
                   <AvatarFallback>{message.sender === 'driver' ? driverName[0] : 'D'}</AvatarFallback>
                 </Avatar>
               )}

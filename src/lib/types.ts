@@ -53,11 +53,11 @@ export type Ride = {
 
 export type Message = {
   id: string;
-  rideId: string;
+  driverId: string;
   sender: 'driver' | 'dispatcher';
   text?: string;
   imageUrl?: string;
   audioUrl?: string;
   timestamp: Date;
-  isNew?: boolean;
+  isRead: boolean;
 };

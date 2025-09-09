@@ -8,16 +8,19 @@ import type { Ride, Driver, Message } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
-import { Truck, CheckCircle } from 'lucide-react';
+import { Truck, CheckCircle, MessageCircle } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ResponsiveDialog } from './responsive-dialog';
 import { DriverEditForm } from './driver-edit-form';
+import { ChatView } from './chat-view';
+import { Button } from './ui/button';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>(initialRides);
   const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // In a real app, you'd get this from auth
   const currentDriverId = 'driver-3';
@@ -46,6 +49,14 @@ export function DriverDashboard() {
   const upcomingRides = useMemo(() => {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
+
+  const driverMessages = useMemo(() => {
+    return messages.filter(m => m.driverId === currentDriverId);
+  }, [messages, currentDriverId]);
+
+  const unreadMessagesCount = useMemo(() => {
+    return driverMessages.filter(m => m.sender === 'dispatcher' && !m.isRead).length;
+  }, [driverMessages]);
   
   const handleEditRide = (rideId: string, details: { cashTip?: number, notes?: string }) => {
     setRides(prevRides =>
@@ -70,19 +81,24 @@ export function DriverDashboard() {
     setEditingRide(ride);
   }
 
-  const handleSendMessage = (message: Omit<Message, 'id' | 'timestamp'>) => {
+  const handleSendMessage = (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
     const newMessage: Message = {
       ...message,
       id: `msg-${Date.now()}`,
       timestamp: new Date(),
-      isNew: true,
+      isRead: true, // Messages sent by self are always read
     };
     setMessages(prev => [...prev, newMessage]);
-
-    // Mark as read after a delay
-    setTimeout(() => {
-      setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, isNew: false } : m));
-    }, 5000);
+  };
+  
+  const handleChatOpen = (isOpen: boolean) => {
+    if(isOpen) {
+        // Mark messages from dispatcher as read
+        setMessages(prev => prev.map(m => (
+            m.driverId === currentDriverId && m.sender === 'dispatcher' ? { ...m, isRead: true } : m
+        )));
+    }
+    setIsChatOpen(isOpen);
   };
 
   if (!currentDriver) {
@@ -101,6 +117,14 @@ export function DriverDashboard() {
           Driver Dashboard
         </h1>
         <div className="ml-auto flex items-center gap-3">
+          <Button variant="outline" className="relative" onClick={() => handleChatOpen(true)}>
+            <MessageCircle className="mr-2" /> Chat
+            {unreadMessagesCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                {unreadMessagesCount}
+                </span>
+            )}
+          </Button>
           <div className="text-right">
             <div className="font-semibold">{currentDriver.name}</div>
             <div className="text-xs text-muted-foreground">{currentDriver.vehicle}</div>
@@ -128,9 +152,7 @@ export function DriverDashboard() {
                         <h2 className="text-lg font-semibold mb-2">{currentRide.status === 'in-progress' ? 'Current Ride' : 'Next Ride'}</h2>
                         <DriverRideCard 
                             ride={currentRide}
-                            messages={messages.filter(m => m.rideId === currentRide.id)}
                             onEdit={handleOpenEdit}
-                            onSendMessage={handleSendMessage}
                         />
                     </div>
                 )}
@@ -144,10 +166,8 @@ export function DriverDashboard() {
                                 <DriverRideCard 
                                     key={ride.id}
                                     ride={ride}
-                                    messages={messages.filter(m => m.rideId === ride.id)}
                                     isQueued={true}
                                     onEdit={handleOpenEdit}
-                                    onSendMessage={handleSendMessage}
                                 />
                             ))}
                         </div>
@@ -168,9 +188,7 @@ export function DriverDashboard() {
                             <DriverRideCard 
                                 key={ride.id}
                                 ride={ride}
-                                messages={messages.filter(m => m.rideId === ride.id)}
                                 onEdit={handleOpenEdit}
-                                onSendMessage={handleSendMessage}
                             />
                         ))}
                     </div>
@@ -191,6 +209,20 @@ export function DriverDashboard() {
                 onSave={handleEditRide}
              />
         )}
+      </ResponsiveDialog>
+      
+      <ResponsiveDialog
+        open={isChatOpen}
+        onOpenChange={handleChatOpen}
+        title={`Chat with Dispatch`}
+      >
+          <ChatView
+            messages={driverMessages}
+            onSendMessage={handleSendMessage}
+            sender='driver'
+            driverId={currentDriver.id}
+            driverName="Me"
+          />
       </ResponsiveDialog>
     </div>
   );

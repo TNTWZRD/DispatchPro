@@ -333,23 +333,34 @@ export const initialRides: Ride[] = [
 export const initialMessages: Message[] = [
   {
     id: 'msg-1',
-    rideId: 'ride-17',
+    driverId: 'driver-3',
     sender: 'dispatcher',
-    text: "Mike, there's been a traffic alert on the main bridge. Can you confirm your route?",
+    text: "Mike, there's been a traffic alert on the main bridge. Can you confirm your route for the Hall of Justice ride?",
     timestamp: new Date(now.getTime() - 4 * 60 * 1000),
+    isRead: false,
   },
   {
     id: 'msg-2',
-    rideId: 'ride-17',
+    driverId: 'driver-3',
     sender: 'driver',
     text: "Confirmed. I'm taking the bypass. No problem.",
     timestamp: new Date(now.getTime() - 3 * 60 * 1000),
+    isRead: true,
   },
   {
     id: 'msg-3',
-    rideId: 'ride-17',
+    driverId: 'driver-3',
     sender: 'dispatcher',
     text: "Great, thanks for the update.",
     timestamp: new Date(now.getTime() - 3 * 60 * 1000 + 5000),
+    isRead: true,
+  },
+  {
+    id: 'msg-4',
+    driverId: 'driver-4',
+    sender: 'dispatcher',
+    text: "Sarah, how's the traffic looking over by Little Italy?",
+    timestamp: new Date(now.getTime() - 10 * 60 * 1000),
+    isRead: true,
   }
 ];

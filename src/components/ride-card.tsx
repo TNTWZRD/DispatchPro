@@ -2,35 +2,32 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useContext } from 'react';
-import type { Ride, Driver, RideStatus, Message } from '@/lib/types';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { Ride, Driver, RideStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2, MessageCircle } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useCondensedMode } from '@/context/condensed-mode-context';
 import { ResponsiveDialog } from './responsive-dialog';
-import { ChatView } from './chat-view';
 
 
 type RideCardProps = {
   ride: Ride;
   drivers: Driver[];
-  messages: Message[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEdit: (ride: Ride) => void;
   onUnschedule: (rideId: string) => void;
-  onSendMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
 };
 
 const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }> = {
@@ -41,9 +38,8 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
   cancelled: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
 };
 
-export function RideCard({ ride, drivers, messages, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule, onSendMessage }: RideCardProps) {
+export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
-  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
   const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check);
@@ -51,7 +47,6 @@ export function RideCard({ ride, drivers, messages, onAssignDriver, onChangeStat
   
   const isMobile = useIsMobile();
   const { isCondensed } = useCondensedMode();
-  const assignedDriver = drivers.find(d => d.id === ride.driverId);
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
   const cardPaymentAmount = useMemo(() => {
@@ -66,8 +61,6 @@ export function RideCard({ ride, drivers, messages, onAssignDriver, onChangeStat
   const totalPayment = useMemo(() => {
     return (fareCash || 0) + (fareCard || 0) + (fareCheck || 0);
   }, [fareCash, fareCard, fareCheck]);
-  
-  const unreadMessagesCount = messages.filter(m => m.isNew && m.sender === 'driver').length;
 
 
   useEffect(() => {
@@ -191,17 +184,6 @@ export function RideCard({ ride, drivers, messages, onAssignDriver, onChangeStat
                )}
             </div>
             <div className="flex items-center gap-1">
-              {ride.driverId && (
-                <Button variant="outline" size="sm" className="h-8 relative" onClick={() => setIsChatModalOpen(true)}>
-                  <MessageCircle className="h-4 w-4" />
-                  {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>Chat</span>}
-                  {unreadMessagesCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                      {unreadMessagesCount}
-                    </span>
-                  )}
-                </Button>
-              )}
               <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
                   <DollarSign className="h-4 w-4" />
                   {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>}
@@ -447,20 +429,6 @@ export function RideCard({ ride, drivers, messages, onAssignDriver, onChangeStat
               Save Fare & Mark Completed
             </Button>
           </div>
-      </ResponsiveDialog>
-      
-      <ResponsiveDialog
-        open={isChatModalOpen}
-        onOpenChange={setIsChatModalOpen}
-        title={`Chat for Ride: ${ride.pickup.name}`}
-      >
-        <ChatView
-          messages={messages}
-          onSendMessage={onSendMessage}
-          sender='dispatcher'
-          rideId={ride.id}
-          driverName={assignedDriver?.name}
-        />
       </ResponsiveDialog>
     </TooltipProvider>
   );

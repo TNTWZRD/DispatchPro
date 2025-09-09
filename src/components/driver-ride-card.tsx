@@ -2,37 +2,28 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import type { Ride, Message } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import type { Ride } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, Phone, CheckCircle2, Package, Users, MessageSquare, Edit, Milestone, MessageCircle } from 'lucide-react';
+import { MapPin, Users, Phone, Package, Edit, Milestone, MessageSquare } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
-import { ResponsiveDialog } from './responsive-dialog';
-import { ChatView } from './chat-view';
 
 
 type DriverRideCardProps = {
     ride: Ride;
-    messages: Message[];
     onEdit: (ride: Ride) => void;
-    onSendMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
     isQueued?: boolean;
 };
 
-export function DriverRideCard({ ride, messages, onEdit, onSendMessage, isQueued = false }: DriverRideCardProps) {
-    const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+export function DriverRideCard({ ride, onEdit, isQueued = false }: DriverRideCardProps) {
 
     const createMapLink = (address: string) => {
         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     }
-    
-    const unreadMessagesCount = messages.filter(m => m.isNew && m.sender === 'dispatcher').length;
-
 
     return (
-        <>
         <Card className={cn(
             isQueued && "bg-muted/50 border-dashed", 
             ride.status === 'completed' && "bg-secondary/70"
@@ -52,14 +43,6 @@ export function DriverRideCard({ ride, messages, onEdit, onSendMessage, isQueued
                         }
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="relative" onClick={() => setIsChatModalOpen(true)}>
-                            <MessageCircle className="mr-2" /> Chat
-                            {unreadMessagesCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                                {unreadMessagesCount}
-                                </span>
-                            )}
-                        </Button>
                         <Button variant="outline" size="sm" onClick={() => onEdit(ride)}>
                             <Edit className="mr-2" /> Edit Details
                         </Button>
@@ -121,19 +104,5 @@ export function DriverRideCard({ ride, messages, onEdit, onSendMessage, isQueued
                 )}
             </CardContent>
         </Card>
-        <ResponsiveDialog
-            open={isChatModalOpen}
-            onOpenChange={setIsChatModalOpen}
-            title={`Chat for Ride: ${ride.pickup.name}`}
-        >
-            <ChatView
-              messages={messages}
-              onSendMessage={onSendMessage}
-              sender='driver'
-              rideId={ride.id}
-              driverName="Me"
-            />
-        </ResponsiveDialog>
-        </>
     );
 }
