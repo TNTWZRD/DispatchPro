@@ -22,7 +22,10 @@ import { UserPlus, Loader2, PlusCircle } from 'lucide-react';
 
 const initialState = {
   message: '',
-  errors: {},
+  errors: {
+    name: [],
+    phoneNumber: [],
+  },
   type: '',
 };
 

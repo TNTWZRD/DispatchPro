@@ -22,7 +22,12 @@ import { Loader2, PlusCircle } from 'lucide-react';
 
 const initialState = {
   message: '',
-  errors: {},
+  errors: {
+    make: [],
+    model: [],
+    year: [],
+    licensePlate: [],
+  },
   type: '',
 };
 

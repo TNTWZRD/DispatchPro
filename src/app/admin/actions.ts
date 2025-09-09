@@ -58,10 +58,9 @@ const createDriverSchema = z.object({
 });
 
 export async function createDriver(prevState: any, formData: FormData) {
-    const validatedFields = createDriverSchema.safeParse({
-        name: formData.get("name"),
-        phoneNumber: formData.get("phoneNumber"),
-    });
+    const validatedFields = createDriverSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
 
     if (!validatedFields.success) {
         return {
@@ -81,7 +80,7 @@ export async function createDriver(prevState: any, formData: FormData) {
             phoneNumber,
             rating: 5,
             status: 'offline',
-            location: { x: 50, y: 50 },
+            location: { x: Math.random() * 100, y: Math.random() * 100 },
         };
 
         await setDoc(newDriverRef, {
@@ -106,12 +105,9 @@ const createVehicleSchema = z.object({
 });
 
 export async function createVehicle(prevState: any, formData: FormData) {
-    const validatedFields = createVehicleSchema.safeParse({
-        make: formData.get("make"),
-        model: formData.get("model"),
-        year: formData.get("year"),
-        licensePlate: formData.get("licensePlate"),
-    });
+    const validatedFields = createVehicleSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
 
     if (!validatedFields.success) {
         return {
