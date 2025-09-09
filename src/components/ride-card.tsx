@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useCondensedMode } from '@/context/condensed-mode-context';
@@ -150,6 +150,10 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
       default:
         eventText = "Updated";
         eventDate = ride.updatedAt;
+    }
+    
+    if (!eventDate || !isValid(new Date(eventDate))) {
+        return `${eventText} just now`;
     }
     
     return `${eventText} ${formatDistanceToNow(eventDate, { addSuffix: true })}`;
