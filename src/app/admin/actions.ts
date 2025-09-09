@@ -58,16 +58,10 @@ const createDriverSchema = z.object({
 });
 
 export async function createDriver(prevState: any, formData: FormData) {
-    console.log("[DEBUG] createDriver action started.");
-    
     const formValues = Object.fromEntries(formData.entries());
-    console.log("[DEBUG] Parsed form data:", formValues);
-
     const validatedFields = createDriverSchema.safeParse(formValues);
-    console.log("[DEBUG] Validation result:", JSON.stringify(validatedFields, null, 2));
 
     if (!validatedFields.success) {
-        console.error("[DEBUG] Validation failed:", validatedFields.error.flatten().fieldErrors);
         return {
             type: "error",
             errors: validatedFields.error.flatten().fieldErrors,
@@ -78,9 +72,8 @@ export async function createDriver(prevState: any, formData: FormData) {
     try {
         const { name, phoneNumber } = validatedFields.data;
         const newDriverRef = doc(collection(db, 'drivers'));
-        console.log("[DEBUG] Generated new driver ref with ID:", newDriverRef.id);
 
-        const newDriver: Driver = {
+        const newDriver: Omit<Driver, 'createdAt' | 'updatedAt'> = {
             id: newDriverRef.id,
             name,
             phoneNumber,
@@ -88,7 +81,6 @@ export async function createDriver(prevState: any, formData: FormData) {
             status: 'offline',
             location: { x: Math.random() * 100, y: Math.random() * 100 },
         };
-        console.log("[DEBUG] Driver object to be saved:", newDriver);
 
         await setDoc(newDriverRef, {
             ...newDriver,
@@ -96,10 +88,9 @@ export async function createDriver(prevState: any, formData: FormData) {
             updatedAt: serverTimestamp(),
         });
         
-        console.log("[DEBUG] Driver created successfully in Firestore.");
         return { type: "success", message: `Driver "${name}" created successfully.` };
     } catch (error) {
-        console.error("[DEBUG] Failed to create driver in Firestore:", error);
+        console.error("Failed to create driver in Firestore:", error);
         return { type: "error", message: "Failed to create the driver. Please try again later." };
     }
 }
