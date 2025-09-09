@@ -92,9 +92,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
         tip: fareTip || undefined,
       }
     });
-    if (ride.status !== 'completed' && ride.status !== 'cancelled') {
-        onChangeStatus(ride.id, 'completed');
-    }
     setIsFareModalOpen(false);
   };
   
@@ -429,8 +426,8 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
              <div className="sm:h-80 md:h-0" />
           </div>
           <div className="flex justify-end p-4">
-            <Button onClick={handleSetFare} disabled={totalPayment <= 0}>
-              Save Fare & Mark Completed
+            <Button onClick={handleSetFare}>
+              Save Fare
             </Button>
           </div>
       </ResponsiveDialog>
