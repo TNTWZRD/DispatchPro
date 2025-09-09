@@ -87,7 +87,7 @@ export function RegisterForm() {
       
     setIsLoading(true);
     try {
-        await registerWithGoogle();
+        await registerWithGoogle(inviteCode);
         // The context handles redirection
     } catch(err) {
         setError('Could not sign in with Google. Please try again.');

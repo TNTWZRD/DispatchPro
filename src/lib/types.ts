@@ -1,15 +1,32 @@
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-ride' | 'offline';
 
 export type PaymentMethod = 'cash' | 'card' | 'check';
 
+export enum Role {
+    ALL = 0,
+    DRIVER = 1,
+    DISPATCHER = 2,
+    OWNER = 4,
+    ADMIN = 8,
+}
+
 export type Location = {
   name: string;
   coords: { x: number; y: number };
 };
+
+export type AppUser = {
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+    role: Role;
+    photoURL?: string | null;
+}
 
 export type Driver = {
   id: string;
