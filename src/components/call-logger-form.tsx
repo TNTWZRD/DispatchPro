@@ -120,7 +120,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
       scheduledTime: values.scheduledTime,
     };
     
-    if (isEditMode) {
+    if (isEditMode && rideToEdit) {
       onEditRide({
         ...rideToEdit,
         ...baseRideData,
@@ -171,20 +171,6 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                     </FormItem>
                 )}
                 />
-                
-                <FormField
-                control={form.control}
-                name="totalFare"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Base Fare</FormLabel>
-                    <FormControl>
-                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
 
                 {fields.map((field, index) => (
                 <FormField
@@ -215,6 +201,20 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 >
                     <MapPin className="mr-2"/> Add Stop
                 </Button>
+                
+                <FormField
+                control={form.control}
+                name="totalFare"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Base Fare</FormLabel>
+                    <FormControl>
+                        <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
                 
                 <FormField
                 control={form.control}
