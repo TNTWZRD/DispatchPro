@@ -26,6 +26,7 @@ export type AppUser = {
     role: Role;
     photoURL?: string | null;
     createdAt?: Date;
+    fcmTokens?: string[];
 }
 
 export type Driver = {
