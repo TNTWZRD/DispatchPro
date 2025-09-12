@@ -28,7 +28,6 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
@@ -89,21 +88,12 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
   };
-  
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-        const scrollContainer = scrollAreaRef.current.querySelector('div');
-        if (scrollContainer) {
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }
-    }
-  }, [messages]);
 
   return (
     <div className="flex flex-col h-[70vh]">
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {[...messages].reverse().map((message) => (
+          {messages.map((message) => (
             <div
               key={message.id}
               className={cn('flex items-end gap-2', message.sender === sender ? 'justify-end' : 'justify-start')}

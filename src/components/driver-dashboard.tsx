@@ -88,15 +88,13 @@ export function DriverDashboard() {
         setRides(newRides);
     });
 
-    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id));
+    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id), orderBy("timestamp", "asc"));
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-        const newMessagesData = snapshot.docs.map(doc => ({
+        const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
             timestamp: toDate(doc.data().timestamp),
         } as Message));
-
-        const newMessages = newMessagesData.sort((a,b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
             const lastMessage = newMessages[newMessages.length - 1];
