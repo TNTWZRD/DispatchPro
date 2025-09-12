@@ -4,9 +4,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { User as FirebaseAuthUser } from 'firebase/auth';
 import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword, getAdditionalUserInfo } from 'firebase/auth';
-import { auth, db, getFCMToken } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { AppUser, Driver } from '@/lib/types';
 import { Role } from '@/lib/types';
 
@@ -31,17 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  const handleFCMToken = useCallback(async (userId: string) => {
-    const fcmToken = await getFCMToken();
-    if (fcmToken) {
-      const userDocRef = doc(db, 'users', userId);
-      // Use arrayUnion to add the token only if it's not already there
-      await updateDoc(userDocRef, {
-        fcmTokens: arrayUnion(fcmToken)
-      });
-    }
-  }, []);
 
   const fetchAppUser = useCallback(async (fbUser: FirebaseAuthUser): Promise<AppUser | null> => {
     const userDocRef = doc(db, 'users', fbUser.uid);
@@ -75,10 +64,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setFirebaseUser(fbUser);
         const appUser = await fetchAppUser(fbUser);
         setUser(appUser);
-
-        if (appUser) {
-            handleFCMToken(fbUser.uid);
-        }
         
         // Centralized redirection logic
         if (appUser && (pathname === '/login' || pathname === '/register')) {
@@ -98,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [fetchAppUser, pathname, router, searchParams, handleFCMToken]);
+  }, [fetchAppUser, pathname, router, searchParams]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -135,7 +120,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
            displayName: fbUser.displayName,
            role: Role.DISPATCHER, 
            photoURL: fbUser.photoURL,
-           fcmTokens: [],
          };
          await setDoc(doc(db, "users", fbUser.uid), {
              ...newAppUser,
@@ -168,7 +152,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email: fbUser.email,
         displayName: fbUser.displayName, 
         role: Role.DISPATCHER, 
-        fcmTokens: [],
     };
     await setDoc(doc(db, 'users', fbUser.uid), {
         ...newAppUser,
