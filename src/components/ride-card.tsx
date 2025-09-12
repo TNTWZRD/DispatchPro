@@ -226,118 +226,116 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
 
   return (
     <TooltipProvider>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div onContextMenu={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).click(); }}>
-            <Card className={cn("transition-all bg-card text-sm cursor-pointer", ride.isNew && "animate-pulse border-primary")}>
-                <div className="p-3">
-                {/* Header Row */}
-                <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                    {getStatusBadge(ride.status)}
-                    {isCondensed && ride.scheduledTime && (
-                        <Tooltip>
-                        <TooltipTrigger>
-                            <div className="flex items-center text-amber-600 font-medium text-xs">
-                            <Calendar className="mr-1 h-3.5 w-3.5" />
-                            <span>{format(ride.scheduledTime, "p")}</span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Scheduled for {format(ride.scheduledTime, "PPpp")}</p>
-                        </TooltipContent>
-                        </Tooltip>
-                    )}
-                    {isCondensed && (
-                        <div className="flex items-center text-xs text-muted-foreground">
-                            <History className="mr-1.5 h-3 w-3" />
-                            <span>{getTimelineEvent()}</span>
-                        </div>
-                    )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                    <Button variant="outline" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); setIsFareModalOpen(true); }}>
-                        <DollarSign className="h-4 w-4" />
-                        {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                    </Button>
-                    </div>
-                </div>
+      <Card className={cn("transition-all bg-card text-sm", ride.isNew && "animate-pulse border-primary")}>
+          <div className="p-3">
+          {/* Header Row */}
+          <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2 flex-wrap">
+              {getStatusBadge(ride.status)}
+              {isCondensed && ride.scheduledTime && (
+                  <Tooltip>
+                  <TooltipTrigger>
+                      <div className="flex items-center text-amber-600 font-medium text-xs">
+                      <Calendar className="mr-1 h-3.5 w-3.5" />
+                      <span>{format(ride.scheduledTime, "p")}</span>
+                      </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Scheduled for {format(ride.scheduledTime, "PPpp")}</p>
+                  </TooltipContent>
+                  </Tooltip>
+              )}
+              {isCondensed && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                      <History className="mr-1.5 h-3 w-3" />
+                      <span>{getTimelineEvent()}</span>
+                  </div>
+              )}
+              </div>
+              <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); setIsFareModalOpen(true); }}>
+                  <DollarSign className="h-4 w-4" />
+                  {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                {menuContent}
+              </DropdownMenu>
+              </div>
+          </div>
 
-                {/* Details Grid */}
-                <div className={cn("grid gap-x-4", isCondensed ? "grid-cols-1" : "grid-cols-2")}>
-                    {/* Left Column */}
-                    <div className="space-y-1.5">
-                    <div className="flex items-start">
-                        <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                        <span className="font-medium">{ride.pickup.name}</span>
-                    </div>
-                    {!isCondensed && ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
-                        <div key={index} className="flex items-start pl-2">
-                            <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-                            <span>{stop.name}</span>
-                        </div>
-                    ))}
-                    {ride.dropoff && (
-                        <div className="flex items-start">
-                            <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                            <span>{ride.dropoff.name}</span>
-                        </div>
-                    )}
-                    </div>
-                    {/* Right Column */}
-                    <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
-                    {ride.passengerCount && ride.passengerCount > 1 && !isCondensed && (
-                        <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount} passengers</div>
-                    )}
-                    {ride.passengerPhone && (
-                        <div className="flex items-center">
-                            <Phone className="mr-1.5" />
-                            <span>{ride.passengerPhone}</span>
-                        </div>
-                    )}
-                    {ride.scheduledTime && !isCondensed && (
-                        <div className="flex items-center text-amber-600 font-medium">
-                        <Calendar className="mr-1.5" />
-                        <span>Scheduled for {format(ride.scheduledTime, "p")}</span>
-                        </div>
-                    )}
-                    </div>
-                </div>
-                
-                {!isCondensed && ride.notes && (
-                    <div className="flex items-start pt-2 text-xs text-muted-foreground">
-                    <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
-                    <span className="italic">{ride.notes}</span>
-                    </div>
-                )}
-                {getPaymentSummary()}
+          {/* Details Grid */}
+          <div className={cn("grid gap-x-4", isCondensed ? "grid-cols-1" : "grid-cols-2")}>
+              {/* Left Column */}
+              <div className="space-y-1.5">
+              <div className="flex items-start">
+                  <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                  <span className="font-medium">{ride.pickup.name}</span>
+              </div>
+              {!isCondensed && ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
+                  <div key={index} className="flex items-start pl-2">
+                      <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                      <span>{stop.name}</span>
+                  </div>
+              ))}
+              {ride.dropoff && (
+                  <div className="flex items-start">
+                      <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                      <span>{ride.dropoff.name}</span>
+                  </div>
+              )}
+              </div>
+              {/* Right Column */}
+              <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
+              {ride.passengerCount && ride.passengerCount > 1 && !isCondensed && (
+                  <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount} passengers</div>
+              )}
+              {ride.passengerPhone && (
+                  <div className="flex items-center">
+                      <Phone className="mr-1.5" />
+                      <span>{ride.passengerPhone}</span>
+                  </div>
+              )}
+              {ride.scheduledTime && !isCondensed && (
+                  <div className="flex items-center text-amber-600 font-medium">
+                  <Calendar className="mr-1.5" />
+                  <span>Scheduled for {format(ride.scheduledTime, "p")}</span>
+                  </div>
+              )}
+              </div>
+          </div>
+          
+          {!isCondensed && ride.notes && (
+              <div className="flex items-start pt-2 text-xs text-muted-foreground">
+              <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
+              <span className="italic">{ride.notes}</span>
+              </div>
+          )}
+          {getPaymentSummary()}
 
-                {/* Footer Row */}
-                <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                    {!isCondensed && (
-                        <div className="flex items-center text-xs text-muted-foreground">
-                            <History className="mr-1.5 h-3 w-3" />
-                            <span>{getTimelineEvent()}</span>
-                        </div>
-                    )}
-                    <div className="flex items-center gap-1.5 ml-auto">
-                        {ride.movingFee && (
-                            <Tooltip>
-                                <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
-                                <TooltipContent><p>Moving Fee</p></TooltipContent>
-                            </Tooltip>
-                        )}
-                    </div>
-                </div>
-                </div>
-            </Card>
-        </div>
-      </DropdownMenuTrigger>
-      {menuContent}
-    </DropdownMenu>
+          {/* Footer Row */}
+          <div className="flex justify-between items-center mt-2 pt-2 border-t">
+              {!isCondensed && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                      <History className="mr-1.5 h-3 w-3" />
+                      <span>{getTimelineEvent()}</span>
+                  </div>
+              )}
+              <div className="flex items-center gap-1.5 ml-auto">
+                  {ride.movingFee && (
+                      <Tooltip>
+                          <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
+                          <TooltipContent><p>Moving Fee</p></TooltipContent>
+                      </Tooltip>
+                  )}
+              </div>
+          </div>
+          </div>
+      </Card>
 
       <ResponsiveDialog
         open={isFareModalOpen}
