@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Ride, Driver, RideStatus } from '@/lib/types';
+import type { Ride, RideStatus, Shift } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,8 +21,8 @@ import { ResponsiveDialog } from './responsive-dialog';
 
 type RideCardProps = {
   ride: Ride;
-  drivers: Driver[];
-  onAssignDriver: (rideId: string, driverId: string) => void;
+  shifts: (Shift & { driver?: any; vehicle?: any })[];
+  onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
@@ -38,7 +38,7 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
   cancelled: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
 };
 
-export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule }: RideCardProps) {
+export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
@@ -46,7 +46,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip);
   
   const { isCondensed } = useCondensedMode();
-  const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
   const cardPaymentAmount = useMemo(() => {
     return (fareCard || 0) + (fareTip || 0);
@@ -171,12 +170,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                    {availableDriversForMenu.map(driver => (
-                    <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
-                        {driver.name}
+                    {shifts.map(shift => (
+                    <DropdownMenuItem key={shift.id} onClick={() => onAssignDriver(ride.id, shift.id)}>
+                        {shift.driver.name} ({shift.vehicle.nickname})
                     </DropdownMenuItem>
                     ))}
-                    {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                    {shifts.length === 0 && <DropdownMenuItem disabled>No active shifts</DropdownMenuItem>}
                 </DropdownMenuSubContent>
                 </DropdownMenuPortal>
             </DropdownMenuSub>
@@ -191,12 +190,12 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                 <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                    {availableDriversForMenu.map(driver => (
-                    <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)} disabled={driver.id === ride.driverId}>
-                        {driver.name}
+                    {shifts.map(shift => (
+                    <DropdownMenuItem key={shift.id} onClick={() => onAssignDriver(ride.id, shift.id)} disabled={shift.id === ride.shiftId}>
+                        {shift.driver.name} ({shift.vehicle.nickname})
                     </DropdownMenuItem>
                     ))}
-                    {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                    {shifts.length === 0 && <DropdownMenuItem disabled>No active shifts</DropdownMenuItem>}
                 </DropdownMenuSubContent>
                 </DropdownMenuPortal>
             </DropdownMenuSub>

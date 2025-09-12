@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import type { Ride, Driver, RideStatus, Message } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message, Shift, Vehicle } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
@@ -11,16 +11,16 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { CheckCircle2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, MessageCircle, Briefcase, Car } from 'lucide-react';
 import { ResponsiveDialog } from './responsive-dialog';
 import { ChatView } from './chat-view';
 
 type DriverColumnProps = {
-  driver: Driver;
+  shift: Shift & { driver?: Driver; vehicle?: Vehicle };
   rides: Ride[];
-  allDrivers: Driver[];
+  allShifts: (Shift & { driver?: any; vehicle?: any })[];
   messages: Message[];
-  onAssignDriver: (rideId: string, driverId: string) => void;
+  onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
@@ -40,9 +40,9 @@ const statusSortOrder: Record<RideStatus, number> = {
 };
 
 export function DriverColumn({ 
-    driver, 
+    shift,
     rides, 
-    allDrivers, 
+    allShifts, 
     messages, 
     onAssignDriver, 
     onChangeStatus, 
@@ -58,7 +58,9 @@ export function DriverColumn({
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const isMobile = useIsMobile();
-  
+  const driver = shift.driver;
+  const vehicle = shift.vehicle;
+
   const activeRides = useMemo(() => {
     return rides
       .filter(r => r.status === 'assigned' || r.status === 'in-progress')
@@ -75,11 +77,14 @@ export function DriverColumn({
   }, [messages]);
   
   const handleChatOpen = (isOpen: boolean) => {
+    if (!driver) return;
     if(isOpen) {
         onMarkMessagesAsRead(driver.id);
     }
     setIsChatOpen(isOpen);
   }
+  
+  if (!driver || !vehicle) return null;
 
   const renderContent = () => (
     <>
@@ -90,15 +95,14 @@ export function DriverColumn({
                 <AvatarImage src={`https://i.pravatar.cc/40?u=${driver.id}`} />
                 <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className='flex flex-col'>
-                <span>{driver.name}</span>
-                  <span className={cn(
-                    "text-xs font-medium capitalize",
-                    driver.status === 'available' && 'text-green-500',
-                    driver.status === 'on-ride' && 'text-blue-500',
-                  )}>
-                    {driver.status.replace('-', ' ')}
-                  </span>
+              <div className='flex flex-col gap-1'>
+                <span className="font-semibold">{driver.name}</span>
+                 <div className='flex items-center gap-4 text-xs text-muted-foreground'>
+                    <div className='flex items-center gap-1.5'>
+                        <Car />
+                        <span>{vehicle.nickname}</span>
+                    </div>
+                 </div>
               </div>
             </div>
             <Button variant="outline" size="sm" className="relative" onClick={() => handleChatOpen(true)}>
@@ -117,7 +121,7 @@ export function DriverColumn({
             <RideCard
               key={ride.id}
               ride={ride}
-              drivers={allDrivers}
+              shifts={allShifts}
               onAssignDriver={onAssignDriver}
               onChangeStatus={onChangeStatus}
               onSetFare={onSetFare}
@@ -139,7 +143,7 @@ export function DriverColumn({
                 <RideCard
                   key={ride.id}
                   ride={ride}
-                  drivers={allDrivers}
+                  shifts={allShifts}
                   onAssignDriver={onAssignDriver}
                   onChangeStatus={onChangeStatus}
                   onSetFare={onSetFare}
@@ -199,7 +203,7 @@ export function DriverColumn({
 
   return (
     <>
-    <StrictModeDroppable droppableId={`driver-${driver.id}`} isDropDisabled={driver.status === 'offline'}>
+    <StrictModeDroppable droppableId={`shift-${shift.id}`} isDropDisabled={driver.status === 'offline'}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}

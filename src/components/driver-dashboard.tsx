@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Ride, Driver, Message } from '@/lib/types';
+import type { Ride, Driver, Message, Shift } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
 import { CheckCircle, MessageCircle, LogOut } from 'lucide-react';
@@ -14,7 +14,7 @@ import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp } from 'firebase/firestore';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -24,6 +24,8 @@ export function DriverDashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const { user, logout } = useAuth();
+  
+  const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
 
   useEffect(() => {
     if (!user) return;
@@ -45,33 +47,27 @@ export function DriverDashboard() {
 
     const ridesQuery = query(collection(db, "rides"), where("driverId", "==", currentDriver.id));
     const ridesUnsub = onSnapshot(ridesQuery, (snapshot) => {
-        const ridesData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id,
-                createdAt: data.createdAt?.toDate(),
-                updatedAt: data.updatedAt?.toDate(),
-                scheduledTime: data.scheduledTime?.toDate(),
-                assignedAt: data.assignedAt?.toDate(),
-                pickedUpAt: data.pickedUpAt?.toDate(),
-                droppedOffAt: data.droppedOffAt?.toDate(),
-                cancelledAt: data.cancelledAt?.toDate(),
-            } as Ride;
-        });
+        const ridesData = snapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            createdAt: toDate(doc.data().createdAt),
+            updatedAt: toDate(doc.data().updatedAt),
+            scheduledTime: doc.data().scheduledTime ? toDate(doc.data().scheduledTime) : undefined,
+            assignedAt: doc.data().assignedAt ? toDate(doc.data().assignedAt) : undefined,
+            pickedUpAt: doc.data().pickedUpAt ? toDate(doc.data().pickedUpAt) : undefined,
+            droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
+            cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
+        } as Ride));
         setRides(ridesData);
     });
 
     const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id));
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id,
-                timestamp: data.timestamp?.toDate(),
-            } as Message;
-        });
+        const messagesData = snapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            timestamp: toDate(doc.data().timestamp),
+        } as Message));
         setMessages(messagesData);
     });
 

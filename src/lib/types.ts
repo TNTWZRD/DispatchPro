@@ -47,7 +47,6 @@ export type Vehicle = {
     vin: string;
     mileage: number | null;
     status: 'active' | 'maintenance' | 'decommissioned';
-    currentDriverId?: string | null;
     currentShiftId?: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -60,7 +59,6 @@ export type Shift = {
     status: 'active' | 'inactive';
     startTime: Date;
     endTime?: Date;
-    rideIds?: string[];
 }
 
 export type MaintenanceTicket = {

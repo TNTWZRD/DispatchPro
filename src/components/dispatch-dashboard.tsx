@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import type { Ride, Driver, RideStatus, Message, AppUser } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message, Shift, Vehicle } from '@/lib/types';
 import { Role } from '@/lib/types';
 import { DragDropContext, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,12 +27,13 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp } from 'firebase/firestore';
-import Link from 'next/link';
 
 
 function DispatchDashboardUI() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
@@ -50,53 +51,68 @@ function DispatchDashboardUI() {
 
   useEffect(() => {
     if (!user) return;
+    
+    const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
 
-    const ridesQuery = query(collection(db, "rides"), orderBy("createdAt", "desc"));
-    const ridesUnsub = onSnapshot(ridesQuery, (snapshot) => {
-        const ridesData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
-            return {
-                ...data,
-                id: doc.id,
-                createdAt: toDate(data.createdAt),
-                updatedAt: toDate(data.updatedAt),
-                scheduledTime: data.scheduledTime ? toDate(data.scheduledTime) : undefined,
-                assignedAt: data.assignedAt ? toDate(data.assignedAt) : undefined,
-                pickedUpAt: data.pickedUpAt ? toDate(data.pickedUpAt) : undefined,
-                droppedOffAt: data.droppedOffAt ? toDate(data.droppedOffAt) : undefined,
-                cancelledAt: data.cancelledAt ? toDate(data.cancelledAt) : undefined,
-            } as Ride;
-        });
+    const ridesUnsub = onSnapshot(query(collection(db, "rides"), orderBy("createdAt", "desc")), (snapshot) => {
+        const ridesData = snapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            createdAt: toDate(doc.data().createdAt),
+            updatedAt: toDate(doc.data().updatedAt),
+            scheduledTime: doc.data().scheduledTime ? toDate(doc.data().scheduledTime) : undefined,
+            assignedAt: doc.data().assignedAt ? toDate(doc.data().assignedAt) : undefined,
+            pickedUpAt: doc.data().pickedUpAt ? toDate(doc.data().pickedUpAt) : undefined,
+            droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
+            cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
+        } as Ride));
         setRides(ridesData);
     });
 
     const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
-        const driversData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver));
-        setDrivers(driversData);
+        setDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
+    });
+    
+    const vehiclesUnsub = onSnapshot(collection(db, "vehicles"), (snapshot) => {
+        setVehicles(snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Vehicle)));
+    });
+
+    const shiftsUnsub = onSnapshot(collection(db, "shifts"), (snapshot) => {
+        setShifts(snapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+          startTime: toDate(doc.data().startTime),
+          endTime: doc.data().endTime ? toDate(doc.data().endTime) : undefined,
+        } as Shift)));
     });
 
     const messagesUnsub = onSnapshot(collection(db, "messages"), (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id,
-                timestamp: data.timestamp?.toDate(),
-            } as Message;
-        });
-        setMessages(messagesData);
+        setMessages(snapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            timestamp: toDate(doc.data().timestamp),
+        } as Message)));
     });
 
 
     return () => {
         ridesUnsub();
         driversUnsub();
+        vehiclesUnsub();
+        shiftsUnsub();
         messagesUnsub();
     };
   }, [user]);
   
-  const activeDrivers = drivers.filter(d => d.status !== 'offline');
+  const activeShifts = shifts
+    .filter(s => s.status === 'active')
+    .map(shift => {
+        const driver = drivers.find(d => d.id === shift.driverId);
+        const vehicle = vehicles.find(v => v.id === shift.vehicleId);
+        return { ...shift, driver, vehicle };
+    })
+    .filter(s => s.driver && s.vehicle);
+    
   
   const allPendingRides = rides.filter(r => r.status === 'pending');
   
@@ -119,13 +135,13 @@ function DispatchDashboardUI() {
     setActiveTab(value);
     const tabs = ['waiting'];
     if (hasScheduledRides) tabs.push('scheduled');
-    tabs.push(...activeDrivers.map(d => d.id));
+    tabs.push(...activeShifts.map(s => s.id));
     const tabIndex = tabs.indexOf(value);
 
     if (carouselApi && tabIndex !== -1) {
       carouselApi.scrollTo(tabIndex);
     }
-  }, [carouselApi, activeDrivers, hasScheduledRides]);
+  }, [carouselApi, activeShifts, hasScheduledRides]);
 
 
   useEffect(() => {
@@ -135,7 +151,7 @@ function DispatchDashboardUI() {
       const selectedIndex = carouselApi.selectedScrollSnap();
       const tabs = ['waiting'];
       if (hasScheduledRides) tabs.push('scheduled');
-      tabs.push(...activeDrivers.map(d => d.id));
+      tabs.push(...activeShifts.map(d => d.id));
       const newTab = tabs[selectedIndex];
 
       if (newTab) {
@@ -147,9 +163,9 @@ function DispatchDashboardUI() {
     return () => {
       carouselApi.off("select", onSelect);
     };
-  }, [carouselApi, activeDrivers, hasScheduledRides]);
+  }, [carouselApi, activeShifts, hasScheduledRides]);
 
-  const handleAddRide = async (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => {
+  const handleAddRide = async (newRideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew' | 'shiftId'>) => {
     if (!db) return;
     
     const rideToSave = {
@@ -161,6 +177,7 @@ function DispatchDashboardUI() {
       ...rideToSave,
       status: 'pending',
       driverId: null,
+      shiftId: null,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any,
       isNew: true,
@@ -185,34 +202,21 @@ function DispatchDashboardUI() {
     setIsFormOpen(false);
   }
 
-  const handleAssignDriver = async (rideId: string, driverId: string) => {
+  const handleAssignDriver = async (rideId: string, shiftId: string) => {
     if (!db) return;
     const rideToAssign = rides.find(r => r.id === rideId);
     if (!rideToAssign) return;
 
-    const driver = drivers.find(d => d.id === driverId);
-    if (driver?.status === 'offline') {
-      console.warn(`Driver ${driverId} is offline.`);
-      return;
-    }
-    
-    const originalDriverId = rideToAssign.driverId;
+    const shift = activeShifts.find(s => s.id === shiftId);
+    if (!shift || !shift.driver) return;
 
     await updateDoc(doc(db, 'rides', rideId), {
         status: 'assigned',
-        driverId: driverId,
+        driverId: shift.driverId,
+        shiftId: shift.id,
         updatedAt: serverTimestamp(),
         assignedAt: serverTimestamp()
     });
-
-    await updateDoc(doc(db, 'drivers', driverId), { status: 'on-ride' });
-
-    if (originalDriverId && originalDriverId !== driverId) {
-        const otherRidesForOldDriver = rides.filter(r => r.driverId === originalDriverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
-        if (otherRidesForOldDriver.length === 0) {
-            await updateDoc(doc(db, 'drivers', originalDriverId), { status: 'available' });
-        }
-    }
   };
   
   const handleUnassignDriver = async (rideId: string) => {
@@ -220,19 +224,13 @@ function DispatchDashboardUI() {
     const ride = rides.find(r => r.id === rideId);
     if (!ride || !ride.driverId) return;
 
-    const driverId = ride.driverId;
-
     await updateDoc(doc(db, 'rides', rideId), {
         status: 'pending',
         driverId: null,
+        shiftId: null,
         updatedAt: serverTimestamp(),
         assignedAt: null
     });
-
-    const otherRides = rides.filter(r => r.driverId === driverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
-    if (otherRides.length === 0) {
-      await updateDoc(doc(db, 'drivers', driverId), { status: 'available' });
-    }
   };
 
   const handleUnscheduleRide = async (rideId: string) => {
@@ -255,9 +253,9 @@ function DispatchDashboardUI() {
     const ride = rides.find(r => r.id === draggableId);
     if (!ride) return;
 
-    if (destination.droppableId.startsWith('driver-')) {
-      const driverId = destination.droppableId.split('driver-')[1];
-      handleAssignDriver(ride.id, driverId);
+    if (destination.droppableId.startsWith('shift-')) {
+      const shiftId = destination.droppableId.split('shift-')[1];
+      handleAssignDriver(ride.id, shiftId);
     } else if (destination.droppableId === 'waiting' || destination.droppableId === 'scheduled') {
       if (ride.driverId) {
         handleUnassignDriver(ride.id);
@@ -277,6 +275,7 @@ function DispatchDashboardUI() {
             ...restOfRide,
             status: 'pending',
             driverId: null,
+            shiftId: null,
             isNew: true,
         };
         await addDoc(collection(db, 'rides'), {
@@ -294,17 +293,10 @@ function DispatchDashboardUI() {
     else if (newStatus === 'cancelled') {
       updateData.cancelledAt = serverTimestamp();
       updateData.driverId = null;
+      updateData.shiftId = null;
     }
 
     await updateDoc(doc(db, 'rides', rideId), updateData);
-
-    if ((newStatus === 'completed' || newStatus === 'cancelled') && rideToUpdate.driverId) {
-      const driverId = rideToUpdate.driverId;
-      const remainingRides = rides.filter(r => r.driverId === driverId && r.id !== rideId && ['assigned', 'in-progress'].includes(r.status));
-      if (remainingRides.length === 0) {
-        await updateDoc(doc(db, 'drivers', driverId), { status: 'available' });
-      }
-    }
   };
 
   const handleSetFare = async (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => {
@@ -375,7 +367,7 @@ function DispatchDashboardUI() {
                         <RideCard
                           key={ride.id}
                           ride={ride}
-                          drivers={drivers}
+                          shifts={activeShifts}
                           onAssignDriver={handleAssignDriver}
                           onChangeStatus={handleChangeStatus}
                           onSetFare={handleSetFare}
@@ -410,7 +402,7 @@ function DispatchDashboardUI() {
                   <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                     {pendingRides.map((ride, index) => (
                       <Draggable key={ride.id} draggableId={ride.id} index={index}>
-                        {(provided, snapshot) => (
+                        {(provided) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
@@ -418,7 +410,7 @@ function DispatchDashboardUI() {
                           >
                             <RideCard
                               ride={ride}
-                              drivers={drivers}
+                              shifts={activeShifts}
                               onAssignDriver={handleAssignDriver}
                               onChangeStatus={handleChangeStatus}
                               onSetFare={handleSetFare}
@@ -461,7 +453,7 @@ function DispatchDashboardUI() {
                     <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                       {scheduledRides.map((ride, index) => (
                         <Draggable key={ride.id} draggableId={ride.id} index={index}>
-                          {(provided, snapshot) => (
+                          {(provided) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
@@ -469,7 +461,7 @@ function DispatchDashboardUI() {
                             >
                               <RideCard
                                 ride={ride}
-                                drivers={drivers}
+                                shifts={activeShifts}
                                 onAssignDriver={handleAssignDriver}
                                 onChangeStatus={handleChangeStatus}
                                 onSetFare={handleSetFare}
@@ -490,13 +482,13 @@ function DispatchDashboardUI() {
 
 
           {/* Driver Columns */}
-          {activeDrivers.map(driver => (
+          {activeShifts.map(shift => (
             <DriverColumn
-              key={driver.id}
-              driver={driver}
-              rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.driverId === driver.id)}
-              allDrivers={drivers}
-              messages={messages.filter(m => m.driverId === driver.id)}
+              key={shift.id}
+              shift={shift}
+              rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
+              allShifts={activeShifts}
+              messages={messages.filter(m => m.driverId === shift.driverId)}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
@@ -518,8 +510,8 @@ function DispatchDashboardUI() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
           {hasScheduledRides && <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>}
-          {activeDrivers.map(driver => (
-            <TabsTrigger key={driver.id} value={driver.id}>{driver.name.split(' ')[0]}</TabsTrigger>
+          {activeShifts.map(shift => (
+            <TabsTrigger key={shift.id} value={shift.id}>{shift.driver?.name.split(' ')[0]}</TabsTrigger>
           ))}
         </TabsList>
         
@@ -533,7 +525,7 @@ function DispatchDashboardUI() {
                       <RideCard
                         key={ride.id}
                         ride={ride}
-                        drivers={drivers}
+                        shifts={activeShifts}
                         onAssignDriver={handleAssignDriver}
                         onChangeStatus={handleChangeStatus}
                         onSetFare={handleSetFare}
@@ -558,7 +550,7 @@ function DispatchDashboardUI() {
                         <RideCard
                           key={ride.id}
                           ride={ride}
-                          drivers={drivers}
+                          shifts={activeShifts}
                           onAssignDriver={handleAssignDriver}
                           onChangeStatus={handleChangeStatus}
                           onSetFare={handleSetFare}
@@ -573,14 +565,14 @@ function DispatchDashboardUI() {
 
 
                 {/* Driver Tabs */}
-                {activeDrivers.map(driver => (
-                  <CarouselItem key={driver.id} className="overflow-y-auto">
+                {activeShifts.map(shift => (
+                  <CarouselItem key={shift.id} className="overflow-y-auto">
                       <div className="pr-1">
                         <DriverColumn
-                            driver={driver}
-                            rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.driverId === driver.id)}
-                            allDrivers={drivers}
-                            messages={messages.filter(m => m.driverId === driver.id)}
+                            shift={shift}
+                            rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
+                            allShifts={activeShifts}
+                            messages={messages.filter(m => m.driverId === shift.driverId)}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
@@ -669,7 +661,12 @@ function DispatchDashboardUI() {
           rides={rides}
           drivers={drivers}
           onAddRide={handleAddRide}
-          onAssignDriver={handleAssignDriver}
+          onAssignDriver={(rideId, driverId) => {
+            const driver = drivers.find(d => d.id === driverId);
+            if (driver && driver.currentShiftId) {
+                handleAssignDriver(rideId, driver.currentShiftId);
+            }
+          }}
           onChangeStatus={handleChangeStatus}
         />
     </div>
