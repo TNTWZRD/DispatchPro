@@ -5,12 +5,23 @@ export function sendBrowserNotification(title: string, body: string, icon: strin
     return;
   }
 
+  const showNotification = () => {
+    if (navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification(title, { body, icon });
+      });
+    } else {
+      // Fallback for non-PWA contexts or if service worker isn't ready
+      new Notification(title, { body, icon });
+    }
+  };
+
   if (Notification.permission === "granted") {
-    new Notification(title, { body, icon });
+    showNotification();
   } else if (Notification.permission !== "denied") {
     Notification.requestPermission().then((permission) => {
       if (permission === "granted") {
-        new Notification(title, { body, icon });
+        showNotification();
       }
     });
   }
