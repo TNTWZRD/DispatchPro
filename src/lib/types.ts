@@ -1,7 +1,8 @@
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
-export type DriverStatus = 'available' | 'on-ride' | 'offline';
+export type DriverStatus = 'available' | 'on-shift' | 'offline';
 
 export type PaymentMethod = 'cash' | 'card' | 'check';
 
@@ -34,24 +35,36 @@ export type Driver = {
   rating: number;
   status: DriverStatus;
   location: { x: number; y: number };
+  currentShiftId?: string | null;
 };
 
 export type Vehicle = {
     id: string;
     nickname: string;
-    make?: string;
-    model?: string;
-    year?: number | null;
-    vin?: string;
-    mileage?: number | null;
+    make: string;
+    model: string;
+    year: number | null;
+    vin: string;
+    mileage: number | null;
     status: 'active' | 'maintenance' | 'decommissioned';
     currentDriverId?: string | null;
+    currentShiftId?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }
 
-export type MaintenanceTicket = {
+export type Shift = {
     id: string;
+    driverId: string;
+    vehicleId: string;
+    status: 'active' | 'inactive';
+    startTime: Date;
+    endTime?: Date;
+    rideIds?: string[];
+}
+
+export type MaintenanceTicket = {
+    id:string;
     vehicleId: string;
     title: string;
     description: string;
@@ -70,7 +83,8 @@ export type Ride = {
   dropoff?: Location;
   stops?: Location[];
   status: RideStatus;
-  driverId: string | null;
+  driverId: string | null; // This will be deprecated in favor of shiftId
+  shiftId?: string | null;
   isNew?: boolean;
   passengerCount?: number;
   movingFee: boolean;

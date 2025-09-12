@@ -44,7 +44,7 @@ import {
 const getStatusVariant = (status: Driver['status']) => {
     switch (status) {
         case 'available': return 'bg-green-600 hover:bg-green-700';
-        case 'on-ride': return 'bg-blue-500 hover:bg-blue-600';
+        case 'on-shift': return 'bg-blue-500 hover:bg-blue-600';
         case 'offline': return 'bg-gray-500 hover:bg-gray-600';
         default: return 'bg-gray-500';
     }
@@ -130,7 +130,7 @@ export function DriverManagementTable() {
               <TableCell>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full min-w-[150px] justify-between capitalize">
+                        <Button variant="outline" className="w-full min-w-[150px] justify-between capitalize" disabled={driver.status === 'on-shift'}>
                             <Badge className={getStatusVariant(driver.status)}>{driver.status.replace('-', ' ')}</Badge>
                             <ChevronDown className="ml-2 h-4 w-4" />
                         </Button>
@@ -138,7 +138,6 @@ export function DriverManagementTable() {
                     <DropdownMenuContent>
                         <DropdownMenuRadioGroup value={driver.status} onValueChange={(value) => handleStatusChange(driver.id, value as Driver['status'])}>
                             <DropdownMenuRadioItem value="available">Available</DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="on-ride">On Ride</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="offline">Offline</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                     </DropdownMenuContent>

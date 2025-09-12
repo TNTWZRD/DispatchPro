@@ -5,7 +5,7 @@ import { UserManagementTable } from '@/components/user-management-table';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, Shield, Truck, User, Users } from 'lucide-react';
+import { Loader2, Shield, Truck, User, Users, Briefcase } from 'lucide-react';
 import { Role } from '@/lib/types';
 import { InviteUserForm } from '@/components/invite-user-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -72,12 +72,20 @@ export default function AdminPage() {
                     </CardHeader>
                     <CardContent className="flex flex-col gap-4">
                          <div className="flex justify-between items-center gap-2">
-                            <Link href="/admin/vehicles" passHref>
-                                <Button variant="outline">
-                                    <Truck className="mr-2" />
-                                    Manage Vehicles
-                                </Button>
-                            </Link>
+                             <div className="flex gap-2">
+                                <Link href="/admin/vehicles" passHref>
+                                    <Button variant="outline">
+                                        <Truck className="mr-2" />
+                                        Manage Vehicles
+                                    </Button>
+                                </Link>
+                                <Link href="/admin/shifts" passHref>
+                                    <Button variant="outline">
+                                        <Briefcase className="mr-2" />
+                                        Manage Shifts
+                                    </Button>
+                                </Link>
+                            </div>
                             <NewDriverForm />
                         </div>
                         <DriverManagementTable />

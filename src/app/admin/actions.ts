@@ -5,8 +5,8 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
-import type { Driver, MaintenanceTicket, Vehicle } from '@/lib/types';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch } from 'firebase/firestore';
+import type { Driver, MaintenanceTicket, Vehicle, Shift } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 const INVITE_CODE = 'KBT04330';
@@ -246,4 +246,79 @@ export async function createTicket(prevState: any, formData: FormData) {
     console.error("Failed to create ticket:", error);
     return { type: "error", message: `Failed to create ticket: ${error.message}` };
   }
+}
+
+const startShiftSchema = z.object({
+  driverId: z.string().min(1, "Please select a driver."),
+  vehicleId: z.string().min(1, "Please select a vehicle."),
+});
+
+export async function startShift(prevState: any, formData: FormData) {
+  const validatedFields = startShiftSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+
+  if (!validatedFields.success) {
+    return {
+      type: "error",
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Please select a driver and a vehicle.",
+    };
+  }
+
+  const { driverId, vehicleId } = validatedFields.data;
+  
+  const batch = writeBatch(db);
+
+  try {
+    // 1. Create a new shift document
+    const newShiftRef = doc(collection(db, 'shifts'));
+    const newShift: Omit<Shift, 'id'> = {
+        driverId,
+        vehicleId,
+        status: 'active',
+        startTime: serverTimestamp() as any,
+    };
+    batch.set(newShiftRef, newShift);
+
+    // 2. Update driver status and link to shift
+    const driverRef = doc(db, 'drivers', driverId);
+    batch.update(driverRef, { status: 'on-shift', currentShiftId: newShiftRef.id });
+
+    // 3. Update vehicle and link to shift
+    const vehicleRef = doc(db, 'vehicles', vehicleId);
+    batch.update(vehicleRef, { currentShiftId: newShiftRef.id });
+
+    await batch.commit();
+    revalidatePath('/admin/shifts');
+    return { type: "success", message: `Shift started successfully.` };
+
+  } catch(error: any) {
+    console.error("Failed to start shift:", error);
+    return { type: "error", message: `Failed to start shift: ${error.message}` };
+  }
+}
+
+export async function endShift(shiftId: string, driverId: string, vehicleId: string) {
+    const batch = writeBatch(db);
+    try {
+        // 1. Update the shift document
+        const shiftRef = doc(db, 'shifts', shiftId);
+        batch.update(shiftRef, { status: 'inactive', endTime: serverTimestamp() });
+
+        // 2. Update the driver status
+        const driverRef = doc(db, 'drivers', driverId);
+        batch.update(driverRef, { status: 'available', currentShiftId: null });
+
+        // 3. Update the vehicle
+        const vehicleRef = doc(db, 'vehicles', vehicleId);
+        batch.update(vehicleRef, { currentShiftId: null });
+
+        await batch.commit();
+        revalidatePath('/admin/shifts');
+        return { type: "success", message: "Shift ended successfully." };
+    } catch (error: any) {
+        console.error("Failed to end shift:", error);
+        return { type: "error", message: `Failed to end shift: ${error.message}` };
+    }
 }
