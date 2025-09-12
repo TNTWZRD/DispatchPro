@@ -97,8 +97,10 @@ export function DriverDashboard() {
             timestamp: toDate(doc.data().timestamp),
         } as Message));
 
-        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = newMessages.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+        const sortedMessages = newMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        if (prevMessagesRef.current.length > 0 && sortedMessages.length > prevMessagesRef.current.length) {
+            const lastMessage = sortedMessages[sortedMessages.length - 1];
             if (lastMessage.sender === 'dispatcher') {
                 if (Notification.permission === "granted") {
                     new Notification("New message from Dispatch", {
@@ -108,7 +110,7 @@ export function DriverDashboard() {
                 }
             }
         }
-        setMessages(newMessages.sort((a,b) => a.timestamp.getTime() - b.timestamp.getTime()));
+        setMessages(sortedMessages);
     });
 
     return () => {
