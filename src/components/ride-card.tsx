@@ -205,7 +205,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                             <CalendarX2 className="mr-2 h-4 w-4" /> Unschedule
                         </DropdownMenuItem>
                     )}
-                    {ride.status === 'pending' && isMobile && (
+                    {ride.status === 'pending' && (
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
@@ -225,7 +225,7 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
                           <Undo2 className="mr-2 h-4 w-4" /> Unassign
                       </DropdownMenuItem>
                     )}
-                    {isMobile && ['assigned', 'in-progress'].includes(ride.status) && (
+                    {['assigned', 'in-progress'].includes(ride.status) && (
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
