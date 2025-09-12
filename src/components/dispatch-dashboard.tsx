@@ -26,7 +26,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { StartShiftForm } from './start-shift-form';
 import { endShift } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -105,8 +105,13 @@ function DispatchDashboardUI() {
           endTime: doc.data().endTime ? toDate(doc.data().endTime) : undefined,
         } as Shift)));
     });
-
-    const messagesUnsub = onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
+    
+    const messagesQuery = query(
+      collection(db, "messages"),
+      where("recipientId", "==", user.uid),
+      orderBy("timestamp", "asc")
+    );
+    const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
         const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
@@ -115,13 +120,11 @@ function DispatchDashboardUI() {
         
         if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
             const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage.sender === 'driver') {
-                 const driver = drivers.find(d => d.id === lastMessage.driverId);
-                 sendBrowserNotification(
-                    `New message from ${driver?.name || 'Driver'}`,
-                    lastMessage.text || "Sent an image or audio"
-                 );
-            }
+            const driver = drivers.find(d => d.id === lastMessage.senderId);
+             sendBrowserNotification(
+                `New message from ${driver?.name || 'Driver'}`,
+                lastMessage.text || "Sent an image or audio"
+             );
         }
         setMessages(newMessages);
     });
@@ -360,11 +363,14 @@ function DispatchDashboardUI() {
   };
   
   const handleMarkMessagesAsRead = async (driverId: string) => {
-    if (!db) return;
-    const unreadMessages = messages.filter(m => m.driverId === driverId && m.sender === 'driver' && !m.isRead);
-    for (const message of unreadMessages) {
-        await updateDoc(doc(db, 'messages', message.id), { isRead: true });
-    }
+    if (!db || !user) return;
+    const batch = writeBatch(db);
+    const unreadMessages = messages.filter(m => m.driverId === driverId && m.recipientId === user.uid && !m.isRead);
+    unreadMessages.forEach(message => {
+        const msgRef = doc(db, 'messages', message.id);
+        batch.update(msgRef, { isRead: true });
+    });
+    await batch.commit();
   };
 
   const handleEndShift = async (shift: Shift) => {
@@ -529,6 +535,7 @@ function DispatchDashboardUI() {
               shift={shift}
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
               allShifts={activeShifts}
+              allDrivers={drivers}
               messages={messages.filter(m => m.driverId === shift.driverId)}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
@@ -614,6 +621,7 @@ function DispatchDashboardUI() {
                             shift={shift}
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                             allShifts={activeShifts}
+                            allDrivers={drivers}
                             messages={messages.filter(m => m.driverId === shift.driverId)}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}

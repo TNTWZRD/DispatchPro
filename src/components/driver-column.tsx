@@ -3,11 +3,11 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import type { Ride, Driver, RideStatus, Message, Shift, Vehicle } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
-import { cn } from '@/lib/utils';
+import { cn, formatUserName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
@@ -21,6 +21,7 @@ type DriverColumnProps = {
   shift: Shift & { driver?: Driver; vehicle?: Vehicle };
   rides: Ride[];
   allShifts: (Shift & { driver?: any; vehicle?: any })[];
+  allDrivers: Driver[];
   messages: Message[];
   onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
@@ -45,7 +46,8 @@ const statusSortOrder: Record<RideStatus, number> = {
 export function DriverColumn({ 
     shift,
     rides, 
-    allShifts, 
+    allShifts,
+    allDrivers,
     messages, 
     onAssignDriver, 
     onChangeStatus, 
@@ -77,8 +79,9 @@ export function DriverColumn({
   const hasCompletedRides = completedRides.length > 0;
   
   const unreadMessagesCount = useMemo(() => {
-    return messages.filter(m => m.sender === 'driver' && !m.isRead).length;
-  }, [messages]);
+    if (!driver) return 0;
+    return messages.filter(m => m.senderId !== driver.id && !m.isRead).length;
+  }, [messages, driver]);
   
   const handleChatOpen = (isOpen: boolean) => {
     if (!driver) return;
@@ -100,7 +103,7 @@ export function DriverColumn({
                 <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className='flex flex-col gap-1'>
-                <span className="font-semibold">{driver.name}</span>
+                <span className="font-semibold">{formatUserName(driver.name)}</span>
                  <div className='flex items-center gap-4 text-xs text-muted-foreground'>
                     <div className='flex items-center gap-1.5'>
                         <Car />
@@ -208,14 +211,14 @@ export function DriverColumn({
     <ResponsiveDialog
         open={isChatOpen}
         onOpenChange={handleChatOpen}
-        title={`Chat with ${driver.name}`}
+        title={`Chat with ${formatUserName(driver.name)}`}
     >
         <ChatView
+          threadId={driver.id}
+          participant={driver}
           messages={messages}
+          allDrivers={allDrivers}
           onSendMessage={onSendMessage}
-          sender='dispatcher'
-          driverId={driver.id}
-          driverName={driver.name}
         />
     </ResponsiveDialog>
   );

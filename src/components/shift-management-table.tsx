@@ -19,6 +19,7 @@ import { Loader2, PowerOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { endShift } from '@/app/admin/actions';
+import { formatUserName } from '@/lib/utils';
 
 export function ShiftManagementTable() {
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -59,7 +60,11 @@ export function ShiftManagementTable() {
     };
   }, [loading]);
 
-  const getDriverName = (driverId: string) => drivers.find(d => d.id === driverId)?.name || 'Unknown';
+  const getDriverName = (driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    return driver ? formatUserName(driver.name) : 'Unknown';
+  }
+
   const getVehicleNickname = (vehicleId: string) => vehicles.find(v => v.id === vehicleId)?.nickname || 'Unknown';
   
   const handleEndShift = async (shift: Shift) => {

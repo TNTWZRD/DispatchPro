@@ -36,7 +36,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const userDocRef = doc(db, 'users', fbUser.uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
-      const appUser = userDoc.data() as AppUser;
+      const data = userDoc.data();
+      const appUser = {
+          ...data,
+          id: userDoc.id,
+          uid: userDoc.id,
+          name: data.displayName
+      } as AppUser;
 
       if (appUser.role & Role.DRIVER) {
         const driverDocRef = doc(db, 'drivers', fbUser.uid);
@@ -116,8 +122,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
        if (additionalInfo?.isNewUser) {
          const newAppUser: AppUser = {
            uid: fbUser.uid,
+           id: fbUser.uid,
            email: fbUser.email,
            displayName: fbUser.displayName,
+           name: fbUser.displayName,
            role: Role.DISPATCHER, 
            photoURL: fbUser.photoURL,
          };
@@ -149,8 +157,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const fbUser = result.user;
     const newAppUser: AppUser = {
         uid: fbUser.uid,
+        id: fbUser.uid,
         email: fbUser.email,
         displayName: fbUser.displayName, 
+        name: fbUser.displayName,
         role: Role.DISPATCHER, 
     };
     await setDoc(doc(db, 'users', fbUser.uid), {

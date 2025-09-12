@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ChevronDown, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { formatUserName } from '@/lib/utils';
 
 const roleMap: { [key in keyof typeof Role]?: Role } = {
     DRIVER: Role.DRIVER,
@@ -59,6 +60,8 @@ export function UserManagementTable() {
         return {
           ...data,
           uid: doc.id,
+          id: doc.id,
+          name: data.displayName,
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         } as AppUser;
       });
@@ -182,7 +185,7 @@ export function UserManagementTable() {
                     <AvatarImage src={user.photoURL ?? undefined} />
                     <AvatarFallback>{user.displayName?.[0] || user.email?.[0]}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{user.displayName || 'N/A'}</span>
+                  <span className="font-medium">{formatUserName(user.displayName || 'N/A')}</span>
                 </div>
               </TableCell>
               <TableCell>{user.email}</TableCell>

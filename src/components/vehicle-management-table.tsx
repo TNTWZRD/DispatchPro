@@ -26,6 +26,7 @@ import { Loader2, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { formatUserName } from '@/lib/utils';
 
 
 const getStatusVariant = (status: Vehicle['status']) => {
@@ -82,7 +83,8 @@ export function VehicleManagementTable() {
     if (!vehicle.currentShiftId) return 'Unassigned';
     const activeShift = shifts.find(s => s.id === vehicle.currentShiftId);
     if (!activeShift) return 'Unassigned';
-    return drivers.find(d => d.id === activeShift.driverId)?.name || 'Unknown Driver';
+    const driver = drivers.find(d => d.id === activeShift.driverId);
+    return driver ? formatUserName(driver.name) : 'Unknown Driver';
   }
 
   const handleStatusChange = async (vehicleId: string, status: Vehicle['status']) => {

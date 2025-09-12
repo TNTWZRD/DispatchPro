@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Ride, Driver, Message, Shift } from '@/lib/types';
+import type { Ride, Driver, Message, Shift, AppUser } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
 import { CheckCircle, MessageCircle, LogOut } from 'lucide-react';
@@ -16,10 +16,12 @@ import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
+import { formatUserName } from '@/lib/utils';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [currentDriver, setCurrentDriver] = useState<Driver | null>(null);
+  const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -42,6 +44,13 @@ export function DriverDashboard() {
     } else if (Notification.permission === "default") {
         Notification.requestPermission();
     }
+  }, []);
+  
+  useEffect(() => {
+    const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
+        setAllDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
+    });
+    return () => driversUnsub();
   }, []);
 
   useEffect(() => {
@@ -88,7 +97,11 @@ export function DriverDashboard() {
         setRides(newRides);
     });
 
-    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id), orderBy("timestamp", "asc"));
+    const messagesQuery = query(
+      collection(db, "messages"),
+      where("recipientId", "==", currentDriver.id),
+      orderBy("timestamp", "asc")
+    );
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
         const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
@@ -141,14 +154,27 @@ export function DriverDashboard() {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
 
+  const dispatcherUser: AppUser = useMemo(() => ({
+    id: 'dispatcher',
+    uid: 'dispatcher',
+    name: 'Dispatch',
+    email: '',
+    role: 2,
+  }), []);
+
   const driverMessages = useMemo(() => {
     if (!currentDriver) return [];
-    return messages.filter(m => m.driverId === currentDriver.id);
-  }, [messages, currentDriver]);
+    return messages.filter(m => 
+        (m.senderId === currentDriver.id && m.recipientId === dispatcherUser.id) ||
+        (m.senderId === dispatcherUser.id && m.recipientId === currentDriver.id)
+    );
+  }, [messages, currentDriver, dispatcherUser.id]);
+
 
   const unreadMessagesCount = useMemo(() => {
-    return driverMessages.filter(m => m.sender === 'dispatcher' && !m.isRead).length;
-  }, [driverMessages]);
+    if (!currentDriver) return 0;
+    return driverMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
+  }, [driverMessages, currentDriver]);
   
   const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
     const rideToUpdate = rides.find(ride => ride.id === rideId);
@@ -174,14 +200,14 @@ export function DriverDashboard() {
     await addDoc(collection(db, 'messages'), {
         ...message,
         timestamp: serverTimestamp(),
-        isRead: true, // Messages sent by self are always read
+        isRead: false,
     });
   };
   
   const handleChatOpen = async (isOpen: boolean) => {
     if(isOpen) {
         if (!currentDriver) return;
-        const unread = driverMessages.filter(m => m.sender === 'dispatcher' && !m.isRead);
+        const unread = driverMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead);
         for(const message of unread) {
             await updateDoc(doc(db, 'messages', message.id), { isRead: true });
         }
@@ -300,14 +326,14 @@ export function DriverDashboard() {
       <ResponsiveDialog
         open={isChatOpen}
         onOpenChange={handleChatOpen}
-        title={`Chat with Dispatch`}
+        title={`Chat with ${dispatcherUser.name}`}
       >
           <ChatView
+            threadId={currentDriver.id}
+            participant={dispatcherUser}
             messages={driverMessages}
+            allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
-            sender='driver'
-            driverId={currentDriver.id}
-            driverName="Me"
           />
       </ResponsiveDialog>
     </div>

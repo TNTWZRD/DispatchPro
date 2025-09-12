@@ -21,7 +21,9 @@ export type Location = {
 
 export type AppUser = {
     uid: string;
+    id: string; // Add id to match Driver type for easier use in components
     email: string | null;
+    name: string | null; // Add name to match Driver type
     displayName: string | null;
     role: Role;
     photoURL?: string | null;
@@ -108,11 +110,14 @@ export type Ride = {
 
 export type Message = {
   id: string;
-  driverId: string;
+  driverId: string; // Represents the chat thread, usually with a driver
   sender: 'driver' | 'dispatcher';
+  senderId: string;
+  recipientId: string;
   text?: string;
   imageUrl?: string;
   audioUrl?: string;
   timestamp: Date;
   isRead: boolean;
+  forwardedFrom?: string;
 };

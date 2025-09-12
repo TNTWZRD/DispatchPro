@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { Role } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, formatUserName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -84,7 +84,7 @@ export function MainHeader() {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                            <p className="text-sm font-medium leading-none">{user.displayName || user.email}</p>
+                            <p className="text-sm font-medium leading-none">{formatUserName(user.displayName || user.email || 'User')}</p>
                             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                         </div>
                     </DropdownMenuLabel>
