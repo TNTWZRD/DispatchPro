@@ -15,6 +15,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy } from 'firebase/firestore';
+import { sendBrowserNotification } from '@/lib/notifications';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -78,12 +79,10 @@ export function DriverDashboard() {
         if (prevRidesRef.current.length > 0 && newRides.length > prevRidesRef.current.length) {
             const assignedRide = newRides.find(nr => !prevRidesRef.current.some(pr => pr.id === nr.id) && nr.status === 'assigned');
             if (assignedRide) {
-                if (Notification.permission === "granted") {
-                    new Notification("New ride assigned!", {
-                        body: `Pickup at: ${assignedRide.pickup.name}`,
-                        icon: '/favicon.ico'
-                    });
-                }
+                sendBrowserNotification(
+                    "New ride assigned!", 
+                    `Pickup at: ${assignedRide.pickup.name}`
+                );
             }
         }
         setRides(newRides);
@@ -91,26 +90,24 @@ export function DriverDashboard() {
 
     const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id));
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-        const newMessages = snapshot.docs.map(doc => ({
+        const newMessagesData = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
             timestamp: toDate(doc.data().timestamp),
         } as Message));
 
-        const sortedMessages = newMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        const newMessages = newMessagesData.sort((a,b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        if (prevMessagesRef.current.length > 0 && sortedMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = sortedMessages[sortedMessages.length - 1];
+        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
+            const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage.sender === 'dispatcher') {
-                if (Notification.permission === "granted") {
-                    new Notification("New message from Dispatch", {
-                        body: lastMessage.text || "Sent an image or audio",
-                        icon: '/favicon.ico'
-                    });
-                }
+                sendBrowserNotification(
+                    "New message from Dispatch",
+                    lastMessage.text || "Sent an image or audio"
+                );
             }
         }
-        setMessages(sortedMessages);
+        setMessages(newMessages);
     });
 
     return () => {

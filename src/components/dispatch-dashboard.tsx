@@ -30,6 +30,7 @@ import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where,
 import { StartShiftForm } from './start-shift-form';
 import { endShift } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
+import { sendBrowserNotification } from '@/lib/notifications';
 
 
 function DispatchDashboardUI() {
@@ -105,7 +106,7 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
 
-    const messagesUnsub = onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "desc")), (snapshot) => {
+    const messagesUnsub = onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
         const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
@@ -113,15 +114,13 @@ function DispatchDashboardUI() {
         } as Message));
         
         if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = newMessages[0];
+            const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage.sender === 'driver') {
                  const driver = drivers.find(d => d.id === lastMessage.driverId);
-                 if (Notification.permission === "granted") {
-                    new Notification(`New message from ${driver?.name || 'Driver'}`, {
-                        body: lastMessage.text || "Sent an image or audio",
-                        icon: '/favicon.ico'
-                    });
-                 }
+                 sendBrowserNotification(
+                    `New message from ${driver?.name || 'Driver'}`,
+                    lastMessage.text || "Sent an image or audio"
+                 );
             }
         }
         setMessages(newMessages);
