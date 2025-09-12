@@ -89,7 +89,7 @@ export function DriverDashboard() {
         setRides(newRides);
     });
 
-    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id), orderBy("timestamp", "desc"));
+    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id));
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
         const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
@@ -98,7 +98,7 @@ export function DriverDashboard() {
         } as Message));
 
         if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = newMessages[0];
+            const lastMessage = newMessages.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
             if (lastMessage.sender === 'dispatcher') {
                 if (Notification.permission === "granted") {
                     new Notification("New message from Dispatch", {
@@ -108,7 +108,7 @@ export function DriverDashboard() {
                 }
             }
         }
-        setMessages(newMessages);
+        setMessages(newMessages.sort((a,b) => a.timestamp.getTime() - b.timestamp.getTime()));
     });
 
     return () => {
