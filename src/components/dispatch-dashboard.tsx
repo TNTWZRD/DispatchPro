@@ -51,8 +51,22 @@ function DispatchDashboardUI() {
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
   const { isCondensed, toggleCondensedMode } = useCondensedMode();
+  
+  const prevMessagesRef = React.useRef<Message[]>([]);
 
   useHotkey('s', toggleCondensedMode, { alt: true });
+  
+  useEffect(() => {
+    prevMessagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      console.log("This browser does not support desktop notification");
+    } else if (Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -91,12 +105,26 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
 
-    const messagesUnsub = onSnapshot(collection(db, "messages"), (snapshot) => {
-        setMessages(snapshot.docs.map(doc => ({
+    const messagesUnsub = onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "desc")), (snapshot) => {
+        const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
             timestamp: toDate(doc.data().timestamp),
-        } as Message)));
+        } as Message));
+        
+        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
+            const lastMessage = newMessages[0];
+            if (lastMessage.sender === 'driver') {
+                 const driver = drivers.find(d => d.id === lastMessage.driverId);
+                 if (Notification.permission === "granted") {
+                    new Notification(`New message from ${driver?.name || 'Driver'}`, {
+                        body: lastMessage.text || "Sent an image or audio",
+                        icon: '/favicon.ico'
+                    });
+                 }
+            }
+        }
+        setMessages(newMessages);
     });
 
 
@@ -107,7 +135,7 @@ function DispatchDashboardUI() {
         shiftsUnsub();
         messagesUnsub();
     };
-  }, [user]);
+  }, [user, drivers]);
   
   const activeShifts = shifts
     .filter(s => s.status === 'active')

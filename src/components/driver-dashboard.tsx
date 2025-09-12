@@ -14,7 +14,7 @@ import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy } from 'firebase/firestore';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -26,6 +26,22 @@ export function DriverDashboard() {
   const { user, logout } = useAuth();
   
   const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
+  
+  const prevRidesRef = React.useRef<Ride[]>([]);
+  const prevMessagesRef = React.useRef<Message[]>([]);
+
+  useEffect(() => {
+    prevRidesRef.current = rides;
+    prevMessagesRef.current = messages;
+  }, [rides, messages]);
+
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      console.log("This browser does not support desktop notification");
+    } else if (Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -47,7 +63,7 @@ export function DriverDashboard() {
 
     const ridesQuery = query(collection(db, "rides"), where("driverId", "==", currentDriver.id));
     const ridesUnsub = onSnapshot(ridesQuery, (snapshot) => {
-        const ridesData = snapshot.docs.map(doc => ({
+        const newRides = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
             createdAt: toDate(doc.data().createdAt),
@@ -58,17 +74,41 @@ export function DriverDashboard() {
             droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
             cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
         } as Ride));
-        setRides(ridesData);
+        
+        if (prevRidesRef.current.length > 0 && newRides.length > prevRidesRef.current.length) {
+            const assignedRide = newRides.find(nr => !prevRidesRef.current.some(pr => pr.id === nr.id) && nr.status === 'assigned');
+            if (assignedRide) {
+                if (Notification.permission === "granted") {
+                    new Notification("New ride assigned!", {
+                        body: `Pickup at: ${assignedRide.pickup.name}`,
+                        icon: '/favicon.ico'
+                    });
+                }
+            }
+        }
+        setRides(newRides);
     });
 
-    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id));
+    const messagesQuery = query(collection(db, "messages"), where("driverId", "==", currentDriver.id), orderBy("timestamp", "desc"));
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({
+        const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
             timestamp: toDate(doc.data().timestamp),
         } as Message));
-        setMessages(messagesData);
+
+        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
+            const lastMessage = newMessages[0];
+            if (lastMessage.sender === 'dispatcher') {
+                if (Notification.permission === "granted") {
+                    new Notification("New message from Dispatch", {
+                        body: lastMessage.text || "Sent an image or audio",
+                        icon: '/favicon.ico'
+                    });
+                }
+            }
+        }
+        setMessages(newMessages);
     });
 
     return () => {
