@@ -103,7 +103,7 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
     <div className="flex flex-col h-[70vh]">
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {messages.map((message) => (
+          {[...messages].reverse().map((message) => (
             <div
               key={message.id}
               className={cn('flex items-end gap-2', message.sender === sender ? 'justify-end' : 'justify-start')}
@@ -127,8 +127,8 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
                 {message.audioUrl && (
                   <audio controls src={message.audioUrl} className="w-full mt-2" />
                 )}
-                {isValid(message.timestamp) && (
-                  <p className="text-xs opacity-70 mt-1 text-right">{format(message.timestamp, 'p')}</p>
+                {isValid(new Date(message.timestamp)) && (
+                  <p className="text-xs opacity-70 mt-1 text-right">{format(new Date(message.timestamp), 'p')}</p>
                 )}
               </div>
             </div>
