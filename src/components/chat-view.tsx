@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { Message } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Paperclip, Mic, Send, StopCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,8 +29,17 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
 
   const { toast } = useToast();
+  
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
+
 
   const handleSendMessage = () => {
     if (text.trim()) {
@@ -91,8 +100,8 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
 
   return (
     <div className="flex flex-col h-[70vh]">
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+      <ScrollArea className="flex-1" viewportRef={scrollAreaRef}>
+        <div className="p-4 space-y-4">
           {messages.map((message) => (
             <div
               key={message.id}
