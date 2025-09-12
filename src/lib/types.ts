@@ -47,7 +47,7 @@ export type Vehicle = {
     vin: string;
     mileage: number | null;
     status: 'active' | 'maintenance' | 'decommissioned';
-    currentShiftId?: string | null;
+    currentShiftId: string | null;
     createdAt: Date;
     updatedAt: Date;
 }

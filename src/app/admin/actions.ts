@@ -182,7 +182,7 @@ export async function createVehicle(prevState: any, formData: FormData) {
             vin: vin || '',
             mileage: mileage || null,
             status: 'active',
-            currentDriverId: null,
+            currentShiftId: null,
         };
         
         await setDoc(newVehicleRef, {

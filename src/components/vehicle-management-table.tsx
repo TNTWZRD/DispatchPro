@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import type { Vehicle, Driver } from '@/lib/types';
+import type { Vehicle, Driver, Shift } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ const getStatusVariant = (status: Vehicle['status']) => {
 export function VehicleManagementTable() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -62,19 +63,26 @@ export function VehicleManagementTable() {
 
     const driversQuery = query(collection(db, 'drivers'));
     const unsubDrivers = onSnapshot(driversQuery, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Driver));
-        setDrivers(data);
+        setDrivers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Driver)));
+    });
+
+    const shiftsQuery = query(collection(db, 'shifts'));
+    const unsubShifts = onSnapshot(shiftsQuery, (snapshot) => {
+        setShifts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shift)));
     });
 
     return () => {
         unsubVehicles();
         unsubDrivers();
+        unsubShifts();
     };
   }, []);
 
-  const getDriverName = (driverId: string | null | undefined) => {
-    if (!driverId) return 'Unassigned';
-    return drivers.find(d => d.id === driverId)?.name || 'Unknown Driver';
+  const getDriverName = (vehicle: Vehicle) => {
+    if (!vehicle.currentShiftId) return 'Unassigned';
+    const activeShift = shifts.find(s => s.id === vehicle.currentShiftId);
+    if (!activeShift) return 'Unassigned';
+    return drivers.find(d => d.id === activeShift.driverId)?.name || 'Unknown Driver';
   }
 
   const handleStatusChange = async (vehicleId: string, status: Vehicle['status']) => {
@@ -117,7 +125,7 @@ export function VehicleManagementTable() {
                 </Link>
               </TableCell>
               <TableCell>{vehicle.year} {vehicle.make} {vehicle.model}</TableCell>
-              <TableCell>{getDriverName(vehicle.currentDriverId)}</TableCell>
+              <TableCell>{getDriverName(vehicle)}</TableCell>
               <TableCell>{vehicle.mileage?.toLocaleString()}</TableCell>
               <TableCell>
                 <DropdownMenu>
