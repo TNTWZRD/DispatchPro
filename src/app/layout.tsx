@@ -8,6 +8,7 @@ import { MainHeader } from '@/components/main-header';
 export const metadata: Metadata = {
   title: 'DispatchPro',
   description: 'A professional taxi dispatch app to connect passengers with available drivers and manage ride requests efficiently.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

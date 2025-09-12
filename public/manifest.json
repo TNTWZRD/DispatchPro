@@ -1,0 +1,32 @@
+{
+  "theme_color": "#2076d2",
+  "background_color": "#eaf3fa",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "name": "DispatchPro",
+  "short_name": "DispatchPro",
+  "description": "A professional taxi dispatch app to connect passengers with available drivers and manage ride requests efficiently.",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
