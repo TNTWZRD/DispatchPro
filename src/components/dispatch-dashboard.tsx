@@ -256,7 +256,7 @@ function DispatchDashboardUI() {
     if (!ride) return;
 
     if (destination.droppableId.startsWith('driver-')) {
-      const driverId = destination.droppableId;
+      const driverId = destination.droppableId.split('driver-')[1];
       handleAssignDriver(ride.id, driverId);
     } else if (destination.droppableId === 'waiting' || destination.droppableId === 'scheduled') {
       if (ride.driverId) {

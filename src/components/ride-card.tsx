@@ -45,7 +45,6 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
   const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check);
   const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip);
   
-  const isMobile = useIsMobile();
   const { isCondensed } = useCondensedMode();
   const availableDriversForMenu = drivers.filter(d => d.status !== 'offline');
 
@@ -155,185 +154,191 @@ export function RideCard({ ride, drivers, onAssignDriver, onChangeStatus, onSetF
     
     return `${eventText} ${formatDistanceToNow(eventDate, { addSuffix: true })}`;
   }
+  
+  const menuContent = (
+    <DropdownMenuContent>
+        <DropdownMenuItem onClick={() => onEdit(ride)}>
+            <Edit className="mr-2 h-4 w-4" /> Edit Ride
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {ride.status === 'pending' && ride.scheduledTime && (
+            <DropdownMenuItem onClick={() => onUnschedule(ride.id)}>
+                <CalendarX2 className="mr-2 h-4 w-4" /> Unschedule
+            </DropdownMenuItem>
+        )}
+        {ride.status === 'pending' && (
+            <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                    {availableDriversForMenu.map(driver => (
+                    <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
+                        {driver.name}
+                    </DropdownMenuItem>
+                    ))}
+                    {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+            </DropdownMenuSub>
+        )}
+        {['assigned', 'in-progress'].includes(ride.status) && (
+            <DropdownMenuItem onClick={() => onUnassignDriver(ride.id)}>
+                <Undo2 className="mr-2 h-4 w-4" /> Unassign
+            </DropdownMenuItem>
+        )}
+        {['assigned', 'in-progress'].includes(ride.status) && (
+            <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                    {availableDriversForMenu.map(driver => (
+                    <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)} disabled={driver.id === ride.driverId}>
+                        {driver.name}
+                    </DropdownMenuItem>
+                    ))}
+                    {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
+                </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+            </DropdownMenuSub>
+        )}
+        {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
+        {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
+        {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
+            <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'cancelled')} className="text-destructive">
+                Cancel Ride
+            </DropdownMenuItem>
+            </>
+        )}
+        {ride.status === 'completed' && (
+            <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>
+                <Undo2 className="mr-2 h-4 w-4" /> Re-open Ride
+            </DropdownMenuItem>
+        )}
+        {ride.status === 'cancelled' && (
+            <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'pending')}>
+                <Undo2 className="mr-2 h-4 w-4" /> Uncancel Ride
+            </DropdownMenuItem>
+        )}
+    </DropdownMenuContent>
+  );
 
   return (
     <TooltipProvider>
-      <Card className={cn("transition-all bg-card text-sm", ride.isNew && "animate-pulse border-primary")}>
-        <div className="p-3">
-          {/* Header Row */}
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {getStatusBadge(ride.status)}
-              {isCondensed && ride.scheduledTime && (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div className="flex items-center text-amber-600 font-medium text-xs">
-                      <Calendar className="mr-1 h-3.5 w-3.5" />
-                      <span>{format(ride.scheduledTime, "p")}</span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <div onContextMenu={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).click(); }}>
+            <Card className={cn("transition-all bg-card text-sm cursor-pointer", ride.isNew && "animate-pulse border-primary")}>
+                <div className="p-3">
+                {/* Header Row */}
+                <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                    {getStatusBadge(ride.status)}
+                    {isCondensed && ride.scheduledTime && (
+                        <Tooltip>
+                        <TooltipTrigger>
+                            <div className="flex items-center text-amber-600 font-medium text-xs">
+                            <Calendar className="mr-1 h-3.5 w-3.5" />
+                            <span>{format(ride.scheduledTime, "p")}</span>
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Scheduled for {format(ride.scheduledTime, "PPpp")}</p>
+                        </TooltipContent>
+                        </Tooltip>
+                    )}
+                    {isCondensed && (
+                        <div className="flex items-center text-xs text-muted-foreground">
+                            <History className="mr-1.5 h-3 w-3" />
+                            <span>{getTimelineEvent()}</span>
+                        </div>
+                    )}
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Scheduled for {format(ride.scheduledTime, "PPpp")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-               {isCondensed && (
-                 <div className="flex items-center text-xs text-muted-foreground">
-                    <History className="mr-1.5 h-3 w-3" />
-                    <span>{getTimelineEvent()}</span>
-                </div>
-               )}
-            </div>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="h-8" onClick={() => setIsFareModalOpen(true)}>
-                  <DollarSign className="h-4 w-4" />
-                  {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>}
-              </Button>
-              <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
+                    <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); setIsFareModalOpen(true); }}>
+                        <DollarSign className="h-4 w-4" />
+                        {!isCondensed && <span className='sr-only sm:not-sr-only sm:ml-2'>{ride.totalFare ? 'Edit Fare' : 'Set Fare'}</span>}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => onEdit(ride)}>
-                      <Edit className="mr-2 h-4 w-4" /> Edit Ride
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {ride.status === 'pending' && ride.scheduledTime && (
-                        <DropdownMenuItem onClick={() => onUnschedule(ride.id)}>
-                            <CalendarX2 className="mr-2 h-4 w-4" /> Unschedule
-                        </DropdownMenuItem>
-                    )}
-                    {ride.status === 'pending' && (
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Assign To</DropdownMenuSubTrigger>
-                          <DropdownMenuPortal>
-                            <DropdownMenuSubContent>
-                              {availableDriversForMenu.map(driver => (
-                                <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)}>
-                                  {driver.name}
-                                </DropdownMenuItem>
-                              ))}
-                              {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                    )}
-                    {['assigned', 'in-progress'].includes(ride.status) && (
-                      <DropdownMenuItem onClick={() => onUnassignDriver(ride.id)}>
-                          <Undo2 className="mr-2 h-4 w-4" /> Unassign
-                      </DropdownMenuItem>
-                    )}
-                    {['assigned', 'in-progress'].includes(ride.status) && (
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>Re-assign</DropdownMenuSubTrigger>
-                          <DropdownMenuPortal>
-                            <DropdownMenuSubContent>
-                              {availableDriversForMenu.map(driver => (
-                                <DropdownMenuItem key={driver.id} onClick={() => onAssignDriver(ride.id, driver.id)} disabled={driver.id === ride.driverId}>
-                                  {driver.name}
-                                </DropdownMenuItem>
-                              ))}
-                              {availableDriversForMenu.length === 0 && <DropdownMenuItem disabled>No drivers available</DropdownMenuItem>}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                    )}
-                    {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
-                    {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
-                    {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'cancelled')} className="text-destructive">
-                          Cancel Ride
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {ride.status === 'completed' && (
-                      <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>
-                          <Undo2 className="mr-2 h-4 w-4" /> Re-open Ride
-                      </DropdownMenuItem>
-                    )}
-                    {ride.status === 'cancelled' && (
-                       <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'pending')}>
-                          <Undo2 className="mr-2 h-4 w-4" /> Uncancel Ride
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-          </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                    </Button>
+                    </div>
+                </div>
 
-          {/* Details Grid */}
-          <div className={cn("grid gap-x-4", isCondensed ? "grid-cols-1" : "grid-cols-2")}>
-            {/* Left Column */}
-            <div className="space-y-1.5">
-              <div className="flex items-start">
-                <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                <span className="font-medium">{ride.pickup.name}</span>
-              </div>
-              {!isCondensed && ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
-                <div key={index} className="flex items-start pl-2">
-                    <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-                    <span>{stop.name}</span>
+                {/* Details Grid */}
+                <div className={cn("grid gap-x-4", isCondensed ? "grid-cols-1" : "grid-cols-2")}>
+                    {/* Left Column */}
+                    <div className="space-y-1.5">
+                    <div className="flex items-start">
+                        <MapPin className="mr-2 h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                        <span className="font-medium">{ride.pickup.name}</span>
+                    </div>
+                    {!isCondensed && ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
+                        <div key={index} className="flex items-start pl-2">
+                            <Milestone className="mr-2 h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                            <span>{stop.name}</span>
+                        </div>
+                    ))}
+                    {ride.dropoff && (
+                        <div className="flex items-start">
+                            <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                            <span>{ride.dropoff.name}</span>
+                        </div>
+                    )}
+                    </div>
+                    {/* Right Column */}
+                    <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
+                    {ride.passengerCount && ride.passengerCount > 1 && !isCondensed && (
+                        <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount} passengers</div>
+                    )}
+                    {ride.passengerPhone && (
+                        <div className="flex items-center">
+                            <Phone className="mr-1.5" />
+                            <span>{ride.passengerPhone}</span>
+                        </div>
+                    )}
+                    {ride.scheduledTime && !isCondensed && (
+                        <div className="flex items-center text-amber-600 font-medium">
+                        <Calendar className="mr-1.5" />
+                        <span>Scheduled for {format(ride.scheduledTime, "p")}</span>
+                        </div>
+                    )}
+                    </div>
                 </div>
-              ))}
-              {ride.dropoff && (
-                <div className="flex items-start">
-                    <MapPin className="mr-2 h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                    <span>{ride.dropoff.name}</span>
-                </div>
-              )}
-            </div>
-            {/* Right Column */}
-            <div className={cn("space-y-1.5 text-xs", isCondensed && "hidden")}>
-              {ride.passengerCount && ride.passengerCount > 1 && !isCondensed && (
-                <div className='flex items-center'><Users className="mr-1.5" /> {ride.passengerCount} passengers</div>
-              )}
-              {ride.passengerPhone && (
-                <div className="flex items-center">
-                    <Phone className="mr-1.5" />
-                    <span>{ride.passengerPhone}</span>
-                </div>
-              )}
-              {ride.scheduledTime && !isCondensed && (
-                <div className="flex items-center text-amber-600 font-medium">
-                  <Calendar className="mr-1.5" />
-                  <span>Scheduled for {format(ride.scheduledTime, "p")}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {!isCondensed && ride.notes && (
-            <div className="flex items-start pt-2 text-xs text-muted-foreground">
-              <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
-              <span className="italic">{ride.notes}</span>
-            </div>
-          )}
-          {getPaymentSummary()}
-
-          {/* Footer Row */}
-          <div className="flex justify-between items-center mt-2 pt-2 border-t">
-             {!isCondensed && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                    <History className="mr-1.5 h-3 w-3" />
-                    <span>{getTimelineEvent()}</span>
-                </div>
-             )}
-             <div className="flex items-center gap-1.5 ml-auto">
-                {ride.movingFee && (
-                    <Tooltip>
-                        <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
-                        <TooltipContent><p>Moving Fee</p></TooltipContent>
-                    </Tooltip>
+                
+                {!isCondensed && ride.notes && (
+                    <div className="flex items-start pt-2 text-xs text-muted-foreground">
+                    <MessageSquare className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
+                    <span className="italic">{ride.notes}</span>
+                    </div>
                 )}
-             </div>
-          </div>
+                {getPaymentSummary()}
+
+                {/* Footer Row */}
+                <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                    {!isCondensed && (
+                        <div className="flex items-center text-xs text-muted-foreground">
+                            <History className="mr-1.5 h-3 w-3" />
+                            <span>{getTimelineEvent()}</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-1.5 ml-auto">
+                        {ride.movingFee && (
+                            <Tooltip>
+                                <TooltipTrigger><Package className="h-4 w-4 text-primary" /></TooltipTrigger>
+                                <TooltipContent><p>Moving Fee</p></TooltipContent>
+                            </Tooltip>
+                        )}
+                    </div>
+                </div>
+                </div>
+            </Card>
         </div>
-      </Card>
-      
+      </DropdownMenuTrigger>
+      {menuContent}
+    </DropdownMenu>
+
       <ResponsiveDialog
         open={isFareModalOpen}
         onOpenChange={setIsFareModalOpen}

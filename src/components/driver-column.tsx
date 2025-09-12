@@ -199,7 +199,7 @@ export function DriverColumn({
 
   return (
     <>
-    <StrictModeDroppable droppableId={driver.id} isDropDisabled={driver.status === 'offline'}>
+    <StrictModeDroppable droppableId={`driver-${driver.id}`} isDropDisabled={driver.status === 'offline'}>
       {(provided, snapshot) => (
         <Card
           ref={provided.innerRef}
