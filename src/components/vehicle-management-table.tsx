@@ -137,7 +137,7 @@ export function VehicleManagementTable() {
                 </DropdownMenu>
               </TableCell>
               <TableCell>
-                {format(vehicle.updatedAt, 'PP')}
+                {vehicle.updatedAt ? format(vehicle.updatedAt, 'PP') : 'N/A'}
               </TableCell>
             </TableRow>
           ))}
