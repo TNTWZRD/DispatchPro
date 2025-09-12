@@ -3,16 +3,20 @@
 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Briefcase } from 'lucide-react';
 import { Role } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StartShiftForm } from '@/components/start-shift-form';
 import { ShiftManagementTable } from '@/components/shift-management-table';
+import { ResponsiveDialog } from '@/components/responsive-dialog';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 export default function ShiftsPage() {
     const { user, loading, hasRole } = useAuth();
     const router = useRouter();
+    const [isFormOpen, setIsFormOpen] = useState(false);
 
     const canAccess = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
@@ -48,7 +52,16 @@ export default function ShiftsPage() {
                 </CardHeader>
                  <CardContent className="flex flex-col gap-4">
                     <div className="flex justify-end gap-2">
-                        <StartShiftForm />
+                        <Button onClick={() => setIsFormOpen(true)}>
+                           <PlusCircle className="mr-2" /> Start New Shift
+                        </Button>
+                        <ResponsiveDialog
+                            open={isFormOpen}
+                            onOpenChange={setIsFormOpen}
+                            title="Start New Shift"
+                        >
+                            <StartShiftForm onFormSubmit={() => setIsFormOpen(false)} />
+                        </ResponsiveDialog>
                     </div>
                     <ShiftManagementTable />
                  </CardContent>

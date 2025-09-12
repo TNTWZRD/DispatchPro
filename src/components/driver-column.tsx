@@ -11,9 +11,11 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { CheckCircle2, ChevronDown, ChevronUp, MessageCircle, Briefcase, Car } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, MessageCircle, Briefcase, Car, PowerOff } from 'lucide-react';
 import { ResponsiveDialog } from './responsive-dialog';
 import { ChatView } from './chat-view';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+
 
 type DriverColumnProps = {
   shift: Shift & { driver?: Driver; vehicle?: Vehicle };
@@ -28,6 +30,7 @@ type DriverColumnProps = {
   onUnscheduleRide: (rideId: string) => void;
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
   onMarkMessagesAsRead: (driverId: string) => void;
+  onEndShift: (shift: Shift) => void;
   className?: string;
 };
 
@@ -52,6 +55,7 @@ export function DriverColumn({
     onUnscheduleRide, 
     onSendMessage,
     onMarkMessagesAsRead,
+    onEndShift,
     className
 }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
@@ -89,7 +93,7 @@ export function DriverColumn({
   const renderContent = () => (
     <>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-start justify-between">
             <div className='flex items-center gap-3'>
               <Avatar>
                 <AvatarImage src={`https://i.pravatar.cc/40?u=${driver.id}`} />
@@ -105,14 +109,40 @@ export function DriverColumn({
                  </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="relative" onClick={() => handleChatOpen(true)}>
-                <MessageCircle />
-                {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                    {unreadMessagesCount}
-                  </span>
-                )}
-            </Button>
+            <div className='flex gap-1'>
+                <Button variant="outline" size="sm" className="relative" onClick={() => handleChatOpen(true)}>
+                    <MessageCircle />
+                    {unreadMessagesCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                        {unreadMessagesCount}
+                      </span>
+                    )}
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={activeRides.length > 0}>
+                        <PowerOff />
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>End Shift for {driver.name}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {activeRides.length > 0 
+                            ? "This driver still has active rides. Please re-assign or complete them before ending the shift."
+                            : "Are you sure you want to end this shift? The driver and vehicle will become available."
+                        }
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onEndShift(shift)} disabled={activeRides.length > 0}>
+                        Confirm End Shift
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+            </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-2 p-2">

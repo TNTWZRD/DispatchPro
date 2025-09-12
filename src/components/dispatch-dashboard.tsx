@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield } from 'lucide-react';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -27,6 +27,9 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp } from 'firebase/firestore';
+import { StartShiftForm } from './start-shift-form';
+import { endShift } from '@/app/admin/actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 function DispatchDashboardUI() {
@@ -36,6 +39,7 @@ function DispatchDashboardUI() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
@@ -43,6 +47,7 @@ function DispatchDashboardUI() {
   
   const { user, hasRole } = useAuth();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
   const { isCondensed, toggleCondensedMode } = useCondensedMode();
@@ -334,6 +339,15 @@ function DispatchDashboardUI() {
         await updateDoc(doc(db, 'messages', message.id), { isRead: true });
     }
   };
+
+  const handleEndShift = async (shift: Shift) => {
+    const result = await endShift(shift.id, shift.driverId, shift.vehicleId);
+     if (result.type === 'success') {
+      toast({ title: 'Success', description: result.message });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+  }
   
   const canAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
@@ -497,6 +511,7 @@ function DispatchDashboardUI() {
               onUnscheduleRide={handleUnscheduleRide}
               onSendMessage={handleSendMessage}
               onMarkMessagesAsRead={handleMarkMessagesAsRead}
+              onEndShift={handleEndShift}
               className="w-full lg:w-[350px] xl:w-[400px]"
             />
           ))}
@@ -581,6 +596,7 @@ function DispatchDashboardUI() {
                             onUnscheduleRide={handleUnscheduleRide}
                             onSendMessage={handleSendMessage}
                             onMarkMessagesAsRead={handleMarkMessagesAsRead}
+                            onEndShift={handleEndShift}
                           />
                       </div>
                   </CarouselItem>
@@ -610,6 +626,17 @@ function DispatchDashboardUI() {
                 onEditRide={handleEditRide}
                 rideToEdit={editingRide}
                 />
+            </ResponsiveDialog>
+            <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={() => setIsShiftFormOpen(true)}>
+                <Briefcase />
+                Start Shift
+            </Button>
+             <ResponsiveDialog 
+                open={isShiftFormOpen} 
+                onOpenChange={setIsShiftFormOpen}
+                title="Start New Shift"
+            >
+                <StartShiftForm onFormSubmit={() => setIsShiftFormOpen(false)} />
             </ResponsiveDialog>
         </div>
         <div className="ml-auto items-center gap-2 hidden md:flex">

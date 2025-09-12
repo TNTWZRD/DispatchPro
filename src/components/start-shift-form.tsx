@@ -43,8 +43,11 @@ function SubmitButton() {
   );
 }
 
-export function StartShiftForm() {
-  const [isOpen, setIsOpen] = useState(false);
+type StartShiftFormProps = {
+    onFormSubmit?: () => void;
+};
+
+export function StartShiftForm({ onFormSubmit }: StartShiftFormProps) {
   const [state, formAction] = useActionState(startShift, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -76,7 +79,9 @@ export function StartShiftForm() {
         description: state.message,
       });
       formRef.current?.reset();
-      setIsOpen(false);
+      if (onFormSubmit) {
+        onFormSubmit();
+      }
     } else if (state.type === 'error' && state.message) {
       toast({
         variant: 'destructive',
@@ -84,68 +89,53 @@ export function StartShiftForm() {
         description: state.message,
       });
     }
-  }, [state, toast]);
+  }, [state, toast, onFormSubmit]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Start New Shift
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Start New Shift</DialogTitle>
-          <DialogDescription>
-            Assign an available driver to an available vehicle to start a shift.
-          </DialogDescription>
-        </DialogHeader>
-        <form ref={formRef} action={formAction} className="grid gap-4 py-4">
-            <div className="space-y-2">
-                <Label htmlFor="driverId">Driver</Label>
-                <Select name="driverId">
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select an available driver" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableDrivers.length > 0 ? (
-                            availableDrivers.map(driver => (
-                                <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
-                            ))
-                        ) : (
-                            <SelectItem value="none" disabled>No drivers available</SelectItem>
-                        )}
-                    </SelectContent>
-                </Select>
-                {state.errors?.driverId && <p className="text-destructive text-sm">{state.errors.driverId[0]}</p>}
-            </div>
+    <form ref={formRef} action={formAction} className="grid gap-4 py-4">
+        <div className="space-y-2">
+            <Label htmlFor="driverId">Driver</Label>
+            <Select name="driverId">
+                <SelectTrigger>
+                    <SelectValue placeholder="Select an available driver" />
+                </SelectTrigger>
+                <SelectContent>
+                    {availableDrivers.length > 0 ? (
+                        availableDrivers.map(driver => (
+                            <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
+                        ))
+                    ) : (
+                        <SelectItem value="none" disabled>No drivers available</SelectItem>
+                    )}
+                </SelectContent>
+            </Select>
+            {state.errors?.driverId && <p className="text-destructive text-sm">{state.errors.driverId[0]}</p>}
+        </div>
 
-            <div className="space-y-2">
-                <Label htmlFor="vehicleId">Vehicle</Label>
-                <Select name="vehicleId">
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select an available vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableVehicles.length > 0 ? (
-                            availableVehicles.map(vehicle => (
-                                <SelectItem key={vehicle.id} value={vehicle.id}>
-                                    {vehicle.nickname} ({vehicle.year} {vehicle.make} {vehicle.model})
-                                </SelectItem>
-                            ))
-                        ) : (
-                             <SelectItem value="none" disabled>No vehicles available</SelectItem>
-                        )}
-                    </SelectContent>
-                </Select>
-                 {state.errors?.vehicleId && <p className="text-destructive text-sm">{state.errors.vehicleId[0]}</p>}
-            </div>
+        <div className="space-y-2">
+            <Label htmlFor="vehicleId">Vehicle</Label>
+            <Select name="vehicleId">
+                <SelectTrigger>
+                    <SelectValue placeholder="Select an available vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                    {availableVehicles.length > 0 ? (
+                        availableVehicles.map(vehicle => (
+                            <SelectItem key={vehicle.id} value={vehicle.id}>
+                                {vehicle.nickname} ({vehicle.year} {vehicle.make} {vehicle.model})
+                            </SelectItem>
+                        ))
+                    ) : (
+                         <SelectItem value="none" disabled>No vehicles available</SelectItem>
+                    )}
+                </SelectContent>
+            </Select>
+             {state.errors?.vehicleId && <p className="text-destructive text-sm">{state.errors.vehicleId[0]}</p>}
+        </div>
 
-          <DialogFooter>
-            <SubmitButton />
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <SubmitButton />
+      </DialogFooter>
+    </form>
   );
 }

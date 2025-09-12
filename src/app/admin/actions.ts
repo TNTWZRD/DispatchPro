@@ -291,6 +291,7 @@ export async function startShift(prevState: any, formData: FormData) {
 
     await batch.commit();
     revalidatePath('/admin/shifts');
+    revalidatePath('/');
     return { type: "success", message: `Shift started successfully.` };
 
   } catch(error: any) {
@@ -316,6 +317,7 @@ export async function endShift(shiftId: string, driverId: string, vehicleId: str
 
         await batch.commit();
         revalidatePath('/admin/shifts');
+        revalidatePath('/');
         return { type: "success", message: "Shift ended successfully." };
     } catch (error: any) {
         console.error("Failed to end shift:", error);
