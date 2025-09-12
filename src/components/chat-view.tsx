@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Paperclip, Mic, Send, StopCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
 
@@ -127,7 +127,9 @@ export function ChatView({ driverId, driverName, messages, onSendMessage, sender
                 {message.audioUrl && (
                   <audio controls src={message.audioUrl} className="w-full mt-2" />
                 )}
-                <p className="text-xs opacity-70 mt-1 text-right">{format(message.timestamp, 'p')}</p>
+                {isValid(message.timestamp) && (
+                  <p className="text-xs opacity-70 mt-1 text-right">{format(message.timestamp, 'p')}</p>
+                )}
               </div>
             </div>
           ))}
