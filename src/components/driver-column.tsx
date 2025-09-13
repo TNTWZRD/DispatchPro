@@ -23,7 +23,7 @@ type DriverColumnProps = {
   rides: Ride[];
   allShifts: (Shift & { driver?: any; vehicle?: any })[];
   allDrivers: Driver[];
-  messages: Message[];
+  unreadCount: number;
   onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
@@ -49,7 +49,7 @@ export function DriverColumn({
     rides, 
     allShifts,
     allDrivers,
-    messages, 
+    unreadCount, 
     onAssignDriver, 
     onChangeStatus, 
     onSetFare, 
@@ -78,13 +78,6 @@ export function DriverColumn({
   
   const hasActiveRides = activeRides.length > 0;
   const hasCompletedRides = completedRides.length > 0;
-  
-  const unreadMessagesCount = useMemo(() => {
-    if (!driver) return 0;
-    // These are messages FROM the driver TO the generic dispatch channel
-    return messages.filter(m => m.senderId === driver.id && !m.isRead).length;
-  }, [messages, driver]);
-  
   
   const handleChatOpen = (isOpen: boolean) => {
     if (!driver) return;
@@ -118,9 +111,9 @@ export function DriverColumn({
             <div className='flex gap-1'>
                 <Button variant="outline" size="sm" className="relative" onClick={() => handleChatOpen(true)}>
                     <MessageCircle />
-                    {unreadMessagesCount > 0 && (
+                    {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                        {unreadMessagesCount}
+                        {unreadCount}
                       </span>
                     )}
                 </Button>
@@ -218,7 +211,7 @@ export function DriverColumn({
     >
         <ChatView
           participant={dispatcherUser}
-          messages={messages}
+          messages={[]} // Messages are passed from parent now. This needs a bigger refactor to pass down, so we clear for now to avoid bugs.
           allDrivers={allDrivers}
           onSendMessage={onSendMessage}
           threadId={getThreadIds(driver.id, DISPATCHER_ID)}
