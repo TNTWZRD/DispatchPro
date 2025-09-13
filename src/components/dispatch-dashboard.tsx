@@ -180,10 +180,12 @@ function DispatchDashboardUI() {
     const shift: Message[] = [];
     messages.forEach(m => {
       if (!m.threadId) return;
-      if (m.threadId.includes(DISPATCHER_ID)) {
-        shift.push(m);
+      // A thread is P2P if it has exactly 2 participants, one of whom might be DISPATCHER_ID.
+      // Otherwise, it's a public shift channel message. This fixes the internal log.
+      if (m.threadId.length === 2) {
+          p2p.push(m);
       } else {
-        p2p.push(m);
+          shift.push(m);
       }
     });
     return { p2pMessages: p2p, shiftChannelMessages: shift };
@@ -1044,5 +1046,6 @@ export function DispatchDashboard() {
 }
 
     
+
 
 
