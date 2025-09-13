@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, CornerUpLeft, MessageSquare } from 'lucide-react';
-import { cn, formatUserName, getThreadId } from '@/lib/utils';
+import { cn, formatUserName, getThreadIds } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +28,7 @@ type ChatViewProps = {
   messages: Message[];
   allDrivers: Driver[];
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
-  threadId: string;
+  threadId: string[];
 };
 
 export function ChatView({ participant, messages, allDrivers, onSendMessage, threadId }: ChatViewProps) {

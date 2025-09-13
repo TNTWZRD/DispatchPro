@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -16,7 +17,7 @@ import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
-import { formatUserName, getThreadId } from '@/lib/utils';
+import { formatUserName, getThreadIds } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -123,55 +124,44 @@ export function DriverDashboard() {
         setRides(newRides);
     });
 
-    let receivedMessages: Message[] = [];
-    let sentMessages: Message[] = [];
-
-    const mergeAndSetMessages = () => {
-        const all = [...receivedMessages, ...sentMessages];
-        const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values())
-            .filter(m => m.timestamp); // Ensure timestamp exists before sorting
-        uniqueMessages.sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
-
-        if (prevMessagesRef.current.length > 0 && uniqueMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = uniqueMessages[uniqueMessages.length - 1];
-            if (lastMessage && lastMessage.recipientId === currentDriver.id) {
-                const senderIsDispatcher = lastMessage.senderId === DISPATCHER_ID;
-                const sender = senderIsDispatcher 
-                    ? dispatcherUser 
-                    : allDrivers.find(d => d.id === lastMessage.senderId);
-
-                sendBrowserNotification(
-                    `New message from ${formatUserName(sender?.name || 'User')}`,
-                    lastMessage.text || "Sent an image or audio"
-                );
-            }
-        }
-        setMessages(uniqueMessages);
-    }
-    
-    const qReceived = query(
-        collection(db, 'messages'),
-        where('recipientId', '==', currentDriver.id)
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      where('threadId', 'array-contains', currentDriver.id)
     );
-    const unsubReceived = onSnapshot(qReceived, snapshot => {
-        receivedMessages = snapshot.docs.map(doc => ({...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)} as Message));
-        mergeAndSetMessages();
-    });
 
-    const qSent = query(
-        collection(db, 'messages'),
-        where('senderId', '==', currentDriver.id)
-    );
-    const unsubSent = onSnapshot(qSent, snapshot => {
-        sentMessages = snapshot.docs.map(doc => ({...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)} as Message));
-        mergeAndSetMessages();
+    const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+      const allMessages = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        timestamp: toDate(doc.data().timestamp),
+      } as Message));
+
+      if (prevMessagesRef.current.length > 0 && allMessages.length > prevMessagesRef.current.length) {
+          const lastMessage = allMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
+          if (lastMessage && lastMessage.recipientId === currentDriver.id) {
+              const senderIsDispatcher = lastMessage.senderId === DISPATCHER_ID;
+              const sender = senderIsDispatcher 
+                  ? dispatcherUser 
+                  : allDrivers.find(d => d.id === lastMessage.senderId);
+
+              sendBrowserNotification(
+                  `New message from ${formatUserName(sender?.name || 'User')}`,
+                  lastMessage.text || "Sent an image or audio"
+              );
+          }
+      }
+      
+      const sortedMessages = allMessages
+        .filter(m => m.timestamp)
+        .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
+        
+      setMessages(sortedMessages);
     });
 
 
     return () => {
         ridesUnsub();
-        unsubReceived();
-        unsubSent();
+        unsubMessages();
     }
   }, [currentDriver, allDrivers]);
 
@@ -204,8 +194,8 @@ export function DriverDashboard() {
 
   const getUnreadCount = (participantId: string) => {
     if (!currentDriver) return 0;
-    const threadId = getThreadId(currentDriver.id, participantId);
-    return messages.filter(m => m.threadId === threadId && m.recipientId === currentDriver.id && !m.isRead).length;
+    const threadId = getThreadIds(currentDriver.id, participantId);
+    return messages.filter(m => m.threadId?.join() === threadId.join() && m.recipientId === currentDriver.id && !m.isRead).length;
   }
   
   const totalUnread = useMemo(() => {
@@ -246,9 +236,9 @@ export function DriverDashboard() {
     if(!currentDriver) return;
 
     setChatParticipant(participant);
-    const threadId = getThreadId(currentDriver.id, participant.id);
+    const threadId = getThreadIds(currentDriver.id, participant.id);
     const batch = writeBatch(db);
-    const unread = messages.filter(m => m.threadId === threadId && m.recipientId === currentDriver.id && !m.isRead);
+    const unread = messages.filter(m => m.threadId?.join() === threadId.join() && m.recipientId === currentDriver.id && !m.isRead);
     
     unread.forEach(message => {
         const msgRef = doc(db, 'messages', message.id);
@@ -398,10 +388,10 @@ export function DriverDashboard() {
         >
           <ChatView
             participant={chatParticipant}
-            messages={messages.filter(m => m.threadId === getThreadId(currentDriver.id, chatParticipant.id))}
+            messages={messages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
-            threadId={getThreadId(currentDriver.id, chatParticipant.id)}
+            threadId={getThreadIds(currentDriver.id, chatParticipant.id)}
           />
       </ResponsiveDialog>
       )}

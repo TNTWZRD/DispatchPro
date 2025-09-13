@@ -45,8 +45,10 @@ function DispatchDashboardUI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
-  const [isChatDirectoryOpen, setIsChatDirectoryOpen] = useState(false);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [isPublicChatDirectoryOpen, setIsPublicChatDirectoryOpen] = useState(false);
+  const [isPrivateChatDirectoryOpen, setIsPrivateChatDirectoryOpen] = useState(false);
+  const [currentPublicChatTarget, setCurrentPublicChatTarget] = useState<AppUser | null>(null);
+  const [currentPrivateChatTarget, setCurrentPrivateChatTarget] = useState<AppUser | null>(null);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
@@ -125,58 +127,37 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
 
-    let receivedP2PMessages: Message[] = [];
-    let sentP2PMessages: Message[] = [];
-    let shiftMessages: Message[] = [];
-
-    const mergeAndSetMessages = () => {
-        const all = [...receivedP2PMessages, ...sentP2PMessages, ...shiftMessages];
-        const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values())
-            .filter(m => m.timestamp)
-            .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
-        
-        const newIncomingMessages = uniqueMessages.filter(m => m.recipientId === user.uid && !m.isRead);
-
-        if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isRead).length) {
-            const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
-            if (lastMessage) {
-                const sender = allUsers.find(u => u.id === lastMessage.senderId);
-                sendBrowserNotification(
-                    `New message from ${sender?.name || 'User'}`,
-                    lastMessage.text || "Sent an image or audio"
-                );
-            }
-        }
-        setMessages(uniqueMessages);
-    }
-    
-    const p2pMessagesReceivedQuery = query(
-      collection(db, 'messages'),
-      where('recipientId', '==', user.uid)
+    // Query for all messages where the logged-in dispatcher is involved OR it's a public dispatch message
+    const messagesQuery = query(
+      collection(db, "messages"),
+      where("threadId", "array-contains", user.uid)
     );
-    const unsubP2PReceived = onSnapshot(p2pMessagesReceivedQuery, (snapshot) => {
-        receivedP2PMessages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
-        mergeAndSetMessages();
-    });
-    
-    const p2pMessagesSentQuery = query(
-      collection(db, 'messages'),
-      where('senderId', '==', user.uid)
-    );
-    const unsubP2PSent = onSnapshot(p2pMessagesSentQuery, (snapshot) => {
-        sentP2PMessages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
-        mergeAndSetMessages();
-    });
-    
-    // This query now fetches all public "shift" channel messages
-    const shiftChannelQuery = query(collection(db, "messages"), where("threadId", "==", `*${DISPATCHER_ID}*`));
-    const unsubShifts = onSnapshot(
-      query(collection(db, "messages"), where("threadId", "includes", DISPATCHER_ID)),
-      (snapshot) => {
-        shiftMessages = snapshot.docs.map(doc => ({
-            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
-        } as Message));
-        mergeAndSetMessages();
+
+    const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+      const allMessages = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        timestamp: toDate(doc.data().timestamp),
+      } as Message));
+
+      const newIncomingMessages = allMessages.filter(m => m.recipientId === user.uid && !m.isRead);
+
+      if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isRead).length) {
+          const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
+          if (lastMessage) {
+              const sender = allUsers.find(u => u.id === lastMessage.senderId);
+              sendBrowserNotification(
+                  `New message from ${sender?.name || 'User'}`,
+                  lastMessage.text || "Sent an image or audio"
+              );
+          }
+      }
+      
+      const sortedMessages = allMessages
+        .filter(m => m.timestamp)
+        .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
+
+      setMessages(sortedMessages);
     });
 
     return () => {
@@ -185,9 +166,7 @@ function DispatchDashboardUI() {
         usersUnsub();
         vehiclesUnsub();
         shiftsUnsub();
-        unsubP2PReceived();
-        unsubP2PSent();
-        unsubShifts();
+        unsubMessages();
     };
   }, [user]);
   
@@ -200,8 +179,18 @@ function DispatchDashboardUI() {
     })
     .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
 
-  const p2pMessages = useMemo(() => messages.filter(m => m.threadId && !m.threadId.includes(DISPATCHER_ID)), [messages]);
-  const shiftChannelMessages = useMemo(() => messages.filter(m => m.threadId && m.threadId.includes(DISPATCHER_ID)), [messages]);
+  const { p2pMessages, shiftChannelMessages } = useMemo(() => {
+    const p2p: Message[] = [];
+    const shift: Message[] = [];
+    messages.forEach(m => {
+      if (m.threadId?.includes(DISPATCHER_ID)) {
+        shift.push(m);
+      } else {
+        p2p.push(m);
+      }
+    });
+    return { p2pMessages: p2p, shiftChannelMessages: shift };
+  }, [messages]);
 
   const chatDirectory = useMemo(() => {
     if (!user) return { contacts: [], totalUnread: 0 };
@@ -211,30 +200,20 @@ function DispatchDashboardUI() {
     allUsers.forEach(u => {
       if (u.id === user.id) return;
       const driverInfo = drivers.find(d => d.id === u.id);
+      
       const threadId = getThreadId(user.id, u.id);
-      const unreadCount = p2pMessages.filter(m => m.threadId === threadId && m.recipientId === user.id && !m.isRead).length;
+      const publicThreadId = getThreadId(u.id, DISPATCHER_ID);
+
+      const privateUnread = p2pMessages.filter(m => getThreadId(m.senderId, m.recipientId) === threadId && m.recipientId === user.id && !m.isRead).length;
+      const publicUnread = shiftChannelMessages.filter(m => getThreadId(m.senderId, m.recipientId) === publicThreadId && m.recipientId === user.id && !m.isRead).length;
 
       contactsMap.set(u.id, {
         id: u.id,
         name: u.displayName || u.email || 'Unknown User',
         photoURL: u.photoURL,
         status: driverInfo?.status || 'offline',
-        unreadCount: unreadCount,
+        unreadCount: privateUnread + publicUnread,
       });
-    });
-
-    drivers.forEach(d => {
-      if (d.id === user.id) return;
-      if (!contactsMap.has(d.id)) {
-        const threadId = getThreadId(user.id, d.id);
-        const unreadCount = p2pMessages.filter(m => m.threadId === threadId && m.recipientId === user.id && !m.isRead).length;
-        contactsMap.set(d.id, {
-          id: d.id,
-          name: d.name,
-          status: d.status,
-          unreadCount: unreadCount,
-        });
-      }
     });
 
     const contacts = Array.from(contactsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -242,8 +221,13 @@ function DispatchDashboardUI() {
     const totalUnread = contacts.reduce((count, contact) => count + contact.unreadCount, 0);
 
     return { contacts, totalUnread };
-  }, [p2pMessages, user, allUsers, drivers]);
+  }, [p2pMessages, shiftChannelMessages, user, allUsers, drivers]);
   
+  const privateUnreadCount = useMemo(() => {
+    if (!user) return 0;
+    return p2pMessages.filter(m => m.recipientId === user.id && !m.isRead).length;
+  }, [p2pMessages, user]);
+
   const allPendingRides = rides.filter(r => r.status === 'pending');
   
   const pendingRides = allPendingRides
@@ -461,25 +445,39 @@ function DispatchDashboardUI() {
     if (!db || !user) return;
     
     const batch = writeBatch(db);
-    const threadId = getThreadId(user.uid, participantId);
-    const unreadP2P = p2pMessages.filter(m => m.threadId === threadId && m.recipientId === user.uid && !m.isRead);
-
+    
+    // Mark private P2P messages as read
+    const privateThreadId = getThreadId(user.uid, participantId);
+    const unreadP2P = p2pMessages.filter(m => getThreadId(m.senderId, m.recipientId) === privateThreadId && m.recipientId === user.uid && !m.isRead);
     unreadP2P.forEach(message => {
+        batch.update(doc(db, 'messages', message.id), { isRead: true });
+    });
+
+    // Mark public shift channel messages as read
+    const publicThreadId = getThreadId(participantId, DISPATCHER_ID);
+    const unreadPublic = shiftChannelMessages.filter(m => getThreadId(m.senderId, m.recipientId) === publicThreadId && m.recipientId === user.uid && !m.isRead);
+     unreadPublic.forEach(message => {
         batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
 
     await batch.commit();
   };
 
-  const openChatWith = (contactId: string) => {
-    setCurrentThreadId(contactId);
-    handleMarkMessagesAsRead(contactId);
-    setIsChatDirectoryOpen(false);
+  const openPublicChatWith = (contact: AppUser) => {
+    setCurrentPublicChatTarget(contact);
+    handleMarkMessagesAsRead(contact.id);
+    setIsPublicChatDirectoryOpen(false);
+  };
+  
+  const openPrivateChatWith = (contact: AppUser) => {
+    setCurrentPrivateChatTarget(contact);
+    handleMarkMessagesAsRead(contact.id);
+    setIsPrivateChatDirectoryOpen(false);
   };
 
-  const currentParticipant = useMemo(() => {
-    if (!currentThreadId) return null;
-     const contact = chatDirectory.contacts.find(c => c.id === currentThreadId);
+  const getContactForId = (contactId: string) => {
+     if (!contactId) return null;
+     const contact = chatDirectory.contacts.find(c => c.id === contactId);
      if (!contact) return null;
      return {
           id: contact.id,
@@ -489,7 +487,7 @@ function DispatchDashboardUI() {
           photoURL: contact.photoURL,
           email: ''
      } as AppUser
-  }, [chatDirectory, currentThreadId]);
+  }
 
 
   const handleEndShift = async (shift: Shift) => {
@@ -663,7 +661,7 @@ function DispatchDashboardUI() {
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
               allShifts={activeShifts}
               allDrivers={drivers}
-              messages={shiftChannelMessages.filter(m => m.threadId === getThreadId(shift.driverId, DISPATCHER_ID))}
+              messages={shiftChannelMessages.filter(m => m.threadId?.includes(shift.driverId) && m.threadId?.includes(DISPATCHER_ID))}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
@@ -749,7 +747,7 @@ function DispatchDashboardUI() {
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                             allShifts={activeShifts}
                             allDrivers={drivers}
-                            messages={shiftChannelMessages.filter(m => m.threadId === getThreadId(shift.driverId, DISPATCHER_ID))}
+                            messages={shiftChannelMessages.filter(m => m.threadId?.includes(shift.driverId) && m.threadId?.includes(DISPATCHER_ID))}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
@@ -800,7 +798,7 @@ function DispatchDashboardUI() {
             >
                 <StartShiftForm onFormSubmit={() => setIsShiftFormOpen(false)} />
             </ResponsiveDialog>
-            <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={() => setIsChatDirectoryOpen(true)}>
+            <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={() => setIsPublicChatDirectoryOpen(true)}>
                 <MessageSquare />
                 Dispatcher Messages
                 {chatDirectory.totalUnread > 0 && (
@@ -858,12 +856,12 @@ function DispatchDashboardUI() {
             variant="secondary"
             size="icon"
             className="h-14 w-14 rounded-full shadow-lg"
-            onClick={() => setIsChatDirectoryOpen(true)}
+            onClick={() => setIsPrivateChatDirectoryOpen(true)}
           >
             <Mail className="h-7 w-7" />
             <span className="sr-only">My Messages</span>
-             {chatDirectory.totalUnread > 0 && (
-              <Badge variant="destructive" className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{chatDirectory.totalUnread}</Badge>
+             {privateUnreadCount > 0 && (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{privateUnreadCount}</Badge>
             )}
           </Button>
       </div>
@@ -888,8 +886,8 @@ function DispatchDashboardUI() {
         />
 
         <ResponsiveDialog
-            open={isChatDirectoryOpen}
-            onOpenChange={setIsChatDirectoryOpen}
+            open={isPublicChatDirectoryOpen}
+            onOpenChange={setIsPublicChatDirectoryOpen}
             title="Dispatcher Messages"
         >
             <div className="p-4 space-y-2">
@@ -898,7 +896,37 @@ function DispatchDashboardUI() {
                         key={contact.id} 
                         variant="ghost" 
                         className="w-full justify-start h-14"
-                        onClick={() => openChatWith(contact.id)}
+                        onClick={() => openPublicChatWith(getContactForId(contact.id)!)}
+                    >
+                        <Avatar className="h-10 w-10 mr-4">
+                            <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                            <AvatarFallback>{contact.name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 text-left">
+                            <p>{formatUserName(contact.name)}</p>
+                            <div className="flex items-center gap-2">
+                                {getStatusIndicator(contact.status)}
+                                <span className="text-xs text-muted-foreground capitalize">{contact.status?.replace('-', ' ')}</span>
+                            </div>
+                        </div>
+                        {contact.unreadCount > 0 && <Badge>{contact.unreadCount}</Badge>}
+                    </Button>
+                ))}
+            </div>
+        </ResponsiveDialog>
+        
+        <ResponsiveDialog
+            open={isPrivateChatDirectoryOpen}
+            onOpenChange={setIsPrivateChatDirectoryOpen}
+            title="My Messages"
+        >
+            <div className="p-4 space-y-2">
+                {chatDirectory.contacts.map(contact => (
+                    <Button 
+                        key={contact.id} 
+                        variant="ghost" 
+                        className="w-full justify-start h-14"
+                        onClick={() => openPrivateChatWith(getContactForId(contact.id)!)}
                     >
                         <Avatar className="h-10 w-10 mr-4">
                             <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
@@ -917,18 +945,34 @@ function DispatchDashboardUI() {
             </div>
         </ResponsiveDialog>
 
-        {currentParticipant && user && (
+        {currentPublicChatTarget && user && (
             <ResponsiveDialog
-                open={!!currentThreadId}
-                onOpenChange={(isOpen) => !isOpen && setCurrentThreadId(null)}
-                title={`Chat with ${formatUserName(currentParticipant.name || '')}`}
+                open={!!currentPublicChatTarget}
+                onOpenChange={(isOpen) => !isOpen && setCurrentPublicChatTarget(null)}
+                title={`Dispatch Channel: ${formatUserName(currentPublicChatTarget.name || '')}`}
             >
                 <ChatView
-                    participant={currentParticipant}
-                    messages={p2pMessages.filter(m => m.threadId === getThreadId(user.uid, currentParticipant.id))}
+                    participant={currentPublicChatTarget}
+                    messages={shiftChannelMessages.filter(m => m.threadId?.includes(currentPublicChatTarget.id) && m.threadId?.includes(DISPATCHER_ID))}
                     allDrivers={drivers}
                     onSendMessage={handleSendMessage}
-                    threadId={getThreadId(user.uid, currentParticipant.id)}
+                    threadId={getThreadIds(DISPATCHER_ID, currentPublicChatTarget.id)}
+                />
+            </ResponsiveDialog>
+        )}
+
+        {currentPrivateChatTarget && user && (
+            <ResponsiveDialog
+                open={!!currentPrivateChatTarget}
+                onOpenChange={(isOpen) => !isOpen && setCurrentPrivateChatTarget(null)}
+                title={`Chat with ${formatUserName(currentPrivateChatTarget.name || '')}`}
+            >
+                <ChatView
+                    participant={currentPrivateChatTarget}
+                    messages={p2pMessages.filter(m => m.threadId?.includes(user.uid) && m.threadId?.includes(currentPrivateChatTarget.id))}
+                    allDrivers={drivers}
+                    onSendMessage={handleSendMessage}
+                    threadId={getThreadIds(user.uid, currentPrivateChatTarget.id)}
                 />
             </ResponsiveDialog>
         )}
@@ -946,7 +990,3 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    
-
-    

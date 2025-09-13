@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
-import { cn, formatUserName, getThreadId } from '@/lib/utils';
+import { cn, formatUserName, getThreadIds } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
@@ -220,7 +221,7 @@ export function DriverColumn({
           messages={messages}
           allDrivers={allDrivers}
           onSendMessage={onSendMessage}
-          threadId={getThreadId(driver.id, DISPATCHER_ID)}
+          threadId={getThreadIds(driver.id, DISPATCHER_ID)}
         />
     </ResponsiveDialog>
   );
