@@ -761,7 +761,7 @@ function DispatchDashboardUI() {
                   onUnscheduleRide={handleUnscheduleRide}
                   onToggleStar={toggleStarMessage}
                   onEndShift={handleEndShift}
-                  onOpenChat={() => openChatWith(shift.driver, true)}
+                  onOpenChat={() => openChatWith(shift.driver as Driver, true)}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
             )
@@ -850,7 +850,7 @@ function DispatchDashboardUI() {
                               onUnscheduleRide={handleUnscheduleRide}
                               onToggleStar={toggleStarMessage}
                               onEndShift={handleEndShift}
-                              onOpenChat={() => openChatWith(shift.driver, true)}
+                              onOpenChat={() => openChatWith(shift.driver as Driver, true)}
                             />
                         </div>
                     </CarouselItem>
@@ -1092,11 +1092,13 @@ function DispatchDashboardUI() {
                             <ArrowLeft />
                         </Button>
                         <span>
-                            Chat with {
+                            { (currentChatTarget as any).context || currentChatTarget.name === 'My Dispatch Log' ? 'Dispatcher Log:' : 'Chat with' }
+                            &nbsp;
+                            {
                                 (currentChatTarget as any).context 
                                     ? formatUserName((currentChatTarget as any).context.name, (currentChatTarget as any).context.email)
                                     : currentChatTarget.name === 'My Dispatch Log' 
-                                        ? 'My Dispatch Log' 
+                                        ? '' 
                                         : formatUserName(currentChatTarget.name, (currentChatTarget as AppUser).email)
                             }
                         </span>
@@ -1136,16 +1138,3 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    
-
-    
-
-
-
-
-
-
-
-
-
