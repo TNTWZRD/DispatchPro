@@ -50,26 +50,26 @@ type NewTicketFormProps = {
 
 export function NewTicketForm({ vehicleId, userId }: NewTicketFormProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction] = useActionState(createTicket, initialState);
+  const [state, formAction, isPending] = useActionState(createTicket, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
       });
       formRef.current?.reset();
       setIsOpen(false);
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast]);
+  }, [state, toast, isPending]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

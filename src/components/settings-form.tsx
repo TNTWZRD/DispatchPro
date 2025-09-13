@@ -36,23 +36,23 @@ type SettingsFormProps = {
 }
 
 export function SettingsForm({ user }: SettingsFormProps) {
-  const [state, formAction] = useActionState(updateUserProfile, initialState);
+  const [state, formAction, isPending] = useActionState(updateUserProfile, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
       });
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast]);
+  }, [state, toast, isPending]);
 
   return (
     <form action={formAction} className="grid gap-6">

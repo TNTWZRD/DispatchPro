@@ -46,7 +46,7 @@ type EditDriverFormProps = {
 }
 
 export function EditDriverForm({ isOpen, setIsOpen, driver }: EditDriverFormProps) {
-  const [state, formAction] = useActionState(updateDriver, initialState);
+  const [state, formAction, isPending] = useActionState(updateDriver, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -56,20 +56,20 @@ export function EditDriverForm({ isOpen, setIsOpen, driver }: EditDriverFormProp
   }), [driver]);
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
       });
       setIsOpen(false);
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast, setIsOpen]);
+  }, [state, toast, setIsOpen, isPending]);
 
   if (!driver) return null;
 

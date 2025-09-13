@@ -38,26 +38,26 @@ function SubmitButton() {
 
 export function InviteUserForm() {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction] = useActionState(sendInviteEmail, initialState);
+  const [state, formAction, isPending] = useActionState(sendInviteEmail, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
       });
       formRef.current?.reset();
       setIsOpen(false);
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast]);
+  }, [state, isPending, toast]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

@@ -42,7 +42,7 @@ type StartShiftFormProps = {
 };
 
 export function StartShiftForm({ onFormSubmit }: StartShiftFormProps) {
-  const [state, formAction] = useActionState(startShift, initialState);
+  const [state, formAction, isPending] = useActionState(startShift, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
   
@@ -67,7 +67,7 @@ export function StartShiftForm({ onFormSubmit }: StartShiftFormProps) {
   }, []);
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
@@ -76,14 +76,14 @@ export function StartShiftForm({ onFormSubmit }: StartShiftFormProps) {
       if (onFormSubmit) {
         onFormSubmit();
       }
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast, onFormSubmit]);
+  }, [state, toast, onFormSubmit, isPending]);
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-4 py-4">

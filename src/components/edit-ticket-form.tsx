@@ -46,25 +46,25 @@ type EditTicketFormProps = {
 }
 
 export function EditTicketForm({ isOpen, onOpenChange, ticket }: EditTicketFormProps) {
-  const [state, formAction] = useActionState(updateTicket, initialState);
+  const [state, formAction, isPending] = useActionState(updateTicket, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
       });
       onOpenChange(false);
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast, onOpenChange]);
+  }, [state, toast, onOpenChange, isPending]);
 
   if (!ticket) return null;
 

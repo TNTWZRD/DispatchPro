@@ -29,17 +29,17 @@ type AddCommentFormProps = {
 }
 
 export function AddCommentForm({ ticketId, userId }: AddCommentFormProps) {
-    const [state, formAction] = useActionState(addTicketComment, initialState);
+    const [state, formAction, isPending] = useActionState(addTicketComment, initialState);
     const formRef = useRef<HTMLFormElement>(null);
     const { toast } = useToast();
 
     useEffect(() => {
-        if (state.type === 'success') {
+        if (state.type === 'success' && !isPending) {
             formRef.current?.reset();
-        } else if (state.type === 'error') {
+        } else if (state.type === 'error' && !isPending) {
             toast({ variant: 'destructive', title: "Error", description: state.message });
         }
-    }, [state, toast]);
+    }, [state, isPending, toast]);
 
     return (
         <form action={formAction} ref={formRef} className="space-y-4">
