@@ -15,6 +15,7 @@ import { ChatView } from './chat-view';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from '@/components/ui/badge';
+import { DISPATCHER_ID } from '@/lib/types';
 
 
 type ChatListProps = {
@@ -32,6 +33,7 @@ function ChatList({ drivers, messages, allDrivers, onSendMessage, onMarkMessages
     const getUnreadCount = (driverId: string) => {
         if (!user) return 0;
         const threadId = getThreadId(user.uid, driverId);
+        // Only count unread messages in the P2P thread
         return messages.filter(m => m.threadId === threadId && m.recipientId === user.uid && !m.isRead).length;
     };
     
@@ -104,6 +106,8 @@ export function Sidebar({ rides, drivers, messages, onAssignSuggestion, onSendMe
   if (isMobile || !user) return null;
 
   const onShiftDrivers = drivers.filter(d => d.status === 'on-shift');
+  const p2pMessages = messages.filter(m => m.threadId !== getThreadId(DISPATCHER_ID, m.senderId) && m.threadId !== getThreadId(DISPATCHER_ID, m.recipientId));
+
 
   return (
     <Collapsible
@@ -123,7 +127,7 @@ export function Sidebar({ rides, drivers, messages, onAssignSuggestion, onSendMe
             <ChatList 
                 drivers={onShiftDrivers}
                 allDrivers={drivers}
-                messages={messages} 
+                messages={p2pMessages} 
                 onSendMessage={onSendMessage} 
                 onMarkMessagesAsRead={onMarkMessagesAsRead} 
             />

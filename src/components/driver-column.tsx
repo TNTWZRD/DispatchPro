@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -81,10 +80,10 @@ export function DriverColumn({
   
   const unreadMessagesCount = useMemo(() => {
     if (!driver) return 0;
-    // Messages from the generic dispatch channel are from senderId=driverId to recipientId=DISPATCHER_ID
-    // We check for unread messages sent by the driver.
+    // These are messages FROM the driver TO the generic dispatch channel
     return messages.filter(m => m.senderId === driver.id && !m.isRead).length;
   }, [messages, driver]);
+  
   
   const handleChatOpen = (isOpen: boolean) => {
     if (!driver) return;
@@ -214,11 +213,11 @@ export function DriverColumn({
     <ResponsiveDialog
         open={isChatOpen}
         onOpenChange={handleChatOpen}
-        title={`Shift Chat: ${formatUserName(driver.name)}`}
+        title={`Shift Channel: ${formatUserName(driver.name)}`}
     >
         <ChatView
-          threadId={getThreadId(driver.id, DISPATCHER_ID)}
-          participant={driver}
+          threadId={getThreadId(DISPATCHER_ID, driver.id)}
+          participant={dispatcherUser}
           messages={messages}
           allDrivers={allDrivers}
           onSendMessage={onSendMessage}

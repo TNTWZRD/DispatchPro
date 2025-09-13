@@ -1,6 +1,5 @@
 
 
-
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-shift' | 'offline';
@@ -123,7 +122,7 @@ export type Ride = {
 
 export type Message = {
   id: string;
-  threadId: string; // Uniquely identifies a conversation between two users
+  threadId: string; // Uniquely identifies a conversation between two users (e.g., uid1-uid2)
   sender: 'driver' | 'dispatcher';
   senderId: string;
   recipientId: string;
