@@ -186,10 +186,8 @@ function DispatchDashboardUI() {
         if (!m.threadId || m.threadId.length !== 2) return;
         
         if (m.threadId.includes(DISPATCHER_ID)) {
-          // This is a "peer-to-dispatcher" message
           dispatchLog.push(m);
         } else if (m.threadId.includes(user.uid)) {
-          // This is a direct P2P message involving the current user
           p2p.push(m);
         }
     });
@@ -200,71 +198,76 @@ function DispatchDashboardUI() {
   const chatDirectory = useMemo(() => {
     if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
     
-    const p2pContactsMap = new Map<string, { user: AppUser, unread: number }>();
-    const dispatchLogContactsMap = new Map<string, { user: AppUser, unread: number }>();
+    type ContactEntry = { user: AppUser, unread: number };
+    const p2pContactsMap = new Map<string, ContactEntry>();
+    const dispatchLogContactsMap = new Map<string, ContactEntry>();
 
     const allPossibleContacts = [...allUsers, ...drivers.filter(d => !allUsers.some(u => u.id === d.id))];
     const uniqueContacts = Array.from(new Map(allPossibleContacts.map(item => [item.id, item])).values());
-
-    // Initialize all p2p contacts
+    
     uniqueContacts.forEach(u => {
-        if (u.id === user.uid || u.id === DISPATCHER_ID) return;
-        const driverInfo = drivers.find(d => d.id === u.id);
-        const contactUser = { ...u, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
-        p2pContactsMap.set(u.id, { user: contactUser, unread: 0 });
+      if (u.id === user.uid) return; // Don't add self to P2P list
+      const driverInfo = drivers.find(d => d.id === u.id);
+      const contactUser = { ...u, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
+      p2pContactsMap.set(u.id, { user: contactUser, unread: 0 });
     });
 
-
     p2pMessages.forEach(msg => {
-        if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
-        const contactId = msg.senderId;
-        const contact = p2pContactsMap.get(contactId);
-        if (contact) {
-            contact.unread++;
-        }
+      if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
+      const contactId = msg.senderId;
+      const contact = p2pContactsMap.get(contactId);
+      if (contact) {
+        contact.unread++;
+      }
     });
 
     dispatchChannelMessages.forEach(msg => {
       const otherUserId = msg.threadId.find(id => id !== DISPATCHER_ID);
       if (!otherUserId) return;
 
-      const isUnread = !msg.isReadBy?.includes(user.uid);
+      const isUnreadByMe = !msg.isReadBy?.includes(user.uid);
 
-      if (otherUserId === user.uid) {
-        // This is the dispatcher's own log. Only count unread if it's from the system.
-        if (isUnread && msg.senderId === DISPATCHER_ID) {
-          let selfEntry = dispatchLogContactsMap.get(user.uid);
-          if (!selfEntry) {
-            const selfUser = { ...user, name: "My Dispatch Log" } as AppUser;
-            selfEntry = { user: selfUser, unread: 0 };
-            dispatchLogContactsMap.set(user.uid, selfEntry);
-          }
+      if (otherUserId === user.uid) { // This is the dispatcher's own log thread
+        let selfEntry = dispatchLogContactsMap.get(user.uid);
+        if (!selfEntry) {
+          const selfUser = { ...user, name: "My Dispatch Log" } as AppUser;
+          selfEntry = { user: selfUser, unread: 0 };
+          dispatchLogContactsMap.set(user.uid, selfEntry);
+        }
+        // Only count if sender is the system and message is unread
+        if (isUnreadByMe && msg.senderId === DISPATCHER_ID) {
           selfEntry.unread++;
         }
-      } else {
-        // This is another user's log with the dispatcher.
+      } else { // This is another user's log with the dispatcher.
         let contactEntry = dispatchLogContactsMap.get(otherUserId);
         if (!contactEntry) {
-            const contactUser = uniqueContacts.find(u => u.id === otherUserId);
-            if (contactUser) {
-                const driverInfo = drivers.find(d => d.id === contactUser.id);
-                const fullContactUser = {...contactUser, status: driverInfo?.status || 'offline' } as AppUser & {status: Driver['status']}
-                contactEntry = { user: fullContactUser, unread: 0 };
-                dispatchLogContactsMap.set(otherUserId, contactEntry);
-            }
+          const contactUser = uniqueContacts.find(u => u.id === otherUserId);
+          if (contactUser) {
+            const driverInfo = drivers.find(d => d.id === contactUser.id);
+            const fullContactUser = { ...contactUser, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status'] };
+            contactEntry = { user: fullContactUser, unread: 0 };
+            dispatchLogContactsMap.set(otherUserId, contactEntry);
+          }
         }
-        if(contactEntry && isUnread) {
+        if (contactEntry && isUnreadByMe) {
           contactEntry.unread++;
         }
       }
     });
+    
+    // Ensure the current user always appears in the P2P list for others to message them
+    if (user && !p2pContactsMap.has(user.id)) {
+        const driverInfo = drivers.find(d => d.id === user.id);
+        const selfUser = { ...user, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
+        p2pContactsMap.set(user.id, {user: selfUser, unread: 0});
+    }
 
-    const sortFn = (a: { user: AppUser }, b: { user: AppUser }) => (a.user.name || '').localeCompare(b.user.name || '');
-
-    const p2pContacts = Array.from(p2pContactsMap.values()).sort(sortFn);
+    const sortFn = (a: ContactEntry, b: ContactEntry) => (a.user.name || '').localeCompare(b.user.name || '');
+    
+    const p2pContacts = Array.from(p2pContactsMap.values()).filter(c => c.user.id !== user.id).sort(sortFn);
     const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort(sortFn);
     
-    const totalUnread = p2pContacts.reduce((sum, c) => sum + c.unread, 0) + dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0);
+    const totalUnread = [...p2pContacts, ...dispatchLogContacts].reduce((sum, c) => sum + c.unread, 0);
 
     return { p2pContacts, dispatchLogContacts, totalUnread };
   }, [p2pMessages, dispatchChannelMessages, user, allUsers, drivers]);
@@ -486,7 +489,7 @@ function DispatchDashboardUI() {
  const handleMarkMessagesAsRead = async (participant: AppUser) => {
     if (!db || !user) return;
     
-    const isDispatchLog = !!(participant as any).context || participant.id === dispatcherUser.id;
+    const isDispatchLog = !!(participant as any).context || participant.id === dispatcherUser.id || participant.name === "My Dispatch Log";
     let messagesToUpdateQuery;
 
     if (isDispatchLog) {
@@ -495,13 +498,15 @@ function DispatchDashboardUI() {
         const threadId = getThreadIds(otherUserId, DISPATCHER_ID);
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
-            where('threadId', '==', threadId)
+            where('threadId', '==', threadId),
+            where('recipientId', '==', otherUserId)
         );
     } else {
         const threadId = getThreadIds(user.uid, participant.id);
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
-            where('threadId', '==', threadId)
+            where('threadId', '==', threadId),
+            where('recipientId', '==', user.uid)
         );
     }
 
@@ -911,7 +916,7 @@ function DispatchDashboardUI() {
                 toast({
                     variant: 'destructive',
                     title: 'Assignment Failed',
-                    description: `Could not assign to ${driver?.name}. The driver is not on an active shift.`
+                    description: `Could not assign to ${formatUserName(driver?.name, driver?.email)}. The driver is not on an active shift.`
                 });
             }
           }}
@@ -986,7 +991,7 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${currentChatTarget.name || 'User'}`}
+                title={`Chat with ${currentChatTarget.context ? formatUserName(currentChatTarget.context.name, currentChatTarget.context.email) : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
             >
                 <ChatView
                     participant={currentChatTarget}
