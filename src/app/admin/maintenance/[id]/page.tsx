@@ -62,12 +62,12 @@ export default function TicketDetailsPage() {
     useEffect(() => {
         if (!ticketId) return;
 
-        const ticketUnsub = onSnapshot(doc(db, 'tickets', ticketId), (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
+        const ticketUnsub = onSnapshot(doc(db, 'tickets', ticketId), (ticketDoc) => {
+            if (ticketDoc.exists()) {
+                const data = ticketDoc.data();
                 const fetchedTicket = {
                     ...data,
-                    id: doc.id,
+                    id: ticketDoc.id,
                     createdAt: data.createdAt?.toDate(),
                     updatedAt: data.updatedAt?.toDate(),
                 } as MaintenanceTicket;
