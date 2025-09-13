@@ -4,7 +4,7 @@
 import 'dotenv/config';
 import { z } from "zod";
 import { db } from '@/lib/firebase';
-import { doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, writeBatch, getDoc } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { Role } from '@/lib/types';
 
@@ -26,11 +26,11 @@ export async function updateUserProfile(prevState: any, formData: FormData) {
         };
     }
     
-    try {
-        const { userId, displayName, phoneNumber } = validatedFields.data;
-        const batch = writeBatch(db);
+    const { userId, displayName, phoneNumber } = validatedFields.data;
+    const batch = writeBatch(db);
 
-        // 1. Update the user document
+    try {
+        // 1. Update the user document in 'users' collection
         const userRef = doc(db, 'users', userId);
         const userData: { displayName: string; phoneNumber?: string; updatedAt: any; } = {
             displayName,
@@ -41,28 +41,28 @@ export async function updateUserProfile(prevState: any, formData: FormData) {
         }
         batch.update(userRef, userData);
 
-        // 2. If the user is a driver, update their driver document too
+        // 2. Check if the user is a driver and update their 'drivers' document if they are.
         const driverRef = doc(db, 'drivers', userId);
-        const driverData: { name: string; phoneNumber?: string; } = { name: displayName };
-        if (phoneNumber) {
-            driverData.phoneNumber = phoneNumber;
+        const driverDoc = await getDoc(driverRef);
+
+        if (driverDoc.exists()) {
+            const driverData: { name: string; phoneNumber?: string; } = { name: displayName };
+            if (phoneNumber) {
+                driverData.phoneNumber = phoneNumber;
+            }
+            batch.update(driverRef, driverData);
         }
-        batch.update(driverRef, driverData);
 
         await batch.commit();
         
         revalidatePath('/settings');
-        revalidatePath('/');
-        revalidatePath('/admin');
+        revalidatePath('/'); // Revalidate main dashboard to reflect name changes
+        revalidatePath('/admin'); // Revalidate admin page
         
         return { type: "success", message: "Profile updated successfully." };
 
     } catch (error: any) {
-        // We catch errors, but if the driver doc doesn't exist, it shouldn't fail the whole batch.
-        if (error.code === 'not-found') {
-             revalidatePath('/settings');
-             return { type: "success", message: "Profile updated successfully (user-only)." };
-        }
+        console.error("Failed to update profile:", error);
         return { type: "error", message: `Failed to update profile: ${error.message}` };
     }
 }
