@@ -177,6 +177,18 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, onT
           )
       };
     }
+    
+    if (senderId === user?.uid) {
+        return {
+            name: "Me",
+            avatar: (
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.photoURL ?? undefined} />
+                    <AvatarFallback>{(user?.displayName || 'U')[0]}</AvatarFallback>
+                </Avatar>
+            )
+        }
+    }
 
     const participantUser = allUsers.find(u => u.id === senderId);
     
@@ -201,22 +213,26 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, onT
             </div>
         )}
       <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
-        <div className="p-4 space-y-4">
-          {messages.map((message) => {
+        <div className="p-4 space-y-2">
+          {messages.map((message, index) => {
+            const previousMessage = messages[index - 1];
+            const showNameplate = !previousMessage || previousMessage.senderId !== message.senderId;
+
             const senderDetails = getSenderDetails(message.senderId);
             const isOwnMessage = message.senderId === user?.uid;
             return (
                 <ContextMenu key={message.id}>
                 <ContextMenuTrigger disabled={!user}>
                     <div
-                    className={cn('flex items-end gap-2 w-full', isOwnMessage ? 'justify-end' : 'justify-start')}
+                        className={cn('flex items-end gap-2 w-full', isOwnMessage ? 'justify-end' : 'justify-start')}
                     >
-                    {!isOwnMessage && senderDetails.avatar}
-                    <div className={cn("flex flex-col", isOwnMessage ? "items-end" : "items-start")}>
-                        {!isOwnMessage && <p className="text-xs text-muted-foreground mb-1 ml-2">{senderDetails.name}</p>}
+                    {!isOwnMessage && showNameplate && senderDetails.avatar}
+                    {!isOwnMessage && !showNameplate && <div className="w-8" />}
+                    <div className={cn("flex flex-col max-w-xs md:max-w-md", isOwnMessage ? "items-end" : "items-start")}>
+                        {showNameplate && <p className={cn("text-xs text-muted-foreground mb-1", isOwnMessage ? "mr-2" : "ml-2")}>{senderDetails.name}</p>}
                         <div
                             className={cn(
-                            'max-w-xs md:max-w-md rounded-lg px-3 py-2 relative',
+                            'rounded-lg px-3 py-2 relative',
                             isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'
                             )}
                         >
