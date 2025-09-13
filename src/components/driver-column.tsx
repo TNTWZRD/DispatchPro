@@ -11,7 +11,7 @@ import { cn, formatUserName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff, MessageSquare } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 
@@ -27,6 +27,7 @@ type DriverColumnProps = {
   onEditRide: (ride: Ride) => void;
   onUnscheduleRide: (rideId: string) => void;
   onEndShift: (shift: Shift) => void;
+  onOpenChat?: () => void;
   className?: string;
 };
 
@@ -49,6 +50,7 @@ export function DriverColumn({
     onEditRide, 
     onUnscheduleRide, 
     onEndShift,
+    onOpenChat,
     className
 }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
@@ -90,6 +92,11 @@ export function DriverColumn({
               </div>
             </div>
             <div className='flex gap-1'>
+                {onOpenChat && (
+                    <Button variant="outline" size="sm" onClick={onOpenChat}>
+                        <MessageSquare />
+                    </Button>
+                )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" disabled={activeRides.length > 0}>

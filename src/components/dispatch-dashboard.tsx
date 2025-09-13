@@ -196,7 +196,7 @@ function DispatchDashboardUI() {
     return { p2pMessages: p2p, dispatchChannelMessages: dispatchLog };
   }, [messages, user]);
   
-  const chatDirectory = useMemo(() => {
+ const chatDirectory = useMemo(() => {
     if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
     
     type ContactEntry = { user: AppUser, unread: number, lastMessage?: Date };
@@ -511,6 +511,9 @@ function DispatchDashboardUI() {
  const handleMarkMessagesAsRead = async (participant: AppUser) => {
     if (!db || !user) return;
     
+    const allDispatcherUsers = allUsers.filter(u => u.role & Role.DISPATCHER);
+    const dispatcherUserIds = allDispatcherUsers.map(u => u.id);
+
     const isDispatchLog = !!(participant as any).context || participant.id === dispatcherUser.id || participant.name === "My Dispatch Log";
     let messagesToUpdateQuery;
 
@@ -533,8 +536,13 @@ function DispatchDashboardUI() {
     
     messagesSnapshot.forEach(docSnapshot => {
         const message = docSnapshot.data() as Message;
-        if (!message.isReadBy?.includes(user.uid)) {
-            const newIsReadBy = [...(message.isReadBy || []), user.uid];
+        const readers = message.isReadBy || [];
+        const shouldMarkAsRead = isDispatchLog 
+          ? !readers.some(id => dispatcherUserIds.includes(id)) // If it's a dispatch log, mark read if NO dispatcher has read it
+          : !readers.includes(user.uid); // For P2P, only check current user
+
+        if (shouldMarkAsRead) {
+            const newIsReadBy = [...readers, user.uid];
             batch.update(docSnapshot.ref, { isReadBy: newIsReadBy });
         }
     });
@@ -720,6 +728,7 @@ function DispatchDashboardUI() {
 
           {/* Driver Columns */}
           {activeShifts.map(shift => {
+            const driverUser = allUsers.find(u => u.id === shift.driverId);
             return (
                 <DriverColumn
                   key={shift.id}
@@ -734,6 +743,7 @@ function DispatchDashboardUI() {
                   onEditRide={handleOpenEdit}
                   onUnscheduleRide={handleUnscheduleRide}
                   onEndShift={handleEndShift}
+                  onOpenChat={driverUser ? () => openChatWith(driverUser) : undefined}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
             )
@@ -804,6 +814,7 @@ function DispatchDashboardUI() {
 
                 {/* Driver Tabs */}
                 {activeShifts.map(shift => {
+                  const driverUser = allUsers.find(u => u.id === shift.driverId);
                   return (
                     <CarouselItem key={shift.id} className="overflow-y-auto">
                         <div className="pr-1">
@@ -819,6 +830,7 @@ function DispatchDashboardUI() {
                               onEditRide={handleOpenEdit}
                               onUnscheduleRide={handleUnscheduleRide}
                               onEndShift={handleEndShift}
+                              onOpenChat={driverUser ? () => openChatWith(driverUser) : undefined}
                             />
                         </div>
                     </CarouselItem>
@@ -1009,7 +1021,7 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${currentChatTarget.name === 'My Dispatch Log' || (currentChatTarget.context && currentChatTarget.name !== 'My Dispatch Log') ? (currentChatTarget.context as AppUser).name : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
+                title={`Chat with ${(currentChatTarget as any).context ? (currentChatTarget.context as AppUser).name : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
             >
                 <ChatView
                     participant={currentChatTarget}
@@ -1046,5 +1058,6 @@ export function DispatchDashboard() {
     
 
     
+
 
 
