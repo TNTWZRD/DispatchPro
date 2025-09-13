@@ -402,7 +402,7 @@ function DispatchDashboardUI() {
   }
 
   const handleAssignDriver = async (rideId: string, shiftId: string) => {
-    if (!db) return;
+    if (!db || !user) return;
     const rideToAssign = rides.find(r => r.id === rideId);
     if (!rideToAssign) return;
 
@@ -415,6 +415,26 @@ function DispatchDashboardUI() {
         shiftId: shift.id,
         updatedAt: serverTimestamp(),
         assignedAt: serverTimestamp()
+    });
+
+    let messageText = `**New Ride Assignment**\n\n`;
+    messageText += `**Pickup:** ${rideToAssign.pickup.name}\n`;
+    if (rideToAssign.dropoff) {
+      messageText += `**Dropoff:** ${rideToAssign.dropoff.name}\n`;
+    }
+    if (rideToAssign.stops && rideToAssign.stops.length > 0) {
+        messageText += `**Stops:** ${rideToAssign.stops.map(s => s.name).join(', ')}\n`;
+    }
+    messageText += `**Passengers:** ${rideToAssign.passengerCount || 1}\n`;
+    if (rideToAssign.notes) {
+      messageText += `**Notes:** ${rideToAssign.notes}\n`;
+    }
+
+    await handleSendMessage({
+        threadId: getThreadIds(DISPATCHER_ID, shift.driverId),
+        senderId: DISPATCHER_ID,
+        recipientId: shift.driverId,
+        text: messageText,
     });
   };
   
