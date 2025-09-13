@@ -228,8 +228,8 @@ export function DriverDashboard() {
   }, [p2pMessages, currentDriver]);
 
   const unreadDispatchLogCount = useMemo(() => {
-    if(!currentDriver) return 0;
-    return dispatchLogMessages.filter(m => m.recipientId === currentDriver.id && !m.isReadBy?.includes(currentDriver.id)).length;
+    if (!currentDriver) return 0;
+    return dispatchLogMessages.filter(m => !m.isReadBy?.includes(currentDriver.id)).length;
   }, [dispatchLogMessages, currentDriver]);
   
   const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
@@ -399,7 +399,7 @@ export function DriverDashboard() {
           >
             <MessageCircle className="h-8 w-8" />
             {unreadDispatchLogCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadDispatchLogCount}</Badge>
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadDispatchLogCount}</Badge>
             )}
             <span className="sr-only">Open Chat with Dispatch</span>
           </Button>
