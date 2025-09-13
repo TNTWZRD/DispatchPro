@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { NewTicketForm } from '@/components/new-ticket-form';
 import { MaintenanceTicketsTable } from '@/components/maintenance-tickets-table';
 import { VehicleNotesForm } from '@/components/vehicle-notes-form';
+import { Button } from '@/components/ui/button';
 
 export default function VehicleDetailsPage() {
     const { user, loading, hasRole } = useAuth();
