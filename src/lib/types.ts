@@ -1,7 +1,4 @@
 
-
-
-
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-shift' | 'offline';
@@ -21,8 +18,8 @@ export const DISPATCHER_ID = 'dispatcher-main';
 export const dispatcherUser: AppUser = {
     id: DISPATCHER_ID,
     uid: DISPATCHER_ID,
-    name: 'Dispatch',
-    displayName: 'Dispatch',
+    name: 'Dispatch Log',
+    displayName: 'Dispatch Log',
     email: '',
     role: Role.DISPATCHER,
 };
@@ -131,5 +128,5 @@ export type Message = {
   imageUrl?: string;
   audioUrl?: string;
   timestamp: Date;
-  isRead: boolean;
+  isReadBy: string[]; // Array of user IDs who have read the message
 };

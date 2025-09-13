@@ -29,7 +29,7 @@ export async function forwardMessage(message: Message, recipientId: string, send
             recipientId: recipientId,
             senderId: senderId,
             timestamp: serverTimestamp() as any,
-            isRead: false,
+            isReadBy: [senderId],
             text: originalMessage.text,
             imageUrl: originalMessage.imageUrl,
             audioUrl: originalMessage.audioUrl,

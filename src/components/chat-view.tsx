@@ -24,10 +24,10 @@ import { Label } from './ui/label';
 
 
 type ChatViewProps = {
-  participant: Driver | AppUser;
+  participant: AppUser;
   messages: Message[];
   allDrivers: Driver[];
-  onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
+  onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isReadBy'>) => void;
   threadId: string[];
 };
 
@@ -55,10 +55,11 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
 
   const handleSendMessage = () => {
     if (text.trim() && user) {
+      const recipientId = participant.id === DISPATCHER_ID ? DISPATCHER_ID : participant.id;
       onSendMessage({ 
         threadId: threadId,
         senderId: user.uid, 
-        recipientId: participant.id,
+        recipientId: recipientId,
         text 
       });
       setText('');
@@ -71,10 +72,11 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
+        const recipientId = participant.id === DISPATCHER_ID ? DISPATCHER_ID : participant.id;
         onSendMessage({ 
             threadId: threadId,
             senderId: user.uid,
-            recipientId: participant.id,
+            recipientId: recipientId,
             imageUrl: reader.result as string 
         });
       };
@@ -100,10 +102,11 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
             const audioDataUri = reader.result as string;
             try {
                 const result = await processChatMessage({ audioDataUri });
+                const recipientId = participant.id === DISPATCHER_ID ? DISPATCHER_ID : participant.id;
                 onSendMessage({ 
                     threadId: threadId,
                     senderId: user.uid,
-                    recipientId: participant.id,
+                    recipientId: recipientId,
                     text: result.responseText, 
                     audioUrl: audioDataUri 
                 });
@@ -153,9 +156,9 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
   const canDelete = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
   const getParticipantAvatar = (senderId: string) => {
-    const participantUser = allDrivers.find(d => d.id === senderId) || participant as AppUser;
+    const participantUser = allDrivers.find(d => d.id === senderId) || allDrivers.find(d => d.id === senderId) as AppUser;
 
-    if (senderId === DISPATCHER_ID || (participantUser && participantUser.id === DISPATCHER_ID)) {
+    if (senderId === DISPATCHER_ID) { // Should not happen but for safety
       return (
         <Avatar className="h-8 w-8">
             <AvatarFallback><MessageSquare /></AvatarFallback>
@@ -263,7 +266,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                         <SelectValue placeholder="Select a recipient..." />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value={DISPATCHER_ID}>Dispatch</SelectItem>
+                        <SelectItem value={DISPATCHER_ID}>Dispatch Log</SelectItem>
                         {allDrivers.filter(d => d.id !== user?.uid).map(driver => (
                             <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
                         ))}

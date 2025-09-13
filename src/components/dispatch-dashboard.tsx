@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,7 +35,6 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ChatView } from './chat-view';
 import { Separator } from './ui/separator';
-import { MessageSquare } from 'lucide-react';
 
 
 function DispatchDashboardUI() {
@@ -127,10 +126,11 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
+    // For dispatchers, fetch all conversations involving them AND all conversations with the Dispatcher entity
     const messagesQuery = query(
       collection(db, "messages"),
       or(
-        where("recipientId", "==", user.uid),
+        where("threadId", "array-contains", user.uid),
         where("threadId", "array-contains", DISPATCHER_ID)
       )
     );
@@ -177,72 +177,84 @@ function DispatchDashboardUI() {
     })
     .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
 
-  const { p2pMessages, dispatchChannelMessages } = useMemo(() => {
+  const { p2pMessages, dispatchLogMessages } = useMemo(() => {
     const p2p: Message[] = [];
-    const dispatch: Message[] = [];
+    const dispatchLog: Message[] = [];
     messages.forEach(m => {
         if (!m.threadId) return;
         if (m.threadId.includes(DISPATCHER_ID)) {
-            dispatch.push(m);
+            dispatchLog.push(m);
         } else {
             p2p.push(m);
         }
     });
-    return { p2pMessages: p2p, dispatchChannelMessages: dispatch };
+    return { p2pMessages: p2p, dispatchLogMessages: dispatchLog };
   }, [messages]);
   
   const chatDirectory = useMemo(() => {
-    if (!user) return { contacts: [], totalUnread: 0, dispatchUnread: 0 };
+    if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
+    
+    const p2pContactsMap = new Map<string, { user: AppUser, unread: number }>();
+    const dispatchLogContactsMap = new Map<string, { user: AppUser, unread: number }>();
 
-    const contactsMap = new Map<string, { id: string; name: string; photoURL?: string | null; status?: Driver['status']; unread: number; }>();
-
+    // Populate all possible contacts first
     allUsers.forEach(u => {
-        if (u.id === user.uid) return; // Exclude self
+        if (u.id === user.uid || u.id === DISPATCHER_ID) return;
         const driverInfo = drivers.find(d => d.id === u.id);
-        contactsMap.set(u.id, {
-            id: u.id,
-            name: u.displayName || u.email || 'Unknown User',
-            photoURL: u.photoURL,
-            status: driverInfo?.status || 'offline',
-            unread: 0,
-        });
+        const contactUser = { ...u, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
+        p2pContactsMap.set(u.id, { user: contactUser, unread: 0 });
     });
-
-    drivers.forEach(d => {
+     drivers.forEach(d => {
         if (d.id === user.uid) return;
-        if (!contactsMap.has(d.id)) {
-            contactsMap.set(d.id, {
-                id: d.id,
-                name: d.name,
-                photoURL: `https://i.pravatar.cc/40?u=${d.id}`,
-                status: d.status,
-                unread: 0,
-            });
+        if (!p2pContactsMap.has(d.id)) {
+            const contactUser = {
+                id: d.id, uid: d.id, name: d.name, displayName: d.name, status: d.status,
+                photoURL: `https://i.pravatar.cc/40?u=${d.id}`
+            } as AppUser & { status: Driver['status']};
+             p2pContactsMap.set(d.id, { user: contactUser, unread: 0 });
         }
     });
-    
-    let dispatchUnreadCount = 0;
 
-    dispatchChannelMessages.forEach(msg => {
-      if (!msg.isRead && msg.senderId !== user.uid) {
-        dispatchUnreadCount++;
+
+    // Calculate unread counts for P2P
+    p2pMessages.forEach(msg => {
+        if (msg.isRead || msg.recipientId !== user.uid) return;
+        const contact = p2pContactsMap.get(msg.senderId);
+        if (contact) {
+            contact.unread++;
+        }
+    });
+
+    // Calculate unread for Dispatcher Logs
+    dispatchLogMessages.forEach(msg => {
+      // A message in the dispatch log is unread for the current dispatcher if they are not the sender
+      if (msg.isReadBy?.includes(user.uid) || msg.senderId === user.uid) return;
+
+      const otherUserId = msg.threadId.find(id => id !== DISPATCHER_ID);
+      if (!otherUserId) return;
+      
+      let contactEntry = dispatchLogContactsMap.get(otherUserId);
+      if (!contactEntry) {
+          const contactUser = allUsers.find(u => u.id === otherUserId) || drivers.find(d => d.id === otherUserId);
+          if (contactUser) {
+              const driverInfo = drivers.find(d => d.id === contactUser.id);
+              const fullContactUser = {...contactUser, status: driverInfo?.status || 'offline' } as AppUser & {status: Driver['status']}
+              contactEntry = { user: fullContactUser, unread: 0 };
+              dispatchLogContactsMap.set(otherUserId, contactEntry);
+          }
+      }
+      if(contactEntry) {
+        contactEntry.unread++;
       }
     });
 
-    p2pMessages.forEach(msg => {
-        if (!msg.isRead && msg.recipientId === user.uid) {
-            const contact = contactsMap.get(msg.senderId);
-            if (contact) {
-                contact.unread++;
-            }
-        }
-    });
+    const p2pContacts = Array.from(p2pContactsMap.values()).sort((a, b) => a.user.name.localeCompare(b.user.name));
+    const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort((a, b) => a.user.name.localeCompare(b.user.name));
+    
+    const totalUnread = p2pContacts.reduce((sum, c) => sum + c.unread, 0) + dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0);
 
-    const contacts = Array.from(contactsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    const totalP2PUnread = contacts.reduce((sum, c) => sum + c.unread, 0);
-
-    return { contacts, totalUnread: totalP2PUnread + dispatchUnreadCount, dispatchUnread: dispatchUnreadCount };
-  }, [p2pMessages, dispatchChannelMessages, user, allUsers, drivers]);
+    return { p2pContacts, dispatchLogContacts, totalUnread };
+  }, [p2pMessages, dispatchLogMessages, user, allUsers, drivers]);
 
 
   const allPendingRides = rides.filter(r => r.status === 'pending');
@@ -449,57 +461,61 @@ function DispatchDashboardUI() {
     setIsFormOpen(true);
   }
 
-  const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
+  const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isReadBy'>) => {
     if (!db || !user) return;
     await addDoc(collection(db, 'messages'), {
         ...message,
         timestamp: serverTimestamp(),
-        isRead: false,
+        isReadBy: [user.uid],
     });
   };
   
-  const handleMarkMessagesAsRead = async (participant: AppUser) => {
+ const handleMarkMessagesAsRead = async (participant: AppUser) => {
     if (!db || !user) return;
+    
+    const isDispatchLog = participant.id === DISPATCHER_ID;
+    let messagesToUpdateQuery;
+
+    if (isDispatchLog) {
+        // This is a special case from the directory, find the actual thread participant
+        const otherUserId = currentChatTarget?.id; 
+        if (!otherUserId) return;
+        const threadId = getThreadIds(otherUserId, DISPATCHER_ID);
+        messagesToUpdateQuery = query(
+            collection(db, 'messages'),
+            where('threadId', '==', threadId)
+        );
+    } else {
+        const threadId = getThreadIds(user.uid, participant.id);
+        messagesToUpdateQuery = query(
+            collection(db, 'messages'),
+            where('threadId', '==', threadId)
+        );
+    }
 
     const batch = writeBatch(db);
-    let messagesToMark: Message[];
+    const messagesSnapshot = await getDocs(messagesToUpdateQuery);
     
-    if (participant.id === DISPATCHER_ID) {
-      messagesToMark = dispatchChannelMessages.filter(m => !m.isRead && m.senderId !== user.uid);
-    } else {
-      messagesToMark = p2pMessages.filter(m => m.senderId === participant.id && m.recipientId === user.uid && !m.isRead);
-    }
-    
-    messagesToMark.forEach(message => {
-        batch.update(doc(db, 'messages', message.id), { isRead: true });
+    messagesSnapshot.forEach(docSnapshot => {
+        const message = docSnapshot.data() as Message;
+        if (!message.isReadBy?.includes(user.uid)) {
+            const newIsReadBy = [...(message.isReadBy || []), user.uid];
+            batch.update(docSnapshot.ref, { isReadBy: newIsReadBy });
+        }
     });
 
-    if (messagesToMark.length > 0) {
-      await batch.commit();
-    }
-  };
+    await batch.commit();
+};
+
   
-  const openChatWith = (contact: AppUser) => {
-    setCurrentChatTarget(contact);
-    handleMarkMessagesAsRead(contact);
+  const openChatWith = (contact: AppUser, isDispatchLog: boolean = false) => {
+    // If it's a dispatch log, the participant is the dispatcher entity, but we store the other user for context
+    const target = isDispatchLog ? { ...dispatcherUser, context: contact } : contact;
+    setCurrentChatTarget(target as AppUser);
+    handleMarkMessagesAsRead(target);
     setIsChatDirectoryOpen(false);
   };
-
-  const getContactForId = (contactId: string): AppUser | null => {
-     if (!contactId) return null;
-     const contact = chatDirectory.contacts.find(c => c.id === contactId);
-     if (!contact) return null;
-     return {
-          id: contact.id,
-          uid: contact.id,
-          name: contact.name,
-          displayName: contact.name,
-          photoURL: contact.photoURL,
-          email: ''
-     } as AppUser
-  }
-
-
+  
   const handleEndShift = async (shift: Shift) => {
     const result = await endShift(shift.id, shift.driverId, shift.vehicleId);
      if (result.type === 'success') {
@@ -891,49 +907,62 @@ function DispatchDashboardUI() {
             onOpenChange={setIsChatDirectoryOpen}
             title="My Messages"
         >
-            <div className="p-4 space-y-2">
-                {user && (
+             <div className="p-4 space-y-2">
+                 {chatDirectory.dispatchLogContacts.length > 0 && (
+                     <>
+                        <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
+                        {chatDirectory.dispatchLogContacts.map(({ user: contact, unread }) => (
+                            <Button 
+                                key={contact.id} 
+                                variant="ghost" 
+                                className="w-full justify-start h-14"
+                                onClick={() => openChatWith(contact, true)}
+                            >
+                                <Avatar className="h-10 w-10 mr-4">
+                                    <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                                    <AvatarFallback>{contact.name?.[0] || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 text-left">
+                                    <p>{formatUserName(contact.name || '')}</p>
+                                    <div className="flex items-center gap-2">
+                                        {(contact as any).status && getStatusIndicator((contact as any).status)}
+                                        <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
+                                    </div>
+                                </div>
+                                {unread > 0 && <Badge>{unread}</Badge>}
+                            </Button>
+                        ))}
+                     </>
+                 )}
+
+                {chatDirectory.p2pContacts.length > 0 && chatDirectory.dispatchLogContacts.length > 0 && <Separator className="my-4"/>}
+
+                {chatDirectory.p2pContacts.length > 0 && (
                     <>
-                        <Button
-                            variant="ghost"
-                            className="w-full justify-start h-14"
-                            onClick={() => openChatWith(dispatcherUser)}
-                        >
-                            <Avatar className="h-10 w-10 mr-4">
-                                <AvatarFallback><MessageSquare /></AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 text-left">
-                                <p>Dispatch (Shared)</p>
-                                <span className="text-xs text-muted-foreground">Internal Dispatch Log</span>
-                            </div>
-                            {chatDirectory.dispatchUnread > 0 && 
-                                <Badge>{chatDirectory.dispatchUnread}</Badge>
-                            }
-                        </Button>
-                        <Separator />
+                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Private Chats</h4>
+                        {chatDirectory.p2pContacts.map(({ user: contact, unread }) => (
+                            <Button 
+                                key={contact.id} 
+                                variant="ghost" 
+                                className="w-full justify-start h-14"
+                                onClick={() => openChatWith(contact)}
+                            >
+                                <Avatar className="h-10 w-10 mr-4">
+                                    <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                                    <AvatarFallback>{contact.name?.[0] || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 text-left">
+                                    <p>{formatUserName(contact.name || '')}</p>
+                                    <div className="flex items-center gap-2">
+                                       {(contact as any).status && getStatusIndicator((contact as any).status)}
+                                        <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
+                                    </div>
+                                </div>
+                                {unread > 0 && <Badge>{unread}</Badge>}
+                            </Button>
+                        ))}
                     </>
                 )}
-                {chatDirectory.contacts.map(contact => (
-                    <Button 
-                        key={contact.id} 
-                        variant="ghost" 
-                        className="w-full justify-start h-14"
-                        onClick={() => openChatWith(getContactForId(contact.id)!)}
-                    >
-                        <Avatar className="h-10 w-10 mr-4">
-                            <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                            <AvatarFallback>{contact.name?.[0] || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 text-left">
-                            <p>{formatUserName(contact.name)}</p>
-                            <div className="flex items-center gap-2">
-                                {getStatusIndicator(contact.status)}
-                                <span className="text-xs text-muted-foreground capitalize">{contact.status?.replace('-', ' ')}</span>
-                            </div>
-                        </div>
-                        {contact.unread > 0 && <Badge>{contact.unread}</Badge>}
-                    </Button>
-                ))}
             </div>
         </ResponsiveDialog>
         
@@ -941,14 +970,22 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={currentChatTarget.id === DISPATCHER_ID ? 'Dispatch (Shared)' : `Chat with ${formatUserName(currentChatTarget.name || '')}`}
+                title={`Chat with ${formatUserName(currentChatTarget.name || '')}`}
             >
                 <ChatView
                     participant={currentChatTarget}
-                    messages={currentChatTarget.id === DISPATCHER_ID ? dispatchChannelMessages : p2pMessages.filter(m => m.threadId?.includes(user.uid) && m.threadId?.includes(currentChatTarget.id))}
+                    messages={
+                        currentChatTarget.id === DISPATCHER_ID
+                        ? dispatchLogMessages.filter(m => m.threadId.includes((currentChatTarget as any).context.id))
+                        : p2pMessages.filter(m => m.threadId.includes(user.uid) && m.threadId.includes(currentChatTarget.id))
+                    }
                     allDrivers={drivers}
                     onSendMessage={handleSendMessage}
-                    threadId={getThreadIds(user.uid, currentChatTarget.id)}
+                    threadId={
+                        currentChatTarget.id === DISPATCHER_ID
+                        ? getThreadIds((currentChatTarget as any).context.id, DISPATCHER_ID)
+                        : getThreadIds(user.uid, currentChatTarget.id)
+                    }
                 />
             </ResponsiveDialog>
         )}

@@ -15,7 +15,7 @@ import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch, or } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch, or, getDocs } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
 import { formatUserName, getThreadIds } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -32,7 +32,7 @@ function DriverChatListDialog({ drivers, onSelectDriver, onSelectDispatch, onClo
                      <Avatar className="h-10 w-10 mr-4">
                         <AvatarFallback><MessageCircle /></AvatarFallback>
                     </Avatar>
-                    <span className="text-left font-semibold">Dispatch</span>
+                    <span className="text-left font-semibold">Dispatch Log</span>
                 </Button>
                 <Separator />
                 {drivers.map(driver => (
@@ -205,29 +205,31 @@ export function DriverDashboard() {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
 
-  const { p2pMessages, dispatchMessages } = useMemo(() => {
+  const { p2pMessages, dispatchLogMessages } = useMemo(() => {
     const p2p: Message[] = [];
-    const dispatch: Message[] = [];
+    const dispatchLog: Message[] = [];
+    if (!currentDriver) return { p2pMessages: [], dispatchLogMessages: [] };
+
     messages.forEach(m => {
         if (!m.threadId) return;
         if (m.threadId.includes(DISPATCHER_ID)) {
-            dispatch.push(m);
+            dispatchLog.push(m);
         } else {
             p2p.push(m);
         }
     });
-    return { p2pMessages: p2p, dispatchMessages: dispatch };
-  }, [messages]);
+    return { p2pMessages: p2p, dispatchLogMessages: dispatchLog };
+  }, [messages, currentDriver]);
 
   const unreadP2PCount = useMemo(() => {
     if(!currentDriver) return 0;
-    return p2pMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
+    return p2pMessages.filter(m => m.recipientId === currentDriver.id && !m.isReadBy?.includes(currentDriver.id)).length;
   }, [p2pMessages, currentDriver]);
 
-  const unreadDispatchCount = useMemo(() => {
+  const unreadDispatchLogCount = useMemo(() => {
     if(!currentDriver) return 0;
-    return dispatchMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
-  }, [dispatchMessages, currentDriver]);
+    return dispatchLogMessages.filter(m => m.recipientId === currentDriver.id && !m.isReadBy?.includes(currentDriver.id)).length;
+  }, [dispatchLogMessages, currentDriver]);
   
   const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
     const rideToUpdate = rides.find(ride => ride.id === rideId);
@@ -249,11 +251,12 @@ export function DriverDashboard() {
     setEditingRide(ride);
   }
 
-  const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
+  const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isReadBy'>) => {
+    if (!currentDriver) return;
     await addDoc(collection(db, 'messages'), {
         ...message,
         timestamp: serverTimestamp(),
-        isRead: false,
+        isReadBy: [currentDriver.id],
     });
   };
   
@@ -262,20 +265,25 @@ export function DriverDashboard() {
 
     setChatParticipant(participant);
     const threadId = getThreadIds(currentDriver.id, participant.id);
+    
+    const messagesToMarkQuery = query(
+        collection(db, 'messages'),
+        where('threadId', '==', threadId),
+        where('recipientId', '==', currentDriver.id)
+    );
     const batch = writeBatch(db);
+    const snapshot = await getDocs(messagesToMarkQuery);
     
-    let messagesToMark: Message[];
-    if (participant.id === DISPATCHER_ID) {
-      messagesToMark = dispatchMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead);
-    } else {
-      messagesToMark = p2pMessages.filter(m => m.recipientId === currentDriver.id && m.senderId === participant.id && !m.isRead);
-    }
-    
-    messagesToMark.forEach(message => {
-        const msgRef = doc(db, 'messages', message.id);
-        batch.update(msgRef, { isRead: true });
+    snapshot.forEach(docSnapshot => {
+        const msg = docSnapshot.data() as Message;
+        if (!msg.isReadBy?.includes(currentDriver.id)) {
+            batch.update(docSnapshot.ref, { isReadBy: [...(msg.isReadBy || []), currentDriver.id] });
+        }
     });
-    await batch.commit();
+    
+    if (snapshot.size > 0) {
+        await batch.commit();
+    }
   };
 
   const handleSelectDriverToChat = (driver: Driver) => {
@@ -389,8 +397,8 @@ export function DriverDashboard() {
             onClick={() => openChatWith(dispatcherUser)}
           >
             <MessageCircle className="h-8 w-8" />
-            {unreadDispatchCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadDispatchCount}</Badge>
+            {unreadDispatchLogCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadDispatchLogCount}</Badge>
             )}
             <span className="sr-only">Open Chat with Dispatch</span>
           </Button>
@@ -428,7 +436,7 @@ export function DriverDashboard() {
         >
           <ChatView
             participant={chatParticipant}
-            messages={chatParticipant.id === DISPATCHER_ID ? dispatchMessages : p2pMessages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
+            messages={chatParticipant.id === DISPATCHER_ID ? dispatchLogMessages : p2pMessages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
             threadId={getThreadIds(currentDriver.id, chatParticipant.id)}
