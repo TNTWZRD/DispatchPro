@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -143,7 +144,7 @@ function DispatchDashboardUI() {
             if (lastMessage) {
                 const sender = allUsers.find(u => u.id === lastMessage.senderId);
                 sendBrowserNotification(
-                    `New message from ${sender?.name || 'User'}`,
+                    `New message from ${formatUserName(sender?.name, sender?.email)}`,
                     lastMessage.text || "Sent an image or audio"
                 );
             }
@@ -176,19 +177,25 @@ function DispatchDashboardUI() {
     .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
 
   const { p2pMessages, dispatchChannelMessages } = useMemo(() => {
-      const p2p: Message[] = [];
-      const dispatchLog: Message[] = [];
+    if (!user) return { p2pMessages: [], dispatchChannelMessages: [] };
 
-      messages.forEach(m => {
-          if (!m.threadId || m.threadId.length !== 2) return;
-          if (m.threadId.includes(DISPATCHER_ID)) {
-              dispatchLog.push(m);
-          } else {
-              p2p.push(m);
-          }
-      });
-      return { p2pMessages: p2p, dispatchChannelMessages: dispatchLog };
-  }, [messages]);
+    const p2p: Message[] = [];
+    const dispatchLog: Message[] = [];
+
+    messages.forEach(m => {
+        if (!m.threadId || m.threadId.length !== 2) return;
+        
+        if (m.threadId.includes(DISPATCHER_ID)) {
+          // This is a "peer-to-dispatcher" message
+          dispatchLog.push(m);
+        } else if (m.threadId.includes(user.uid)) {
+          // This is a direct P2P message involving the current user
+          p2p.push(m);
+        }
+    });
+
+    return { p2pMessages: p2p, dispatchChannelMessages: dispatchLog };
+  }, [messages, user]);
   
   const chatDirectory = useMemo(() => {
     if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
@@ -196,10 +203,10 @@ function DispatchDashboardUI() {
     const p2pContactsMap = new Map<string, { user: AppUser, unread: number }>();
     const dispatchLogContactsMap = new Map<string, { user: AppUser, unread: number }>();
 
-    // Initialize all users and drivers as potential contacts
     const allPossibleContacts = [...allUsers, ...drivers.filter(d => !allUsers.some(u => u.id === d.id))];
     const uniqueContacts = Array.from(new Map(allPossibleContacts.map(item => [item.id, item])).values());
 
+    // Initialize all p2p contacts
     uniqueContacts.forEach(u => {
         if (u.id === user.uid || u.id === DISPATCHER_ID) return;
         const driverInfo = drivers.find(d => d.id === u.id);
@@ -218,23 +225,37 @@ function DispatchDashboardUI() {
     });
 
     dispatchChannelMessages.forEach(msg => {
-      if (msg.isReadBy?.includes(user.uid) || msg.senderId === user.uid) return;
-
       const otherUserId = msg.threadId.find(id => id !== DISPATCHER_ID);
       if (!otherUserId) return;
-      
-      let contactEntry = dispatchLogContactsMap.get(otherUserId);
-      if (!contactEntry) {
-          const contactUser = uniqueContacts.find(u => u.id === otherUserId);
-          if (contactUser) {
-              const driverInfo = drivers.find(d => d.id === contactUser.id);
-              const fullContactUser = {...contactUser, status: driverInfo?.status || 'offline' } as AppUser & {status: Driver['status']}
-              contactEntry = { user: fullContactUser, unread: 0 };
-              dispatchLogContactsMap.set(otherUserId, contactEntry);
+
+      const isUnread = !msg.isReadBy?.includes(user.uid);
+
+      if (otherUserId === user.uid) {
+        // This is the dispatcher's own log. Only count unread if it's from the system.
+        if (isUnread && msg.senderId === DISPATCHER_ID) {
+          let selfEntry = dispatchLogContactsMap.get(user.uid);
+          if (!selfEntry) {
+            const selfUser = { ...user, name: "My Dispatch Log" } as AppUser;
+            selfEntry = { user: selfUser, unread: 0 };
+            dispatchLogContactsMap.set(user.uid, selfEntry);
           }
-      }
-      if(contactEntry) {
-        contactEntry.unread++;
+          selfEntry.unread++;
+        }
+      } else {
+        // This is another user's log with the dispatcher.
+        let contactEntry = dispatchLogContactsMap.get(otherUserId);
+        if (!contactEntry) {
+            const contactUser = uniqueContacts.find(u => u.id === otherUserId);
+            if (contactUser) {
+                const driverInfo = drivers.find(d => d.id === contactUser.id);
+                const fullContactUser = {...contactUser, status: driverInfo?.status || 'offline' } as AppUser & {status: Driver['status']}
+                contactEntry = { user: fullContactUser, unread: 0 };
+                dispatchLogContactsMap.set(otherUserId, contactEntry);
+            }
+        }
+        if(contactEntry && isUnread) {
+          contactEntry.unread++;
+        }
       }
     });
 
@@ -465,25 +486,22 @@ function DispatchDashboardUI() {
  const handleMarkMessagesAsRead = async (participant: AppUser) => {
     if (!db || !user) return;
     
-    const isDispatchLog = (participant as any).context;
+    const isDispatchLog = !!(participant as any).context || participant.id === dispatcherUser.id;
     let messagesToUpdateQuery;
 
     if (isDispatchLog) {
         // This is a special case from the directory, find the actual thread participant
-        const otherUserId = (participant as any).context.id; 
-        if (!otherUserId) return;
+        const otherUserId = (participant as any).context?.id || user.uid;
         const threadId = getThreadIds(otherUserId, DISPATCHER_ID);
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
-            where('threadId', '==', threadId),
-            where('recipientId', '==', DISPATCHER_ID)
+            where('threadId', '==', threadId)
         );
     } else {
         const threadId = getThreadIds(user.uid, participant.id);
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
-            where('threadId', '==', threadId),
-            where('recipientId', '==', user.uid)
+            where('threadId', '==', threadId)
         );
     }
 
@@ -498,14 +516,19 @@ function DispatchDashboardUI() {
         }
     });
 
-    await batch.commit();
+    if (messagesSnapshot.docs.length > 0) {
+      await batch.commit();
+    }
 };
 
   
   const openChatWith = (contact: AppUser, isDispatchLog: boolean = false) => {
-    const target = isDispatchLog ? { ...dispatcherUser, context: contact } : contact;
+    const target = isDispatchLog 
+        ? { ...dispatcherUser, context: contact, name: formatUserName(contact.name, contact.email) } 
+        : contact;
+
     setCurrentChatTarget(target as AppUser);
-    handleMarkMessagesAsRead(target);
+    handleMarkMessagesAsRead(target as AppUser);
     setIsChatDirectoryOpen(false);
   };
   
@@ -963,23 +986,19 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${
-                    (currentChatTarget as any).context
-                        ? formatUserName((currentChatTarget as any).context.name, (currentChatTarget as any).context.email)
-                        : formatUserName(currentChatTarget.name, currentChatTarget.email)
-                }`}
+                title={`Chat with ${currentChatTarget.name || 'User'}`}
             >
                 <ChatView
                     participant={currentChatTarget}
                     messages={
-                        currentChatTarget.id === DISPATCHER_ID
+                        (currentChatTarget as any).context
                         ? dispatchChannelMessages.filter(m => m.threadId.includes((currentChatTarget as any).context.id))
                         : p2pMessages.filter(m => m.threadId.includes(user.uid) && m.threadId.includes(currentChatTarget.id))
                     }
                     allDrivers={drivers}
                     onSendMessage={handleSendMessage}
                     threadId={
-                        currentChatTarget.id === DISPATCHER_ID
+                        (currentChatTarget as any).context
                         ? getThreadIds((currentChatTarget as any).context.id, DISPATCHER_ID)
                         : getThreadIds(user.uid, currentChatTarget.id)
                     }
@@ -1000,5 +1019,7 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
 
     
