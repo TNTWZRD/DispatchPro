@@ -11,14 +11,15 @@ import { cn, formatUserName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff, MessageSquare } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff, MessageSquare, MoreHorizontal, DollarSign, FileText, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { toggleStarMessage } from '@/app/actions';
 import { Badge } from './ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 
 type DriverColumnProps = {
-  shift: Shift & { driver?: Driver; vehicle?: Vehicle };
+  shift: Shift & { driver?: Driver; vehicle?: Vehicle, totalFare: number };
   rides: Ride[];
   allShifts: (Shift & { driver?: any; vehicle?: any })[];
   allDrivers: Driver[];
@@ -31,6 +32,7 @@ type DriverColumnProps = {
   onToggleStar: typeof toggleStarMessage;
   onEndShift: (shift: Shift) => void;
   onOpenChat?: () => void;
+  onEditShift: (shift: Shift) => void;
   unreadCount: number;
   className?: string;
 };
@@ -56,6 +58,7 @@ export function DriverColumn({
     onToggleStar,
     onEndShift,
     onOpenChat,
+    onEditShift,
     unreadCount,
     className
 }: DriverColumnProps) {
@@ -106,29 +109,46 @@ export function DriverColumn({
                         )}
                     </Button>
                 )}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="icon" onClick={(e) => e.stopPropagation()} disabled={activeRides.length > 0}>
-                        <PowerOff />
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>End Shift for {driver.name}?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {activeRides.length > 0 
-                            ? "This driver still has active rides. Please re-assign or complete them before ending the shift."
-                            : "Are you sure you want to end this shift? The driver and vehicle will become available."
-                        }
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => onEndShift(shift)} disabled={activeRides.length > 0}>
-                        Confirm End Shift
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
+                 <AlertDialog>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled>
+                            <DollarSign /> Total Fare: ${shift.totalFare.toFixed(2)}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => {}} disabled>
+                           <Edit /> Edit Shift
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => onEditShift(shift)}>
+                            <FileText /> Add/Edit Notes
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()} disabled={hasActiveRides}>
+                              <PowerOff /> End Shift
+                            </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                           This action will end the shift for "{driver.name}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onEndShift(shift)}>
+                            Confirm End Shift
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
                 </AlertDialog>
             </div>
         </CardTitle>

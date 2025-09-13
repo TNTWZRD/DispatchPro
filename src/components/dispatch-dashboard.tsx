@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ChatView } from './chat-view';
 import { Separator } from './ui/separator';
 import { format, formatDistanceToNowStrict } from 'date-fns';
+import { ShiftNotesForm } from './shift-notes-form';
 
 
 function DispatchDashboardUI() {
@@ -48,6 +49,7 @@ function DispatchDashboardUI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [isChatDirectoryOpen, setIsChatDirectoryOpen] = useState(false);
   const [currentChatTarget, setCurrentChatTarget] = useState<AppUser | Driver | null>(null);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
@@ -83,7 +85,7 @@ function DispatchDashboardUI() {
     
     const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
 
-    const ridesUnsub = onSnapshot(query(collection(db, "rides"), where("status", "!=", "cancelled")), (snapshot) => {
+    const ridesUnsub = onSnapshot(collection(db, "rides"), (snapshot) => {
         const ridesData = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
@@ -175,9 +177,18 @@ function DispatchDashboardUI() {
     .map(shift => {
         const driver = drivers.find(d => d.id === shift.driverId);
         const vehicle = vehicles.find(v => v.id === shift.vehicleId);
-        return { ...shift, driver, vehicle };
+        const completedRides = rides.filter(ride => 
+          ride.shiftId === shift.id && 
+          ride.status === 'completed' &&
+          ride.droppedOffAt &&
+          ride.droppedOffAt >= shift.startTime &&
+          (!shift.endTime || ride.droppedOffAt <= shift.endTime)
+      );
+      const totalFare = completedRides.reduce((sum, ride) => sum + (ride.totalFare || 0), 0);
+
+        return { ...shift, driver, vehicle, totalFare };
     })
-    .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
+    .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles, rides]);
 
   const { p2pMessages, dispatchChannelMessages } = useMemo(() => {
     if (!user) return { p2pMessages: [], dispatchChannelMessages: [] };
@@ -764,6 +775,7 @@ function DispatchDashboardUI() {
                   onToggleStar={toggleStarMessage}
                   onEndShift={handleEndShift}
                   onOpenChat={() => openChatWith(shift.driver as Driver, true)}
+                  onEditShift={setEditingShift}
                   unreadCount={unreadCount}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
@@ -856,6 +868,7 @@ function DispatchDashboardUI() {
                               onToggleStar={toggleStarMessage}
                               onEndShift={handleEndShift}
                               onOpenChat={() => openChatWith(shift.driver as Driver, true)}
+                              onEditShift={setEditingShift}
                               unreadCount={unreadCount}
                             />
                         </div>
@@ -1130,6 +1143,15 @@ function DispatchDashboardUI() {
                 />
             </ResponsiveDialog>
         )}
+        
+        <ShiftNotesForm
+            shift={editingShift}
+            isOpen={!!editingShift}
+            onOpenChange={(isOpen) => {
+                if(!isOpen) setEditingShift(null);
+            }}
+        />
+
     </div>
   );
 }
