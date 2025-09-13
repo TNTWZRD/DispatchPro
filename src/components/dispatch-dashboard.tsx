@@ -53,7 +53,7 @@ function DispatchDashboardUI() {
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
   
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const isMobile = useIsMobile();
   const { toast } = useToast();
   
@@ -130,7 +130,8 @@ function DispatchDashboardUI() {
       collection(db, "messages"),
       or(
         where("threadId", "array-contains", user.uid),
-        where("threadId", "array-contains", DISPATCHER_ID)
+        // If user is a dispatcher, they also need to see all dispatcher logs
+        hasRole(Role.DISPATCHER) ? where("threadId", "array-contains", DISPATCHER_ID) : where("recipientId", "==", user.uid)
       )
     );
 
@@ -165,7 +166,7 @@ function DispatchDashboardUI() {
         shiftsUnsub();
         unsubMessages();
     };
-  }, [user]);
+  }, [user, hasRole]);
   
   const activeShifts = useMemo(() => shifts
     .filter(s => s.status === 'active')
@@ -198,36 +199,48 @@ function DispatchDashboardUI() {
   const chatDirectory = useMemo(() => {
     if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
     
-    type ContactEntry = { user: AppUser, unread: number };
+    type ContactEntry = { user: AppUser, unread: number, lastMessage?: Date };
     const p2pContactsMap = new Map<string, ContactEntry>();
     const dispatchLogContactsMap = new Map<string, ContactEntry>();
+    
+    const allDispatcherUsers = allUsers.filter(u => u.role & Role.DISPATCHER);
+    const dispatcherUserIds = allDispatcherUsers.map(u => u.id);
 
     const allPossibleContacts = [...allUsers, ...drivers.filter(d => !allUsers.some(u => u.id === d.id))];
     const uniqueContacts = Array.from(new Map(allPossibleContacts.map(item => [item.id, item])).values());
     
-    uniqueContacts.forEach(u => {
-      // Don't add self to P2P list to start
-      if (u.id === user.uid) return; 
-      const driverInfo = drivers.find(d => d.id === u.id);
-      const contactUser = { ...u, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
-      p2pContactsMap.set(u.id, { user: contactUser, unread: 0 });
-    });
-
+    // Setup P2P contacts
     p2pMessages.forEach(msg => {
-      if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
-      
       const contactId = msg.senderId === user.uid ? msg.recipientId : msg.senderId;
+      if (contactId === user.uid) return;
+
+      if (!p2pContactsMap.has(contactId)) {
+        const contactUser = uniqueContacts.find(u => u.id === contactId);
+        if (contactUser) {
+           const driverInfo = drivers.find(d => d.id === contactId);
+           const fullContactUser = { ...contactUser, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
+           p2pContactsMap.set(contactId, { user: fullContactUser, unread: 0 });
+        }
+      }
+      
       const contact = p2pContactsMap.get(contactId);
-      if (contact) {
-        contact.unread++;
+      if(contact) {
+        if (msg.recipientId === user.uid && !msg.isReadBy?.includes(user.uid)) {
+            contact.unread++;
+        }
+        if (!contact.lastMessage || msg.timestamp > contact.lastMessage) {
+            contact.lastMessage = msg.timestamp;
+        }
       }
     });
 
+    // Setup Dispatch Log contacts
     dispatchChannelMessages.forEach(msg => {
       const otherUserId = msg.threadId.find(id => id !== DISPATCHER_ID);
       if (!otherUserId) return;
 
-      const isUnreadByMe = !msg.isReadBy?.includes(user.uid);
+      const hasBeenReadByAnyDispatcher = msg.isReadBy?.some(readerId => dispatcherUserIds.includes(readerId));
+      const isUnread = !hasBeenReadByAnyDispatcher && !msg.isStarred;
 
       if (otherUserId === user.uid) { // This is the dispatcher's own log thread
         let selfEntry = dispatchLogContactsMap.get(user.uid);
@@ -236,11 +249,13 @@ function DispatchDashboardUI() {
           selfEntry = { user: selfUser, unread: 0 };
           dispatchLogContactsMap.set(user.uid, selfEntry);
         }
-        // Only count if sender is the system and message is unread
-        if (isUnreadByMe && msg.senderId === DISPATCHER_ID) {
+        if (isUnread && msg.senderId === DISPATCHER_ID) {
           selfEntry.unread++;
         }
-      } else { // This is another user's log with the dispatcher.
+         if (!selfEntry.lastMessage || msg.timestamp > selfEntry.lastMessage) {
+            selfEntry.lastMessage = msg.timestamp;
+        }
+      } else {
         let contactEntry = dispatchLogContactsMap.get(otherUserId);
         if (!contactEntry) {
           const contactUser = uniqueContacts.find(u => u.id === otherUserId);
@@ -251,8 +266,13 @@ function DispatchDashboardUI() {
             dispatchLogContactsMap.set(otherUserId, contactEntry);
           }
         }
-        if (contactEntry && isUnreadByMe) {
-          contactEntry.unread++;
+        if (contactEntry) {
+            if(isUnread) {
+                contactEntry.unread++;
+            }
+            if (!contactEntry.lastMessage || msg.timestamp > contactEntry.lastMessage) {
+                contactEntry.lastMessage = msg.timestamp;
+            }
         }
       }
     });
@@ -264,7 +284,7 @@ function DispatchDashboardUI() {
         p2pContactsMap.set(user.id, {user: selfUser, unread: 0});
     }
 
-    const sortFn = (a: ContactEntry, b: ContactEntry) => (a.user.name || '').localeCompare(b.user.name || '');
+    const sortFn = (a: ContactEntry, b: ContactEntry) => (b.lastMessage?.getTime() || 0) - (a.lastMessage?.getTime() || 0);
     
     const p2pContacts = Array.from(p2pContactsMap.values()).sort(sortFn);
     const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort(sortFn);
@@ -494,23 +514,19 @@ function DispatchDashboardUI() {
     const isDispatchLog = !!(participant as any).context || participant.id === dispatcherUser.id || participant.name === "My Dispatch Log";
     let messagesToUpdateQuery;
 
+    let otherUserId;
     if (isDispatchLog) {
-        // This is a special case from the directory, find the actual thread participant
-        const otherUserId = (participant as any).context?.id || user.uid;
-        const threadId = getThreadIds(otherUserId, DISPATCHER_ID);
-        messagesToUpdateQuery = query(
-            collection(db, 'messages'),
-            where('threadId', '==', threadId),
-            where('recipientId', '==', user.uid)
-        );
+      otherUserId = (participant as any).context?.id || user.uid;
     } else {
-        const threadId = getThreadIds(user.uid, participant.id);
-        messagesToUpdateQuery = query(
-            collection(db, 'messages'),
-            where('threadId', '==', threadId),
-            where('recipientId', '==', user.uid)
-        );
+      otherUserId = participant.id;
     }
+    
+    const threadId = getThreadIds(otherUserId, isDispatchLog ? DISPATCHER_ID : user.uid);
+    
+    messagesToUpdateQuery = query(
+        collection(db, 'messages'),
+        where('threadId', '==', threadId)
+    );
 
     const batch = writeBatch(db);
     const messagesSnapshot = await getDocs(messagesToUpdateQuery);
@@ -531,7 +547,7 @@ function DispatchDashboardUI() {
   
   const openChatWith = (contact: AppUser, isDispatchLog: boolean = false) => {
     const target = isDispatchLog 
-        ? { ...dispatcherUser, context: contact, name: formatUserName(contact.name, contact.email) } 
+        ? { ...dispatcherUser, context: contact, name: contact.name } 
         : contact;
 
     setCurrentChatTarget(target as AppUser);
@@ -993,7 +1009,7 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${currentChatTarget.name === 'My Dispatch Log' || (currentChatTarget.context && currentChatTarget.name !== 'My Dispatch Log') ? currentChatTarget.name : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
+                title={`Chat with ${currentChatTarget.name === 'My Dispatch Log' || (currentChatTarget.context && currentChatTarget.name !== 'My Dispatch Log') ? (currentChatTarget.context as AppUser).name : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
             >
                 <ChatView
                     participant={currentChatTarget}
@@ -1030,4 +1046,5 @@ export function DispatchDashboard() {
     
 
     
+
 

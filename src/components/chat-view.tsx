@@ -10,13 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, MessageSquare } from 'lucide-react';
+import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, MessageSquare, Star } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { deleteMessage, forwardMessage } from '@/app/actions';
+import { deleteMessage, forwardMessage, toggleStarMessage } from '@/app/actions';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { ResponsiveDialog } from './responsive-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -140,6 +140,15 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
     }
   }
 
+  const handleToggleStar = async (messageId: string, isStarred: boolean) => {
+    const result = await toggleStarMessage(messageId, isStarred);
+    if (result.type === 'success') {
+      toast({ title: result.message });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+  };
+
   const handleForwardMessage = async () => {
     if (!forwardingMessage || !forwardRecipient || !user) return;
     
@@ -153,7 +162,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
     setForwardRecipient('');
   }
   
-  const canDelete = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
+  const canPerformActions = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
   const getParticipantAvatar = (senderId: string) => {
     const participantUser = allDrivers.find(d => d.id === senderId) || allDrivers.find(d => d.id === senderId) as AppUser;
@@ -187,10 +196,13 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                   {message.senderId !== user?.uid && getParticipantAvatar(message.senderId)}
                   <div
                     className={cn(
-                      'max-w-xs md:max-w-md rounded-lg px-3 py-2',
+                      'max-w-xs md:max-w-md rounded-lg px-3 py-2 relative',
                       message.senderId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     )}
                   >
+                    {message.isStarred && (
+                      <Star className="h-3 w-3 absolute -top-1 -left-1 fill-yellow-400 text-yellow-500" />
+                    )}
                     {message.text && <p className="text-sm break-words">{message.text}</p>}
                     {message.imageUrl && (
                       <Image src={message.imageUrl} alt="Uploaded content" width={200} height={200} className="rounded-md mt-2" />
@@ -208,7 +220,12 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                 <ContextMenuItem onSelect={() => setForwardingMessage(message)}>
                   <Forward className="mr-2 h-4 w-4" /> Forward
                 </ContextMenuItem>
-                 {canDelete && message.id && (
+                 {canPerformActions && threadId.includes(DISPATCHER_ID) && (
+                  <ContextMenuItem onSelect={() => handleToggleStar(message.id, !!message.isStarred)}>
+                    <Star className="mr-2 h-4 w-4" /> {message.isStarred ? 'Unstar' : 'Star'} Message
+                  </ContextMenuItem>
+                 )}
+                 {canPerformActions && message.id && (
                     <ContextMenuItem className="text-destructive" onSelect={() => handleDeleteMessage(message.id)}>
                         <Trash2 className="mr-2 h-4 w-4" /> Delete Message
                     </ContextMenuItem>

@@ -129,4 +129,5 @@ export type Message = {
   audioUrl?: string;
   timestamp: Date;
   isReadBy: string[]; // Array of user IDs who have read the message
+  isStarred?: boolean;
 };

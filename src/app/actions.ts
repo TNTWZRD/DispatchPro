@@ -3,7 +3,7 @@
 
 import 'dotenv/config';
 import { db } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import type { Message } from '@/lib/types';
 import { getThreadIds } from '@/lib/utils';
@@ -17,6 +17,19 @@ export async function deleteMessage(messageId: string) {
     } catch (error: any) {
         console.error("Failed to delete message:", error);
         return { type: "error", message: `Failed to delete message: ${error.message}` };
+    }
+}
+
+export async function toggleStarMessage(messageId: string, currentStarredStatus: boolean) {
+    try {
+        const messageRef = doc(db, 'messages', messageId);
+        await updateDoc(messageRef, { isStarred: !currentStarredStatus });
+        revalidatePath('/');
+        revalidatePath('/driver');
+        return { type: "success", message: `Message ${!currentStarredStatus ? 'starred' : 'unstarred'}.` };
+    } catch (error: any) {
+        console.error("Failed to star message:", error);
+        return { type: "error", message: `Failed to update message: ${error.message}` };
     }
 }
 
