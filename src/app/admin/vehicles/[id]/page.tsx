@@ -4,13 +4,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter, useParams } from 'next/navigation';
-import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Vehicle, Role } from '@/lib/types';
+import type { Vehicle } from '@/lib/types';
+import { Role } from '@/lib/types';
 import { Loader2, Truck, Wrench } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NewTicketForm } from '@/components/new-ticket-form';
 import { MaintenanceTicketsTable } from '@/components/maintenance-tickets-table';
+import { VehicleNotesForm } from '@/components/vehicle-notes-form';
 
 export default function VehicleDetailsPage() {
     const { user, loading, hasRole } = useAuth();
@@ -20,6 +22,7 @@ export default function VehicleDetailsPage() {
 
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
     const [vehicleLoading, setVehicleLoading] = useState(true);
+    const [isNotesFormOpen, setIsNotesFormOpen] = useState(false);
 
     const canAccess = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
@@ -80,9 +83,12 @@ export default function VehicleDetailsPage() {
             <div className="max-w-6xl mx-auto flex flex-col gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-2xl">
-                            <Truck className="h-7 w-7 text-primary" />
-                            {vehicle.nickname}
+                        <CardTitle className="flex items-center justify-between text-2xl">
+                             <div className="flex items-center gap-2">
+                                <Truck className="h-7 w-7 text-primary" />
+                                {vehicle.nickname}
+                            </div>
+                            <Button variant="outline" onClick={() => setIsNotesFormOpen(true)}>Edit Notes</Button>
                         </CardTitle>
                         <CardDescription>
                             {vehicle.year} {vehicle.make} {vehicle.model}
@@ -95,6 +101,12 @@ export default function VehicleDetailsPage() {
                             <div><span className="font-semibold">Status:</span> <span className="capitalize">{vehicle.status}</span></div>
                             <div><span className="font-semibold">Added:</span> {vehicle.createdAt.toLocaleDateString()}</div>
                         </div>
+                         {vehicle.notes && (
+                            <div className="mt-4 border-t pt-4">
+                                <h4 className="font-semibold mb-1">Notes:</h4>
+                                <p className="text-sm text-muted-foreground italic whitespace-pre-wrap">{vehicle.notes}</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -116,6 +128,12 @@ export default function VehicleDetailsPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <VehicleNotesForm 
+                vehicle={vehicle}
+                isOpen={isNotesFormOpen}
+                onOpenChange={setIsNotesFormOpen}
+            />
         </div>
     );
 }
