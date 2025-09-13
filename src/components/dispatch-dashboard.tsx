@@ -12,7 +12,7 @@ import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
 import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, MessageSquare, Mail } from 'lucide-react';
-import { cn, getThreadId, formatUserName } from '@/lib/utils';
+import { cn, getThreadId, formatUserName, getThreadIds } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -201,11 +201,11 @@ function DispatchDashboardUI() {
       if (u.id === user.id) return;
       const driverInfo = drivers.find(d => d.id === u.id);
       
-      const threadId = getThreadId(user.id, u.id);
-      const publicThreadId = getThreadId(u.id, DISPATCHER_ID);
+      const privateThreadId = getThreadIds(user.id, u.id);
+      const publicThreadId = getThreadIds(u.id, DISPATCHER_ID);
 
-      const privateUnread = p2pMessages.filter(m => getThreadId(m.senderId, m.recipientId) === threadId && m.recipientId === user.id && !m.isRead).length;
-      const publicUnread = shiftChannelMessages.filter(m => getThreadId(m.senderId, m.recipientId) === publicThreadId && m.recipientId === user.id && !m.isRead).length;
+      const privateUnread = p2pMessages.filter(m => getThreadIds(m.senderId, m.recipientId).join() === privateThreadId.join() && m.recipientId === user.id && !m.isRead).length;
+      const publicUnread = shiftChannelMessages.filter(m => getThreadIds(m.senderId, m.recipientId).join() === publicThreadId.join() && m.recipientId === user.id && !m.isRead).length;
 
       contactsMap.set(u.id, {
         id: u.id,
@@ -447,15 +447,15 @@ function DispatchDashboardUI() {
     const batch = writeBatch(db);
     
     // Mark private P2P messages as read
-    const privateThreadId = getThreadId(user.uid, participantId);
-    const unreadP2P = p2pMessages.filter(m => getThreadId(m.senderId, m.recipientId) === privateThreadId && m.recipientId === user.uid && !m.isRead);
+    const privateThreadId = getThreadIds(user.uid, participantId);
+    const unreadP2P = p2pMessages.filter(m => getThreadIds(m.senderId, m.recipientId).join() === privateThreadId.join() && m.recipientId === user.uid && !m.isRead);
     unreadP2P.forEach(message => {
         batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
 
     // Mark public shift channel messages as read
-    const publicThreadId = getThreadId(participantId, DISPATCHER_ID);
-    const unreadPublic = shiftChannelMessages.filter(m => getThreadId(m.senderId, m.recipientId) === publicThreadId && m.recipientId === user.uid && !m.isRead);
+    const publicThreadId = getThreadIds(participantId, DISPATCHER_ID);
+    const unreadPublic = shiftChannelMessages.filter(m => getThreadIds(m.senderId, m.recipientId).join() === publicThreadId.join() && m.recipientId === user.uid && !m.isRead);
      unreadPublic.forEach(message => {
         batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
