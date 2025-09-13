@@ -62,6 +62,8 @@ export default function TicketDetailsPage() {
     useEffect(() => {
         if (!ticketId) return;
 
+        let vehicleUnsub: (() => void) | null = null;
+
         const ticketUnsub = onSnapshot(doc(db, 'tickets', ticketId), (ticketDoc) => {
             if (ticketDoc.exists()) {
                 const data = ticketDoc.data();
@@ -72,19 +74,22 @@ export default function TicketDetailsPage() {
                     updatedAt: data.updatedAt?.toDate(),
                 } as MaintenanceTicket;
                 setTicket(fetchedTicket);
-                
-                // Fetch associated vehicle
-                const vehicleUnsub = onSnapshot(doc(db, 'vehicles', fetchedTicket.vehicleId), (vehicleDoc) => {
-                     if (vehicleDoc.exists()) {
-                        setVehicle({ id: vehicleDoc.id, ...vehicleDoc.data() } as Vehicle);
-                     }
-                });
-                return () => vehicleUnsub();
 
+                // Fetch associated vehicle
+                vehicleUnsub = onSnapshot(doc(db, 'vehicles', fetchedTicket.vehicleId), (vehicleDoc) => {
+                    if (vehicleDoc.exists()) {
+                        setVehicle({ id: vehicleDoc.id, ...vehicleDoc.data() } as Vehicle);
+                    } else {
+                        setVehicle(null);
+                    }
+                    // Only set loading to false after vehicle is fetched (or not found)
+                    setPageLoading(false);
+                });
             } else {
                 setTicket(null);
+                setVehicle(null);
+                setPageLoading(false);
             }
-            setPageLoading(false);
         });
 
         const activityQuery = query(collection(db, 'tickets', ticketId, 'activity'), orderBy('timestamp', 'asc'));
@@ -102,6 +107,9 @@ export default function TicketDetailsPage() {
         return () => {
             ticketUnsub();
             activityUnsub();
+            if (vehicleUnsub) {
+                vehicleUnsub();
+            }
         };
     }, [ticketId]);
 
