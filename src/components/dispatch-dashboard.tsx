@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, MessageSquare } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, MessageSquare, Mail } from 'lucide-react';
 import { cn, getThreadId, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -168,8 +168,11 @@ function DispatchDashboardUI() {
         mergeAndSetMessages();
     });
     
-    const shiftMessagesQuery = query(collection(db, 'messages'), where('threadId', 'includes', DISPATCHER_ID));
-    const unsubShifts = onSnapshot(shiftMessagesQuery, (snapshot) => {
+    // This query now fetches all public "shift" channel messages
+    const shiftChannelQuery = query(collection(db, "messages"), where("threadId", "==", `*${DISPATCHER_ID}*`));
+    const unsubShifts = onSnapshot(
+      query(collection(db, "messages"), where("threadId", "includes", DISPATCHER_ID)),
+      (snapshot) => {
         shiftMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
         } as Message));
@@ -767,7 +770,7 @@ function DispatchDashboardUI() {
   )};
 
   return (
-    <div className="flex h-full flex-col bg-secondary/50">
+    <div className="h-full flex flex-col bg-secondary/50">
       <div className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
         <div className="flex items-center gap-2">
             <Button size={isMobile ? 'sm' : 'default'} onClick={handleOpenLogNew}>
@@ -799,7 +802,7 @@ function DispatchDashboardUI() {
             </ResponsiveDialog>
             <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={() => setIsChatDirectoryOpen(true)}>
                 <MessageSquare />
-                My Messages
+                Dispatcher Messages
                 {chatDirectory.totalUnread > 0 && (
                     <Badge variant="destructive" className="ml-2">{chatDirectory.totalUnread}</Badge>
                 )}
@@ -849,6 +852,22 @@ function DispatchDashboardUI() {
           {isMobile ? renderMobileView() : renderDesktopView()}
         </div>
       </div>
+
+      <div className="fixed bottom-6 right-24 z-50 flex flex-col items-center gap-3">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-14 w-14 rounded-full shadow-lg"
+            onClick={() => setIsChatDirectoryOpen(true)}
+          >
+            <Mail className="h-7 w-7" />
+            <span className="sr-only">My Messages</span>
+             {chatDirectory.totalUnread > 0 && (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{chatDirectory.totalUnread}</Badge>
+            )}
+          </Button>
+      </div>
+      
       <VoiceControl
           rides={rides}
           drivers={drivers}
@@ -871,7 +890,7 @@ function DispatchDashboardUI() {
         <ResponsiveDialog
             open={isChatDirectoryOpen}
             onOpenChange={setIsChatDirectoryOpen}
-            title="My Messages"
+            title="Dispatcher Messages"
         >
             <div className="p-4 space-y-2">
                 {chatDirectory.contacts.map(contact => (
@@ -927,5 +946,7 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
 
     
