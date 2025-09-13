@@ -197,7 +197,7 @@ function DispatchDashboardUI() {
     const contactsMap = new Map<string, { id: string; name: string; photoURL?: string | null; status?: Driver['status']; privateUnread: number; publicUnread: number; }>();
 
     allUsers.forEach(u => {
-      if (u.id === user.id) return;
+      if (u.id === user.uid) return;
       const driverInfo = drivers.find(d => d.id === u.id);
       contactsMap.set(u.id, {
         id: u.id,
@@ -210,6 +210,7 @@ function DispatchDashboardUI() {
     });
 
     drivers.forEach(d => {
+        if (d.id === user.uid) return;
         if (!contactsMap.has(d.id)) {
             contactsMap.set(d.id, {
                 id: d.id,
@@ -223,7 +224,7 @@ function DispatchDashboardUI() {
     });
 
     p2pMessages.forEach(msg => {
-      if (msg.recipientId === user.id && !msg.isRead) {
+      if (msg.recipientId === user.uid && !msg.isRead) {
         const contact = contactsMap.get(msg.senderId);
         if (contact) {
           contact.privateUnread += 1;
