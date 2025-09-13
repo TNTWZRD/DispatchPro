@@ -1008,7 +1008,9 @@ function DispatchDashboardUI() {
                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
                         {chatDirectory.dispatchLogContacts.map(({ user: contact, unread, hasStarred, lastMessage }) => {
                             const { snippet, sender } = getMessageSnippet(lastMessage);
-                            const displayName = contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, (contact as AppUser).email);
+                            const displayName = contact.name === 'My Dispatch Log' 
+                              ? contact.name 
+                              : formatUserName(contact.name, (contact as AppUser).email);
                             return (
                                 <Button 
                                     key={contact.id} 
@@ -1138,6 +1140,7 @@ export function DispatchDashboard() {
     
 
     
+
 
 
 
