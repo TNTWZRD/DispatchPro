@@ -439,6 +439,7 @@ export function DriverDashboard() {
             messages={chatParticipant.id === DISPATCHER_ID ? dispatchLogMessages : p2pMessages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
+            onToggleStar={toggleStarMessage}
             threadId={getThreadIds(currentDriver.id, chatParticipant.id)}
           />
       </ResponsiveDialog>
