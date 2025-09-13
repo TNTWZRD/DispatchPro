@@ -4,13 +4,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import type { Message, Driver, AppUser } from '@/lib/types';
-import { Role } from '@/lib/types';
+import { Role, DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, CornerUpLeft } from 'lucide-react';
-import { cn, formatUserName } from '@/lib/utils';
+import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, CornerUpLeft, MessageSquare } from 'lucide-react';
+import { cn, formatUserName, getThreadId } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -58,7 +58,6 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
     if (text.trim() && user) {
       onSendMessage({ 
         threadId: threadId,
-        driverId: hasRole(Role.DRIVER) ? user.uid : participant.id, // For legacy compatibility
         sender: senderType,
         senderId: user.uid, 
         recipientId: participant.id,
@@ -76,7 +75,6 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
       reader.onloadend = () => {
         onSendMessage({ 
             threadId: threadId,
-            driverId: hasRole(Role.DRIVER) ? user.uid : participant.id,
             sender: senderType,
             senderId: user.uid,
             recipientId: participant.id,
@@ -107,7 +105,6 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
                 const result = await processChatMessage({ audioDataUri });
                 onSendMessage({ 
                     threadId: threadId,
-                    driverId: hasRole(Role.DRIVER) ? user.uid : participant.id,
                     sender: senderType,
                     senderId: user.uid,
                     recipientId: participant.id,
@@ -159,6 +156,22 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
   
   const canDelete = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
+  const getParticipantAvatar = () => {
+    if (participant.id === DISPATCHER_ID) {
+      return (
+        <Avatar className="h-8 w-8">
+            <AvatarFallback><MessageSquare /></AvatarFallback>
+        </Avatar>
+      );
+    }
+    return (
+        <Avatar className="h-8 w-8">
+            <AvatarImage src={(participant as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${participant.id}`} />
+            <AvatarFallback>{(participant.name || (participant as AppUser).displayName)?.[0] || 'U'}</AvatarFallback>
+        </Avatar>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[70vh]">
       <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
@@ -169,12 +182,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
                 <div
                   className={cn('flex items-end gap-2', message.senderId === user?.uid ? 'justify-end' : 'justify-start')}
                 >
-                  {message.senderId !== user?.uid && (
-                    <Avatar className="h-8 w-8">
-                       <AvatarImage src={(participant as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${participant.id}`} />
-                       <AvatarFallback>{(participant.name || (participant as AppUser).displayName)?.[0] || 'U'}</AvatarFallback>
-                    </Avatar>
-                  )}
+                  {message.senderId !== user?.uid && getParticipantAvatar()}
                   <div
                     className={cn(
                       'max-w-xs md:max-w-md rounded-lg px-3 py-2',

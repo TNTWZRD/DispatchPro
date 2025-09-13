@@ -1,5 +1,6 @@
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-shift' | 'offline';
@@ -13,6 +14,18 @@ export enum Role {
     OWNER = 4,
     ADMIN = 8,
 }
+
+export const DISPATCHER_ID = 'dispatcher-main';
+
+export const dispatcherUser: AppUser = {
+    id: DISPATCHER_ID,
+    uid: DISPATCHER_ID,
+    name: 'Dispatch',
+    displayName: 'Dispatch',
+    email: '',
+    role: Role.DISPATCHER,
+};
+
 
 export type Location = {
   name: string;
@@ -111,7 +124,6 @@ export type Ride = {
 export type Message = {
   id: string;
   threadId: string; // Uniquely identifies a conversation between two users
-  driverId: string; // Represents the chat thread, usually with a driver - DEPRECATED
   sender: 'driver' | 'dispatcher';
   senderId: string;
   recipientId: string;

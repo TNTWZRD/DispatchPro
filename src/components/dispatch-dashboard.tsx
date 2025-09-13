@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import type { Ride, Driver, RideStatus, Message, Shift, Vehicle } from '@/lib/types';
-import { Role } from '@/lib/types';
+import { Role, DISPATCHER_ID } from '@/lib/types';
 import { DragDropContext, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
 import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield, Briefcase } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getThreadId } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -105,23 +105,25 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
-    const messagesReceivedQuery = query(
+    const messagesQuery = query(
       collection(db, "messages"),
-      where("recipientId", "==", user.uid),
+      where("threadId", "array-contains", user.uid),
       orderBy("timestamp", "asc")
     );
-    const messagesSentQuery = query(
+     const shiftMessagesQuery = query(
       collection(db, "messages"),
-      where("senderId", "==", user.uid),
+      where("threadId", "array-contains", DISPATCHER_ID),
       orderBy("timestamp", "asc")
     );
 
-    let receivedMessages: Message[] = [];
-    let sentMessages: Message[] = [];
+
+    let p2pMessages: Message[] = [];
+    let shiftMessages: Message[] = [];
 
     const mergeAndSetMessages = () => {
-        const all = [...receivedMessages, ...sentMessages];
+        const all = [...p2pMessages, ...shiftMessages];
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
+        
         uniqueMessages
           .filter(m => m.timestamp)
           .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
@@ -142,15 +144,15 @@ function DispatchDashboardUI() {
         setMessages(uniqueMessages);
     }
     
-    const unsubReceived = onSnapshot(messagesReceivedQuery, (snapshot) => {
-        receivedMessages = snapshot.docs.map(doc => ({
+    const unsubP2P = onSnapshot(messagesQuery, (snapshot) => {
+        p2pMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
         } as Message));
         mergeAndSetMessages();
     });
 
-    const unsubSent = onSnapshot(messagesSentQuery, (snapshot) => {
-        sentMessages = snapshot.docs.map(doc => ({
+    const unsubShift = onSnapshot(shiftMessagesQuery, (snapshot) => {
+        shiftMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
         } as Message));
         mergeAndSetMessages();
@@ -162,8 +164,8 @@ function DispatchDashboardUI() {
         driversUnsub();
         vehiclesUnsub();
         shiftsUnsub();
-        unsubReceived();
-        unsubSent();
+        unsubP2P();
+        unsubShift();
     };
   }, [user]);
   
@@ -380,18 +382,11 @@ function DispatchDashboardUI() {
     setEditingRide(null);
     setIsFormOpen(true);
   }
-  
-  const getThreadId = (uid1: string, uid2: string) => {
-    return [uid1, uid2].sort().join('-');
-  }
-
 
   const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
     if (!db || !user) return;
-
     await addDoc(collection(db, 'messages'), {
         ...message,
-        threadId: getThreadId(message.senderId, message.recipientId),
         timestamp: serverTimestamp(),
         isRead: false,
     });
@@ -401,7 +396,11 @@ function DispatchDashboardUI() {
     if (!db || !user) return;
     const threadId = getThreadId(user.uid, participantId);
     const batch = writeBatch(db);
-    const unreadMessages = messages.filter(m => m.threadId === threadId && m.recipientId === user.uid && !m.isRead);
+    const unreadMessages = messages.filter(m => 
+        m.threadId === threadId && 
+        m.recipientId === user.uid && 
+        !m.isRead
+    );
     unreadMessages.forEach(message => {
         const msgRef = doc(db, 'messages', message.id);
         batch.update(msgRef, { isRead: true });
@@ -572,7 +571,7 @@ function DispatchDashboardUI() {
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
               allShifts={activeShifts}
               allDrivers={drivers}
-              messages={messages.filter(m => m.threadId === getThreadId(user?.uid || '', shift.driverId))}
+              messages={messages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
@@ -658,7 +657,7 @@ function DispatchDashboardUI() {
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                             allShifts={activeShifts}
                             allDrivers={drivers}
-                            messages={messages.filter(m => m.threadId === getThreadId(user?.uid || '', shift.driverId))}
+                            messages={messages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
@@ -766,6 +765,12 @@ function DispatchDashboardUI() {
             const driver = drivers.find(d => d.id === driverId);
             if (driver && driver.currentShiftId) {
                 handleAssignDriver(rideId, driver.currentShiftId);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Assignment Failed',
+                    description: `Could not assign to ${driver?.name}. The driver is not on an active shift.`
+                });
             }
           }}
           onChangeStatus={handleChangeStatus}

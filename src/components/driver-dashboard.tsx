@@ -3,6 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Ride, Driver, Message, Shift, AppUser } from '@/lib/types';
+import { DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
 import { CheckCircle, MessageCircle, LogOut, Users, X } from 'lucide-react';
@@ -15,14 +16,11 @@ import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
-import { formatUserName } from '@/lib/utils';
+import { formatUserName, getThreadId } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
-const getThreadId = (uid1: string, uid2: string) => {
-    return [uid1, uid2].sort().join('-');
-}
 
 function DriverChatListDialog({ drivers, onSelectDriver, onClose }: { drivers: Driver[], onSelectDriver: (driver: Driver) => void, onClose: () => void }) {
     return (
@@ -107,10 +105,10 @@ export function DriverDashboard() {
             createdAt: toDate(doc.data().createdAt),
             updatedAt: toDate(doc.data().updatedAt),
             scheduledTime: doc.data().scheduledTime ? toDate(doc.data().scheduledTime) : undefined,
-            assignedAt: toDate(doc.data().assignedAt),
-            pickedUpAt: toDate(doc.data().pickedUpAt),
-            droppedOffAt: toDate(doc.data().droppedOffAt),
-            cancelledAt: toDate(doc.data().cancelledAt),
+            assignedAt: doc.data().assignedAt ? toDate(doc.data().assignedAt) : undefined,
+            pickedUpAt: doc.data().pickedUpAt ? toDate(doc.data().pickedUpAt) : undefined,
+            droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
+            cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
         } as Ride));
         
         if (prevRidesRef.current.length > 0 && newRides.length > prevRidesRef.current.length) {
@@ -140,9 +138,13 @@ export function DriverDashboard() {
         if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage && lastMessage.recipientId === currentDriver.id) {
-                const senderName = allDrivers.find(d => d.id === lastMessage.senderId)?.name || 'Dispatch';
+                const senderIsDispatcher = lastMessage.senderId === DISPATCHER_ID;
+                const sender = senderIsDispatcher 
+                    ? dispatcherUser 
+                    : allDrivers.find(d => d.id === lastMessage.senderId);
+
                 sendBrowserNotification(
-                    `New message from ${formatUserName(senderName)}`,
+                    `New message from ${formatUserName(sender?.name || 'User')}`,
                     lastMessage.text || "Sent an image or audio"
                 );
             }
@@ -182,17 +184,6 @@ export function DriverDashboard() {
   const upcomingRides = useMemo(() => {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
-
-  const dispatcherUser: AppUser = useMemo(() => {
-    return {
-        id: 'dispatcher-main', // a static ID for the dispatcher entity
-        uid: 'dispatcher-main',
-        name: 'Dispatch',
-        displayName: 'Dispatch',
-        email: '',
-        role: 2,
-    };
-  }, []);
 
   const getUnreadCount = (participantId: string) => {
     if (!currentDriver) return 0;

@@ -4,10 +4,11 @@
 
 import React, { useState, useMemo } from 'react';
 import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
+import { DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
-import { cn, formatUserName } from '@/lib/utils';
+import { cn, formatUserName, getThreadId } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
@@ -80,7 +81,9 @@ export function DriverColumn({
   
   const unreadMessagesCount = useMemo(() => {
     if (!driver) return 0;
-    return messages.filter(m => m.senderId !== driver.id && !m.isRead).length;
+    // Messages from the generic dispatch channel are from senderId=driverId to recipientId=DISPATCHER_ID
+    // We check for unread messages sent by the driver.
+    return messages.filter(m => m.senderId === driver.id && !m.isRead).length;
   }, [messages, driver]);
   
   const handleChatOpen = (isOpen: boolean) => {
@@ -211,10 +214,10 @@ export function DriverColumn({
     <ResponsiveDialog
         open={isChatOpen}
         onOpenChange={handleChatOpen}
-        title={`Chat with ${formatUserName(driver.name)}`}
+        title={`Shift Chat: ${formatUserName(driver.name)}`}
     >
         <ChatView
-          threadId={driver.id}
+          threadId={getThreadId(driver.id, DISPATCHER_ID)}
           participant={driver}
           messages={messages}
           allDrivers={allDrivers}

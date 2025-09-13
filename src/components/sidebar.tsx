@@ -6,8 +6,8 @@ import { MapView } from './map-view';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import type { Ride, Driver, Message, AppUser } from '@/lib/types';
-import { PanelLeftClose, PanelLeftOpen, MessageCircle, User } from 'lucide-react';
-import { cn, formatUserName } from '@/lib/utils';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { cn, formatUserName, getThreadId } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollArea } from './ui/scroll-area';
 import { ResponsiveDialog } from './responsive-dialog';
@@ -20,17 +20,19 @@ import { Badge } from '@/components/ui/badge';
 type ChatListProps = {
     drivers: Driver[];
     messages: Message[];
+    allDrivers: Driver[]; // For forwarding
     onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
     onMarkMessagesAsRead: (driverId: string) => void;
 }
 
-function ChatList({ drivers, messages, onSendMessage, onMarkMessagesAsRead }: ChatListProps) {
+function ChatList({ drivers, messages, allDrivers, onSendMessage, onMarkMessagesAsRead }: ChatListProps) {
     const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
     const { user } = useAuth();
 
     const getUnreadCount = (driverId: string) => {
         if (!user) return 0;
-        return messages.filter(m => m.driverId === driverId && m.recipientId === user.uid && !m.isRead).length;
+        const threadId = getThreadId(user.uid, driverId);
+        return messages.filter(m => m.threadId === threadId && m.recipientId === user.uid && !m.isRead).length;
     };
     
     const openChat = (driverId: string) => {
@@ -42,7 +44,7 @@ function ChatList({ drivers, messages, onSendMessage, onMarkMessagesAsRead }: Ch
 
     return (
         <div className="flex flex-col gap-2">
-            <h3 className="font-semibold px-2">Chats</h3>
+            <h3 className="font-semibold px-2">P2P Chats</h3>
             <ScrollArea className="h-[200px]">
                  <div className="space-y-1 pr-2">
                     {drivers.map(driver => {
@@ -65,17 +67,17 @@ function ChatList({ drivers, messages, onSendMessage, onMarkMessagesAsRead }: Ch
                     })}
                  </div>
             </ScrollArea>
-             {currentParticipant && (
+             {currentParticipant && user && (
                 <ResponsiveDialog
                     open={!!currentThreadId}
                     onOpenChange={(isOpen) => !isOpen && setCurrentThreadId(null)}
                     title={`Chat with ${formatUserName(currentParticipant.name)}`}
                 >
                     <ChatView
-                        threadId={currentParticipant.id}
+                        threadId={getThreadId(user.uid, currentParticipant.id)}
                         participant={currentParticipant}
-                        messages={messages.filter(m => m.driverId === currentParticipant.id)}
-                        allDrivers={drivers}
+                        messages={messages.filter(m => m.threadId === getThreadId(user.uid, currentParticipant.id))}
+                        allDrivers={allDrivers}
                         onSendMessage={onSendMessage}
                     />
                 </ResponsiveDialog>
@@ -97,8 +99,11 @@ type SidebarProps = {
 export function Sidebar({ rides, drivers, messages, onAssignSuggestion, onSendMessage, onMarkMessagesAsRead }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   
-  if (isMobile) return null;
+  if (isMobile || !user) return null;
+
+  const onShiftDrivers = drivers.filter(d => d.status === 'on-shift');
 
   return (
     <Collapsible
@@ -115,7 +120,13 @@ export function Sidebar({ rides, drivers, messages, onAssignSuggestion, onSendMe
       <CollapsibleContent asChild className="data-[state=closed]:hidden">
         <div className="w-[350px] xl:w-[450px] flex flex-col gap-4">
             <MapView rides={rides} drivers={drivers} />
-            <ChatList drivers={drivers} messages={messages} onSendMessage={onSendMessage} onMarkMessagesAsRead={onMarkMessagesAsRead} />
+            <ChatList 
+                drivers={onShiftDrivers}
+                allDrivers={drivers}
+                messages={messages} 
+                onSendMessage={onSendMessage} 
+                onMarkMessagesAsRead={onMarkMessagesAsRead} 
+            />
         </div>
       </CollapsibleContent>
        {!isOpen && (
