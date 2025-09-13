@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -878,6 +878,11 @@ function DispatchDashboardUI() {
     return { snippet, sender: `${senderName}: ` };
   }
 
+  const handleBackFromChat = () => {
+    setCurrentChatTarget(null);
+    setIsChatDirectoryOpen(true);
+  }
+
   return (
     <div className="h-full flex flex-col bg-secondary/50">
       <div className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
@@ -992,7 +997,11 @@ function DispatchDashboardUI() {
         <ResponsiveDialog
             open={isChatDirectoryOpen}
             onOpenChange={setIsChatDirectoryOpen}
-            title="My Messages"
+            title={
+                <div className="flex items-center gap-2">
+                    My Messages
+                </div>
+            }
         >
              <div className="p-4 space-y-1">
                  {chatDirectory.dispatchLogContacts.length > 0 && (
@@ -1000,6 +1009,7 @@ function DispatchDashboardUI() {
                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
                         {chatDirectory.dispatchLogContacts.map(({ user: contact, unread, hasStarred, lastMessage }) => {
                             const { snippet, sender } = getMessageSnippet(lastMessage);
+                            const displayName = contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, contact.email);
                             return (
                                 <Button 
                                     key={contact.id} 
@@ -1009,11 +1019,11 @@ function DispatchDashboardUI() {
                                 >
                                     <Avatar className="h-10 w-10 mr-4">
                                         <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                        <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
+                                        <AvatarFallback>{(displayName || 'U')[0]}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 text-left">
                                         <div className="flex justify-between items-center">
-                                            <p className="font-semibold">{contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, contact.email)}</p>
+                                            <p className="font-semibold">{displayName}</p>
                                             {lastMessage?.timestamp && (
                                                 <span className="text-xs text-muted-foreground">{formatDistanceToNowStrict(lastMessage.timestamp, { addSuffix: true })}</span>
                                             )}
@@ -1075,13 +1085,22 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${
-                    (currentChatTarget as any).context 
-                        ? formatUserName((currentChatTarget.context as AppUser).name, (currentChatTarget.context as AppUser).email)
-                        : currentChatTarget.name === 'My Dispatch Log' 
-                            ? 'My Dispatch Log' 
-                            : formatUserName(currentChatTarget.name, currentChatTarget.email)
-                }`}
+                title={
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={handleBackFromChat}>
+                            <ArrowLeft />
+                        </Button>
+                        <span>
+                            Chat with {
+                                (currentChatTarget as any).context 
+                                    ? formatUserName((currentChatTarget.context as AppUser).name, (currentChatTarget.context as AppUser).email)
+                                    : currentChatTarget.name === 'My Dispatch Log' 
+                                        ? 'My Dispatch Log' 
+                                        : formatUserName(currentChatTarget.name, currentChatTarget.email)
+                            }
+                        </span>
+                    </div>
+                }
             >
                 <ChatView
                     participant={currentChatTarget}
@@ -1098,6 +1117,7 @@ function DispatchDashboardUI() {
                         ? getThreadIds((currentChatTarget as any).context.id, DISPATCHER_ID)
                         : getThreadIds(user.uid, currentChatTarget.id)
                     }
+                    onBack={handleBackFromChat}
                 />
             </ResponsiveDialog>
         )}
@@ -1119,6 +1139,7 @@ export function DispatchDashboard() {
     
 
     
+
 
 
 

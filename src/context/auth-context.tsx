@@ -6,13 +6,14 @@ import type { User as FirebaseAuthUser } from 'firebase/auth';
 import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword, getAdditionalUserInfo } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot } from 'firebase/firestore';
 import type { AppUser, Driver } from '@/lib/types';
 import { Role } from '@/lib/types';
 
 interface AuthContextType {
   user: AppUser | null;
   firebaseUser: FirebaseAuthUser | null;
+  allUsers: AppUser[];
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   registerWithGoogle: (inviteCode: string) => Promise<void>;
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -65,7 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       setLoading(true);
       if (fbUser) {
         setFirebaseUser(fbUser);
@@ -89,7 +91,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            uid: doc.id,
+            ...doc.data()
+        } as AppUser));
+        setAllUsers(usersData);
+    });
+
+    return () => {
+        unsubscribeAuth();
+        unsubscribeUsers();
+    };
   }, [fetchAppUser, pathname, router, searchParams]);
 
   const signInWithGoogle = async () => {
@@ -189,7 +204,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, signInWithGoogle, registerWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, firebaseUser, allUsers, loading, signInWithGoogle, registerWithGoogle, signInWithEmailAndPassword, createUserWithEmailAndPassword, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, MessageSquare, Star } from 'lucide-react';
+import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, MessageSquare, Star, ArrowLeft } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
@@ -30,9 +30,10 @@ type ChatViewProps = {
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isReadBy'>) => void;
   onToggleStar: typeof toggleStarMessage;
   threadId: string[];
+  onBack?: () => void;
 };
 
-export function ChatView({ participant, messages, allDrivers, onSendMessage, onToggleStar, threadId }: ChatViewProps) {
+export function ChatView({ participant, messages, allDrivers, onSendMessage, onToggleStar, threadId, onBack }: ChatViewProps) {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -44,7 +45,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, onT
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   
-  const { user, hasRole } = useAuth();
+  const { user, allUsers, hasRole } = useAuth();
   const { toast } = useToast();
   
   useEffect(() => {
@@ -165,75 +166,95 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, onT
   
   const canPerformActions = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
-  const getParticipantAvatar = (senderId: string) => {
-    if (senderId === DISPATCHER_ID) { 
-      return (
-        <Avatar className="h-8 w-8">
-            <AvatarFallback><MessageSquare /></AvatarFallback>
-        </Avatar>
-      );
+  const getSenderDetails = (senderId: string) => {
+    if (senderId === DISPATCHER_ID) {
+      return { 
+          name: "Dispatch",
+          avatar: (
+            <Avatar className="h-8 w-8">
+                <AvatarFallback><MessageSquare /></AvatarFallback>
+            </Avatar>
+          )
+      };
     }
 
-    const participantUser = allDrivers.find(d => d.id === senderId) || allDrivers.find(d => d.id === senderId) as AppUser;
+    const participantUser = allUsers.find(u => u.id === senderId);
     
-    return (
-        <Avatar className="h-8 w-8">
-            <AvatarImage src={(participantUser as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${senderId}`} />
-            <AvatarFallback>{(formatUserName(participantUser?.name, (participantUser as AppUser)?.email) || 'U')[0]}</AvatarFallback>
-        </Avatar>
-    );
+    return {
+        name: formatUserName(participantUser?.name, participantUser?.email),
+        avatar: (
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={participantUser?.photoURL ?? `https://i.pravatar.cc/40?u=${senderId}`} />
+                <AvatarFallback>{(formatUserName(participantUser?.name, participantUser?.email) || 'U')[0]}</AvatarFallback>
+            </Avatar>
+        )
+    };
   }
 
   return (
     <div className="flex flex-col h-[70vh]">
+        {onBack && (
+            <div className="absolute top-4 left-4 z-10 sm:hidden">
+                <Button variant="ghost" size="icon" onClick={onBack}>
+                    <ArrowLeft />
+                </Button>
+            </div>
+        )}
       <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
         <div className="p-4 space-y-4">
-          {messages.map((message) => (
-            <ContextMenu key={message.id}>
-              <ContextMenuTrigger disabled={!user}>
-                <div
-                  className={cn('flex items-end gap-2', message.senderId === user?.uid ? 'justify-end' : 'justify-start')}
-                >
-                  {message.senderId !== user?.uid && getParticipantAvatar(message.senderId)}
-                  <div
-                    className={cn(
-                      'max-w-xs md:max-w-md rounded-lg px-3 py-2 relative',
-                      message.senderId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                    )}
-                  >
-                    {message.isStarred && (
-                      <Star className="h-3 w-3 absolute -top-1 -left-1 fill-yellow-400 text-yellow-500" />
-                    )}
-                    {message.text && <p className="text-sm break-words">{message.text}</p>}
-                    {message.imageUrl && (
-                      <Image src={message.imageUrl} alt="Uploaded content" width={200} height={200} className="rounded-md mt-2" />
-                    )}
-                    {message.audioUrl && (
-                      <audio controls src={message.audioUrl} className="w-full mt-2" />
-                    )}
-                    {message.timestamp && isValid(new Date(message.timestamp)) && (
-                      <p className="text-xs opacity-70 mt-1 text-right">{format(new Date(message.timestamp), 'p')}</p>
-                    )}
-                  </div>
-                </div>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem onSelect={() => setForwardingMessage(message)}>
-                  <Forward className="mr-2 h-4 w-4" /> Forward
-                </ContextMenuItem>
-                 {canPerformActions && threadId.includes(DISPATCHER_ID) && (
-                  <ContextMenuItem onSelect={() => handleToggleStar(message.id, !!message.isStarred)}>
-                    <Star className="mr-2 h-4 w-4" /> {message.isStarred ? 'Unstar' : 'Star'} Message
-                  </ContextMenuItem>
-                 )}
-                 {canPerformActions && message.id && (
-                    <ContextMenuItem className="text-destructive" onSelect={() => handleDeleteMessage(message.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Message
+          {messages.map((message) => {
+            const senderDetails = getSenderDetails(message.senderId);
+            const isOwnMessage = message.senderId === user?.uid;
+            return (
+                <ContextMenu key={message.id}>
+                <ContextMenuTrigger disabled={!user}>
+                    <div
+                    className={cn('flex items-end gap-2 w-full', isOwnMessage ? 'justify-end' : 'justify-start')}
+                    >
+                    {!isOwnMessage && senderDetails.avatar}
+                    <div className={cn("flex flex-col", isOwnMessage ? "items-end" : "items-start")}>
+                        {!isOwnMessage && <p className="text-xs text-muted-foreground mb-1 ml-2">{senderDetails.name}</p>}
+                        <div
+                            className={cn(
+                            'max-w-xs md:max-w-md rounded-lg px-3 py-2 relative',
+                            isOwnMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            )}
+                        >
+                            {message.isStarred && (
+                            <Star className="h-3 w-3 absolute -top-1 -left-1 fill-yellow-400 text-yellow-500" />
+                            )}
+                            {message.text && <p className="text-sm break-words">{message.text}</p>}
+                            {message.imageUrl && (
+                            <Image src={message.imageUrl} alt="Uploaded content" width={200} height={200} className="rounded-md mt-2" />
+                            )}
+                            {message.audioUrl && (
+                            <audio controls src={message.audioUrl} className="w-full mt-2" />
+                            )}
+                            {message.timestamp && isValid(new Date(message.timestamp)) && (
+                            <p className="text-[10px] opacity-70 mt-1 text-right">{format(new Date(message.timestamp), 'p')}</p>
+                            )}
+                        </div>
+                    </div>
+                    </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                    <ContextMenuItem onSelect={() => setForwardingMessage(message)}>
+                    <Forward className="mr-2 h-4 w-4" /> Forward
                     </ContextMenuItem>
-                 )}
-              </ContextMenuContent>
-            </ContextMenu>
-          ))}
+                    {canPerformActions && threadId.includes(DISPATCHER_ID) && (
+                    <ContextMenuItem onSelect={() => handleToggleStar(message.id, !!message.isStarred)}>
+                        <Star className="mr-2 h-4 w-4" /> {message.isStarred ? 'Unstar' : 'Star'} Message
+                    </ContextMenuItem>
+                    )}
+                    {canPerformActions && message.id && (
+                        <ContextMenuItem className="text-destructive" onSelect={() => handleDeleteMessage(message.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete Message
+                        </ContextMenuItem>
+                    )}
+                </ContextMenuContent>
+                </ContextMenu>
+            )
+          })}
         </div>
       </ScrollArea>
       <div className="p-4 border-t bg-background">
