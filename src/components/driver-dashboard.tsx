@@ -16,7 +16,7 @@ import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
-import { formatUserName, getThreadIds } from '@/lib/utils';
+import { formatUserName, getThreadId } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -182,8 +182,8 @@ export function DriverDashboard() {
 
   const getUnreadCount = (participantId: string) => {
     if (!currentDriver) return 0;
-    const threadIds = getThreadIds(currentDriver.id, participantId);
-    return messages.filter(m => m.threadId.every(id => threadIds.includes(id)) && m.recipientId === currentDriver.id && !m.isRead).length;
+    const threadId = getThreadId(currentDriver.id, participantId);
+    return messages.filter(m => m.threadId === threadId && m.recipientId === currentDriver.id && !m.isRead).length;
   }
   
   const totalUnread = useMemo(() => {
@@ -224,9 +224,9 @@ export function DriverDashboard() {
     if(!currentDriver) return;
 
     setChatParticipant(participant);
-    const threadIds = getThreadIds(currentDriver.id, participant.id);
+    const threadIds = getThreadId(currentDriver.id, participant.id);
     const batch = writeBatch(db);
-    const unread = messages.filter(m => m.threadId.every(id => threadIds.includes(id)) && m.recipientId === currentDriver.id && !m.isRead);
+    const unread = messages.filter(m => m.threadId === threadIds && m.recipientId === currentDriver.id && !m.isRead);
     
     unread.forEach(message => {
         const msgRef = doc(db, 'messages', message.id);
@@ -376,12 +376,10 @@ export function DriverDashboard() {
         >
           <ChatView
             participant={chatParticipant}
-            messages={messages.filter(m => {
-                const threadIds = getThreadIds(currentDriver.id, chatParticipant.id);
-                return m.threadId.every(id => threadIds.includes(id));
-            })}
+            messages={messages.filter(m => m.threadId === getThreadId(currentDriver.id, chatParticipant.id))}
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
+            threadId={getThreadId(currentDriver.id, chatParticipant.id)}
           />
       </ResponsiveDialog>
       )}

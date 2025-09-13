@@ -216,11 +216,11 @@ export function DriverColumn({
         title={`Shift Channel: ${formatUserName(driver.name)}`}
     >
         <ChatView
-          threadId={getThreadId(DISPATCHER_ID, driver.id)}
           participant={dispatcherUser}
           messages={messages}
           allDrivers={allDrivers}
           onSendMessage={onSendMessage}
+          threadId={getThreadId(driver.id, DISPATCHER_ID)}
         />
     </ResponsiveDialog>
   );

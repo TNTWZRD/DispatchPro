@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, CornerUpLeft, MessageSquare } from 'lucide-react';
-import { cn, formatUserName, getThreadIds } from '@/lib/utils';
+import { cn, formatUserName, getThreadId } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -27,9 +27,10 @@ type ChatViewProps = {
   messages: Message[];
   allDrivers: Driver[];
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
+  threadId: string;
 };
 
-export function ChatView({ participant, messages, allDrivers, onSendMessage }: ChatViewProps) {
+export function ChatView({ participant, messages, allDrivers, onSendMessage, threadId }: ChatViewProps) {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -56,7 +57,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage }: C
   const handleSendMessage = () => {
     if (text.trim() && user) {
       onSendMessage({ 
-        threadId: getThreadIds(user.uid, participant.id),
+        threadId: threadId,
         sender: senderType,
         senderId: user.uid, 
         recipientId: participant.id,
@@ -73,7 +74,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage }: C
       const reader = new FileReader();
       reader.onloadend = () => {
         onSendMessage({ 
-            threadId: getThreadIds(user.uid, participant.id),
+            threadId: threadId,
             sender: senderType,
             senderId: user.uid,
             recipientId: participant.id,
@@ -103,7 +104,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage }: C
             try {
                 const result = await processChatMessage({ audioDataUri });
                 onSendMessage({ 
-                    threadId: getThreadIds(user.uid, participant.id),
+                    threadId: threadId,
                     sender: senderType,
                     senderId: user.uid,
                     recipientId: participant.id,
@@ -156,7 +157,8 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage }: C
   const canDelete = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
   const getParticipantAvatar = () => {
-    if (participant.id === DISPATCHER_ID) {
+    const participantUser = participant as AppUser;
+    if (participantUser.id === DISPATCHER_ID) {
       return (
         <Avatar className="h-8 w-8">
             <AvatarFallback><MessageSquare /></AvatarFallback>
@@ -165,8 +167,8 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage }: C
     }
     return (
         <Avatar className="h-8 w-8">
-            <AvatarImage src={(participant as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${participant.id}`} />
-            <AvatarFallback>{(participant.name || (participant as AppUser).displayName)?.[0] || 'U'}</AvatarFallback>
+            <AvatarImage src={participantUser.photoURL ?? `https://i.pravatar.cc/40?u=${participantUser.id}`} />
+            <AvatarFallback>{(participantUser.name || participantUser.displayName)?.[0] || 'U'}</AvatarFallback>
         </Avatar>
     );
   }
