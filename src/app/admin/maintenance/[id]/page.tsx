@@ -4,11 +4,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter, useParams } from 'next/navigation';
-import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { MaintenanceTicket, Vehicle, TicketActivity, AppUser } from '@/lib/types';
 import { Role } from '@/lib/types';
-import { Loader2, Ticket, Wrench, Edit, MessageSquare, Workflow } from 'lucide-react';
+import { Loader2, Ticket, Wrench, Edit, MessageSquare, Workflow, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,8 @@ import { formatUserName, cn } from '@/lib/utils';
 import { EditTicketForm } from '@/components/edit-ticket-form';
 import { AddCommentForm } from '@/components/add-comment-form';
 import Link from 'next/link';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 
 const getStatusVariant = (status?: MaintenanceTicket['status']) => {
     if (!status) return 'bg-gray-500';
@@ -43,6 +45,7 @@ export default function TicketDetailsPage() {
     const router = useRouter();
     const params = useParams();
     const ticketId = params.id as string;
+    const { toast } = useToast();
 
     const [ticket, setTicket] = useState<MaintenanceTicket | null>(null);
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -117,6 +120,24 @@ export default function TicketDetailsPage() {
         return allUsers.find(u => u.uid === userId);
     };
 
+    const handleStatusChange = async (ticket: MaintenanceTicket, newStatus: MaintenanceTicket['status']) => {
+        if (!user) return;
+        const ticketRef = doc(db, 'tickets', ticket.id);
+        const activityRef = collection(db, 'tickets', ticket.id, 'activity');
+        try {
+            await updateDoc(ticketRef, { status: newStatus, updatedAt: serverTimestamp() });
+            await addDoc(activityRef, {
+                userId: user.uid,
+                timestamp: serverTimestamp(),
+                type: 'status_change',
+                content: `Status changed from "${ticket.status.replace('-', ' ')}" to "${newStatus.replace('-', ' ')}".`,
+            });
+            toast({ title: "Status Updated", description: "Ticket status changed successfully."});
+        } catch(e) {
+            toast({ variant: 'destructive', title: "Update Failed", description: "Could not update ticket status."});
+        }
+    }
+
     if (authLoading || pageLoading || !user || !canAccess) {
         return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
@@ -142,14 +163,33 @@ export default function TicketDetailsPage() {
                                     {ticket.title}
                                 </CardTitle>
                             </div>
-                            <Button onClick={() => setIsEditFormOpen(true)}>
-                                <Edit className="mr-2" /> Edit Ticket
-                            </Button>
+                             <div className="flex items-center gap-2">
+                                <Button variant="outline" onClick={() => setIsEditFormOpen(true)}>
+                                    <Edit className="mr-2" /> Edit Ticket
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                            <div><span className="font-semibold">Status:</span> <Badge className={cn("capitalize text-white", getStatusVariant(ticket.status))}>{ticket.status.replace('-', ' ')}</Badge></div>
+                            <div>
+                                <span className="font-semibold">Status:</span>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-between capitalize">
+                                            <Badge className={cn("text-white", getStatusVariant(ticket.status))}>{ticket.status.replace('-', ' ')}</Badge>
+                                            <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuRadioGroup value={ticket.status} onValueChange={(value) => handleStatusChange(ticket, value as MaintenanceTicket['status'])}>
+                                            <DropdownMenuRadioItem value="open">Open</DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="in-progress">In Progress</DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="closed">Closed</DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                             <div><span className="font-semibold">Priority:</span> <Badge variant={getPriorityVariant(ticket.priority)} className="capitalize">{ticket.priority}</Badge></div>
                             <div><span className="font-semibold">Vehicle:</span> <Link href={`/admin/vehicles/${vehicle?.id}`} className="text-primary hover:underline">{vehicle?.nickname || 'N/A'}</Link></div>
                             <div><span className="font-semibold">Created:</span> {format(ticket.createdAt, 'PP')}</div>
