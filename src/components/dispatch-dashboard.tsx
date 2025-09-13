@@ -177,17 +177,18 @@ function DispatchDashboardUI() {
     .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
 
   const { p2pMessages, dispatchChannelMessages } = useMemo(() => {
-    const p2p: Message[] = [];
-    const dispatchLog: Message[] = [];
-    messages.forEach(m => {
-        if (!m.threadId) return;
-        if (m.threadId.includes(DISPATCHER_ID)) {
-            dispatchLog.push(m);
-        } else {
-            p2p.push(m);
-        }
-    });
-    return { p2pMessages: p2p, dispatchChannelMessages: dispatchLog };
+      const p2p: Message[] = [];
+      const dispatchLog: Message[] = [];
+
+      messages.forEach(m => {
+          if (!m.threadId || m.threadId.length !== 2) return;
+          if (m.threadId.includes(DISPATCHER_ID)) {
+              dispatchLog.push(m);
+          } else {
+              p2p.push(m);
+          }
+      });
+      return { p2pMessages: p2p, dispatchChannelMessages: dispatchLog };
   }, [messages]);
   
   const chatDirectory = useMemo(() => {
@@ -226,7 +227,7 @@ function DispatchDashboardUI() {
 
     // Calculate unread for Dispatcher Logs
     dispatchChannelMessages.forEach(msg => {
-      if (msg.isReadBy?.includes(user.uid)) return;
+      if (msg.isReadBy?.includes(user.uid) || msg.senderId === user.uid) return;
 
       const otherUserId = msg.threadId.find(id => id !== DISPATCHER_ID);
       if (!otherUserId) return;
@@ -246,8 +247,10 @@ function DispatchDashboardUI() {
       }
     });
 
-    const p2pContacts = Array.from(p2pContactsMap.values()).sort((a, b) => a.user.name.localeCompare(b.user.name));
-    const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort((a, b) => a.user.name.localeCompare(b.user.name));
+    const sortFn = (a: { user: AppUser }, b: { user: AppUser }) => (a.user.name || '').localeCompare(b.user.name || '');
+
+    const p2pContacts = Array.from(p2pContactsMap.values()).sort(sortFn);
+    const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort(sortFn);
     
     const totalUnread = p2pContacts.reduce((sum, c) => sum + c.unread, 0) + dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0);
 
