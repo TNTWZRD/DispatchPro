@@ -12,7 +12,7 @@ import { Loader2, Ticket, Wrench, Edit, MessageSquare, Workflow, ChevronDown } f
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { format, formatDistanceToNowStrict, isValid } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatUserName, cn } from '@/lib/utils';
 import { EditTicketForm } from '@/components/edit-ticket-form';
@@ -223,7 +223,9 @@ export default function TicketDetailsPage() {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 text-sm">
                                                 <span className="font-semibold">{formatUserName(author?.displayName, author?.email)}</span>
-                                                <span className="text-muted-foreground text-xs">{formatDistanceToNowStrict(act.timestamp, { addSuffix: true })}</span>
+                                                {act.timestamp && isValid(act.timestamp) && (
+                                                    <span className="text-muted-foreground text-xs">{formatDistanceToNowStrict(act.timestamp, { addSuffix: true })}</span>
+                                                )}
                                             </div>
                                              <div className="mt-1 text-sm text-muted-foreground p-3 bg-secondary/50 rounded-md">
                                                 {act.type === 'comment' ? (
