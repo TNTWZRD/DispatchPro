@@ -1,20 +1,21 @@
 
+
 "use client";
 
-import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
 import { Role, DISPATCHER_ID, dispatcherUser } from '@/lib/types';
-import { DragDropContext, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield, Briefcase, MessageSquare } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, MessageSquare } from 'lucide-react';
 import { cn, getThreadId, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StrictModeDroppable } from './strict-mode-droppable';
 import { Sidebar } from './sidebar';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
@@ -55,7 +56,7 @@ function DispatchDashboardUI() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   
-  const { zoom, zoomIn, zoomOut } = useContext(ZoomContext);
+  const { zoom, zoomIn, zoomOut } = React.useContext(ZoomContext);
   const { isCondensed, toggleCondensedMode } = useCondensedMode();
   
   const prevMessagesRef = React.useRef<Message[]>([]);
@@ -124,26 +125,12 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
 
-    const p2pMessagesReceivedQuery = query(
-      collection(db, 'messages'),
-      where('recipientId', '==', user.uid)
-    );
-
-    const p2pMessagesSentQuery = query(
-      collection(db, 'messages'),
-      where('senderId', '==', user.uid)
-    );
-    
-    const shiftMessagesQuery = query(
-      collection(db, "messages"),
-      where("threadId", "array-contains", DISPATCHER_ID)
-    );
-    
-    let p2pMessages: Message[] = [];
+    let receivedP2PMessages: Message[] = [];
+    let sentP2PMessages: Message[] = [];
     let shiftMessages: Message[] = [];
 
     const mergeAndSetMessages = () => {
-        const all = [...p2pMessages, ...shiftMessages];
+        const all = [...receivedP2PMessages, ...sentP2PMessages, ...shiftMessages];
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values())
             .filter(m => m.timestamp)
             .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
@@ -163,18 +150,25 @@ function DispatchDashboardUI() {
         setMessages(uniqueMessages);
     }
     
+    const p2pMessagesReceivedQuery = query(
+      collection(db, 'messages'),
+      where('recipientId', '==', user.uid)
+    );
     const unsubP2PReceived = onSnapshot(p2pMessagesReceivedQuery, (snapshot) => {
-        const received = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
-        p2pMessages = [...p2pMessages.filter(m => m.senderId === user.uid), ...received];
+        receivedP2PMessages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
         mergeAndSetMessages();
     });
     
+    const p2pMessagesSentQuery = query(
+      collection(db, 'messages'),
+      where('senderId', '==', user.uid)
+    );
     const unsubP2PSent = onSnapshot(p2pMessagesSentQuery, (snapshot) => {
-        const sent = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
-        p2pMessages = [...p2pMessages.filter(m => m.recipientId === user.uid), ...sent];
+        sentP2PMessages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
         mergeAndSetMessages();
     });
     
+    const shiftMessagesQuery = query(collection(db, 'messages'), where('threadId', 'includes', DISPATCHER_ID));
     const unsubShifts = onSnapshot(shiftMessagesQuery, (snapshot) => {
         shiftMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
@@ -203,8 +197,8 @@ function DispatchDashboardUI() {
     })
     .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
 
-  const p2pMessages = useMemo(() => messages.filter(m => !m.threadId.includes(DISPATCHER_ID)), [messages]);
-  const shiftChannelMessages = useMemo(() => messages.filter(m => m.threadId.includes(DISPATCHER_ID)), [messages]);
+  const p2pMessages = useMemo(() => messages.filter(m => m.threadId && !m.threadId.includes(DISPATCHER_ID)), [messages]);
+  const shiftChannelMessages = useMemo(() => messages.filter(m => m.threadId && m.threadId.includes(DISPATCHER_ID)), [messages]);
 
   const chatDirectory = useMemo(() => {
     if (!user) return { contacts: [], totalUnread: 0 };
@@ -504,8 +498,6 @@ function DispatchDashboardUI() {
     }
   }
   
-  const canAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
-
   const getStatusIndicator = (status?: Driver['status']) => {
         switch(status) {
             case 'on-shift': return <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />;
@@ -935,3 +927,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
