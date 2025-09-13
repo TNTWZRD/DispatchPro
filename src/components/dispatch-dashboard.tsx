@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
 import { Role, DISPATCHER_ID, dispatcherUser } from '@/lib/types';
-import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, type DropResult, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
@@ -126,59 +126,45 @@ function DispatchDashboardUI() {
           endTime: doc.data().endTime ? toDate(doc.data().endTime) : undefined,
         } as Shift)));
     });
-
-    // Query for all P2P messages involving the logged-in dispatcher
-    const p2pMessagesQuery = query(
+    
+    const messagesQuery = query(
       collection(db, "messages"),
-      where("threadId", "array-contains", user.uid)
+      or(
+        where("threadId", "array-contains", user.uid),
+        where("threadId", "array-contains", DISPATCHER_ID)
+      )
     );
 
-    // Query for all public shift channel messages
-    const shiftMessagesQuery = query(
-      collection(db, "messages"),
-      where("threadId", "array-contains", DISPATCHER_ID)
-    );
+    const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+        const allMessages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
+        
+        const newIncomingMessages = allMessages.filter(m => m.recipientId === user.uid && !m.isRead);
+        
+        if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isRead).length) {
+            const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
+            if (lastMessage) {
+                const sender = allUsers.find(u => u.id === lastMessage.senderId);
+                sendBrowserNotification(
+                    `New message from ${sender?.name || 'User'}`,
+                    lastMessage.text || "Sent an image or audio"
+                );
+            }
+        }
+        
+        const sortedMessages = allMessages
+          .filter(m => m.timestamp)
+          .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
 
-    const unsubP2P = onSnapshot(p2pMessagesQuery, (p2pSnapshot) => {
-      const p2pMessages = p2pSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
-      
-      const unsubShift = onSnapshot(shiftMessagesQuery, (shiftSnapshot) => {
-          const shiftMessages = shiftSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
-
-          // Combine and filter out duplicates, just in case a dispatcher messages themselves in a public channel
-          const allMessagesMap = new Map<string, Message>();
-          [...p2pMessages, ...shiftMessages].forEach(m => allMessagesMap.set(m.id, m));
-          const allMessages = Array.from(allMessagesMap.values());
-          
-          const newIncomingMessages = allMessages.filter(m => m.recipientId === user.uid && !m.isRead);
-          
-          if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isRead).length) {
-              const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
-              if (lastMessage) {
-                  const sender = allUsers.find(u => u.id === lastMessage.senderId);
-                  sendBrowserNotification(
-                      `New message from ${sender?.name || 'User'}`,
-                      lastMessage.text || "Sent an image or audio"
-                  );
-              }
-          }
-          
-          const sortedMessages = allMessages
-            .filter(m => m.timestamp)
-            .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
-
-          setMessages(sortedMessages);
-      });
-      return () => unsubShift();
+        setMessages(sortedMessages);
     });
 
     return () => {
         ridesUnsub();
         driversUnsub();
         usersUnsub();
-        vehiclesUnsub();
+        vehiclesUnsub;
         shiftsUnsub();
-        unsubP2P();
+        unsubMessages();
     };
   }, [user]);
   
@@ -195,22 +181,21 @@ function DispatchDashboardUI() {
     const p2p: Message[] = [];
     const shift: Message[] = [];
     messages.forEach(m => {
-      if (m.threadId?.includes(DISPATCHER_ID)) {
+      if (!m.threadId) return;
+      if (m.threadId.includes(DISPATCHER_ID)) {
         shift.push(m);
       } else {
         p2p.push(m);
       }
     });
-    return { p2pMessages, shiftChannelMessages };
+    return { p2pMessages: p2p, shiftChannelMessages: shift };
   }, [messages]);
   
   const chatDirectory = useMemo(() => {
     if (!user) return { contacts: [], totalPrivateUnread: 0, totalPublicUnread: 0 };
     
-    // Combine users and drivers into a single list of contacts
     const contactsMap = new Map<string, { id: string; name: string; photoURL?: string | null; status?: Driver['status']; privateUnread: number; publicUnread: number; }>();
 
-    // Add all AppUsers
     allUsers.forEach(u => {
       if (u.id === user.id) return;
       const driverInfo = drivers.find(d => d.id === u.id);
@@ -224,7 +209,6 @@ function DispatchDashboardUI() {
       });
     });
 
-    // Add any drivers that aren't also users
     drivers.forEach(d => {
         if (!contactsMap.has(d.id)) {
             contactsMap.set(d.id, {
@@ -238,7 +222,6 @@ function DispatchDashboardUI() {
         }
     });
 
-    // Calculate unread counts
     p2pMessages.forEach(msg => {
       if (msg.recipientId === user.id && !msg.isRead) {
         const contact = contactsMap.get(msg.senderId);
@@ -249,12 +232,11 @@ function DispatchDashboardUI() {
     });
 
     shiftChannelMessages.forEach(msg => {
-        if (msg.recipientId === user.id && !msg.isRead) {
-            const contact = contactsMap.get(msg.senderId);
-            if (contact) {
-                contact.publicUnread += 1;
-            }
-        }
+      const contactId = msg.senderId === DISPATCHER_ID ? msg.recipientId : msg.senderId;
+      const contact = contactsMap.get(contactId);
+      if (contact && msg.recipientId === DISPATCHER_ID && !msg.isRead) {
+        contact.publicUnread += 1;
+      }
     });
 
     const contacts = Array.from(contactsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -479,37 +461,37 @@ function DispatchDashboardUI() {
     });
   };
   
-  const handleMarkMessagesAsRead = async (participantId: string) => {
+  const handleMarkMessagesAsRead = async (participantId: string, isPublic: boolean) => {
     if (!db || !user) return;
     
     const batch = writeBatch(db);
     
-    // Mark private P2P messages as read
-    const privateThreadId = getThreadIds(user.uid, participantId);
-    const unreadP2P = p2pMessages.filter(m => m.threadId?.join() === privateThreadId.join() && m.recipientId === user.uid && !m.isRead);
-    unreadP2P.forEach(message => {
-        batch.update(doc(db, 'messages', message.id), { isRead: true });
-    });
-
-    // Mark public shift channel messages as read
-    const publicThreadId = getThreadIds(participantId, DISPATCHER_ID);
-    const unreadPublic = shiftChannelMessages.filter(m => m.threadId?.join() === publicThreadId.join() && m.recipientId === user.uid && !m.isRead);
-     unreadPublic.forEach(message => {
-        batch.update(doc(db, 'messages', message.id), { isRead: true });
-    });
+    if (isPublic) {
+        const publicThreadId = getThreadIds(participantId, DISPATCHER_ID);
+        const unreadPublic = shiftChannelMessages.filter(m => m.threadId?.join() === publicThreadId.join() && m.recipientId === DISPATCHER_ID && !m.isRead);
+        unreadPublic.forEach(message => {
+            batch.update(doc(db, 'messages', message.id), { isRead: true });
+        });
+    } else {
+        const privateThreadId = getThreadIds(user.uid, participantId);
+        const unreadP2P = p2pMessages.filter(m => m.threadId?.join() === privateThreadId.join() && m.recipientId === user.uid && !m.isRead);
+        unreadP2P.forEach(message => {
+            batch.update(doc(db, 'messages', message.id), { isRead: true });
+        });
+    }
 
     await batch.commit();
   };
 
   const openPublicChatWith = (contact: AppUser) => {
     setCurrentPublicChatTarget(contact);
-    handleMarkMessagesAsRead(contact.id);
+    handleMarkMessagesAsRead(contact.id, true);
     setIsPublicChatDirectoryOpen(false);
   };
   
   const openPrivateChatWith = (contact: AppUser) => {
     setCurrentPrivateChatTarget(contact);
-    handleMarkMessagesAsRead(contact.id);
+    handleMarkMessagesAsRead(contact.id, false);
     setIsPrivateChatDirectoryOpen(false);
   };
 
@@ -693,7 +675,8 @@ function DispatchDashboardUI() {
 
           {/* Driver Columns */}
           {activeShifts.map(shift => {
-            const shiftUnreadCount = chatDirectory.contacts.find(c => c.id === shift.driverId)?.publicUnread || 0;
+            const contact = chatDirectory.contacts.find(c => c.id === shift.driverId);
+            const unreadCount = contact ? contact.publicUnread : 0;
             return (
                 <DriverColumn
                   key={shift.id}
@@ -701,7 +684,7 @@ function DispatchDashboardUI() {
                   rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                   allShifts={activeShifts}
                   allDrivers={drivers}
-                  unreadCount={shiftUnreadCount}
+                  unreadCount={unreadCount}
                   onAssignDriver={handleAssignDriver}
                   onChangeStatus={handleChangeStatus}
                   onSetFare={handleSetFare}
@@ -709,7 +692,7 @@ function DispatchDashboardUI() {
                   onEditRide={handleOpenEdit}
                   onUnscheduleRide={handleUnscheduleRide}
                   onSendMessage={handleSendMessage}
-                  onMarkMessagesAsRead={() => handleMarkMessagesAsRead(shift.driverId)}
+                  onMarkMessagesAsRead={(driverId) => handleMarkMessagesAsRead(driverId, true)}
                   onEndShift={handleEndShift}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
@@ -781,7 +764,8 @@ function DispatchDashboardUI() {
 
                 {/* Driver Tabs */}
                 {activeShifts.map(shift => {
-                  const shiftUnreadCount = chatDirectory.contacts.find(c => c.id === shift.driverId)?.publicUnread || 0;
+                  const contact = chatDirectory.contacts.find(c => c.id === shift.driverId);
+                  const unreadCount = contact ? contact.publicUnread : 0;
                   return (
                     <CarouselItem key={shift.id} className="overflow-y-auto">
                         <div className="pr-1">
@@ -790,7 +774,7 @@ function DispatchDashboardUI() {
                               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                               allShifts={activeShifts}
                               allDrivers={drivers}
-                              unreadCount={shiftUnreadCount}
+                              unreadCount={unreadCount}
                               onAssignDriver={handleAssignDriver}
                               onChangeStatus={handleChangeStatus}
                               onSetFare={handleSetFare}
@@ -798,7 +782,7 @@ function DispatchDashboardUI() {
                               onEditRide={handleOpenEdit}
                               onUnscheduleRide={handleUnscheduleRide}
                               onSendMessage={handleSendMessage}
-                              onMarkMessagesAsRead={() => handleMarkMessagesAsRead(shift.driverId)}
+                              onMarkMessagesAsRead={(driverId) => handleMarkMessagesAsRead(driverId, true)}
                               onEndShift={handleEndShift}
                             />
                         </div>
@@ -1034,3 +1018,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
