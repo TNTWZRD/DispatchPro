@@ -23,11 +23,18 @@ import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 
-function DriverChatListDialog({ drivers, onSelectDriver, onClose }: { drivers: Driver[], onSelectDriver: (driver: Driver) => void, onClose: () => void }) {
+function DriverChatListDialog({ drivers, onSelectDriver, onSelectDispatch, onClose }: { drivers: Driver[], onSelectDriver: (driver: Driver) => void, onSelectDispatch: () => void, onClose: () => void }) {
     return (
-        <ResponsiveDialog open={true} onOpenChange={(isOpen) => !isOpen && onClose()} title="Chat with another driver">
+        <ResponsiveDialog open={true} onOpenChange={(isOpen) => !isOpen && onClose()} title="New Chat">
             <ScrollArea className="h-[60vh] p-2">
                 <div className="space-y-2">
+                 <Button variant="ghost" className="w-full justify-start h-14" onClick={onSelectDispatch}>
+                     <Avatar className="h-10 w-10 mr-4">
+                        <AvatarFallback><MessageCircle /></AvatarFallback>
+                    </Avatar>
+                    <span className="text-left font-semibold">Dispatch</span>
+                </Button>
+                <Separator />
                 {drivers.map(driver => (
                     <Button key={driver.id} variant="ghost" className="w-full justify-start h-14" onClick={() => onSelectDriver(driver)}>
                          <Avatar className="h-10 w-10 mr-4">
@@ -74,25 +81,28 @@ export function DriverDashboard() {
   }, []);
   
   useEffect(() => {
-    const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
+    if (!user) return;
+
+    const driversQuery = query(collection(db, "drivers"));
+    const driversUnsub = onSnapshot(driversQuery, (snapshot) => {
         setAllDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
     });
-    return () => driversUnsub();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
 
     const driverRef = doc(db, "drivers", user.uid);
     const unsubDriver = onSnapshot(driverRef, (doc) => {
         if (doc.exists()) {
             setCurrentDriver({ ...doc.data(), id: doc.id } as Driver);
         } else {
+            // Driver profile might not exist yet if they've just registered
+            // It will be created by the auth context if they have the DRIVER role
             setCurrentDriver(null);
         }
     });
 
-    return () => unsubDriver();
+    return () => {
+        driversUnsub();
+        unsubDriver();
+    };
   }, [user]);
 
   useEffect(() => {
@@ -112,14 +122,16 @@ export function DriverDashboard() {
             cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
         } as Ride));
         
-        if (prevRidesRef.current.length > 0 && newRides.length > prevRidesRef.current.length) {
-            const assignedRide = newRides.find(nr => !prevRidesRef.current.some(pr => pr.id === nr.id) && nr.status === 'assigned');
-            if (assignedRide) {
-                sendBrowserNotification(
-                    "New ride assigned!", 
-                    `Pickup at: ${assignedRide.pickup.name}`
-                );
-            }
+        const newlyAssignedRide = newRides.find(nr => 
+            nr.status === 'assigned' &&
+            !prevRidesRef.current.some(pr => pr.id === nr.id)
+        );
+
+        if (newlyAssignedRide) {
+            sendBrowserNotification(
+                "New ride assigned!", 
+                `Pickup at: ${newlyAssignedRide.pickup.name}`
+            );
         }
         setRides(newRides);
     });
@@ -136,19 +148,22 @@ export function DriverDashboard() {
         timestamp: toDate(doc.data().timestamp),
       } as Message));
 
-      if (prevMessagesRef.current.length > 0 && allMessages.length > prevMessagesRef.current.length) {
-          const lastMessage = allMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
-          if (lastMessage && lastMessage.recipientId === currentDriver.id) {
-              const senderIsDispatcher = lastMessage.senderId === DISPATCHER_ID;
-              const sender = senderIsDispatcher 
-                  ? dispatcherUser 
-                  : allDrivers.find(d => d.id === lastMessage.senderId);
+      const newIncomingMessages = allMessages.filter(m => 
+          m.recipientId === currentDriver.id && 
+          !prevMessagesRef.current.some(pm => pm.id === m.id)
+      );
 
-              sendBrowserNotification(
-                  `New message from ${formatUserName(sender?.name || 'User')}`,
-                  lastMessage.text || "Sent an image or audio"
-              );
-          }
+      if (newIncomingMessages.length > 0) {
+          const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
+          const senderIsDispatcher = lastMessage.senderId === DISPATCHER_ID;
+          const sender = senderIsDispatcher 
+              ? dispatcherUser 
+              : allDrivers.find(d => d.id === lastMessage.senderId);
+
+          sendBrowserNotification(
+              `New message from ${formatUserName(sender?.name || 'User')}`,
+              lastMessage.text || "Sent an image or audio"
+          );
       }
       
       const sortedMessages = allMessages
@@ -192,17 +207,29 @@ export function DriverDashboard() {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
 
-  const getUnreadCount = (participantId: string) => {
-    if (!currentDriver) return 0;
-    const threadId = getThreadIds(currentDriver.id, participantId);
-    return messages.filter(m => m.threadId?.join() === threadId.join() && m.recipientId === currentDriver.id && !m.isRead).length;
-  }
-  
-  const totalUnread = useMemo(() => {
-    if(!currentDriver) return 0;
-    return messages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
-  }, [messages, currentDriver]);
+  const { p2pMessages, dispatchMessages } = useMemo(() => {
+    const p2p: Message[] = [];
+    const dispatch: Message[] = [];
+    messages.forEach(m => {
+        if (!m.threadId) return;
+        if (m.threadId.includes(DISPATCHER_ID)) {
+            dispatch.push(m);
+        } else {
+            p2p.push(m);
+        }
+    });
+    return { p2pMessages: p2p, dispatchMessages: dispatch };
+  }, [messages]);
 
+  const unreadP2PCount = useMemo(() => {
+    if(!currentDriver) return 0;
+    return p2pMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
+  }, [p2pMessages, currentDriver]);
+
+  const unreadDispatchCount = useMemo(() => {
+    if(!currentDriver) return 0;
+    return dispatchMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
+  }, [dispatchMessages, currentDriver]);
   
   const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
     const rideToUpdate = rides.find(ride => ride.id === rideId);
@@ -250,6 +277,11 @@ export function DriverDashboard() {
   const handleSelectDriverToChat = (driver: Driver) => {
       setIsDriverListOpen(false);
       openChatWith(driver);
+  }
+  
+  const handleSelectDispatchToChat = () => {
+    setIsDriverListOpen(false);
+    openChatWith(dispatcherUser);
   }
 
   if (!currentDriver) {
@@ -337,21 +369,24 @@ export function DriverDashboard() {
           <Button
             variant="secondary"
             size="lg"
-            className="h-14 w-14 rounded-full shadow-lg p-0"
+            className="h-14 w-14 rounded-full shadow-lg p-0 relative"
             onClick={() => setIsDriverListOpen(true)}
           >
             <Users className="h-7 w-7" />
             <span className="sr-only">Chat with other drivers</span>
+            {unreadP2PCount > 0 && (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadP2PCount}</Badge>
+            )}
           </Button>
           <Button
             variant="default"
             size="lg"
-            className="h-16 w-16 rounded-full shadow-lg p-0"
+            className="h-16 w-16 rounded-full shadow-lg p-0 relative"
             onClick={() => openChatWith(dispatcherUser)}
           >
             <MessageCircle className="h-8 w-8" />
-            {totalUnread > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{totalUnread}</Badge>
+            {unreadDispatchCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadDispatchCount}</Badge>
             )}
             <span className="sr-only">Open Chat with Dispatch</span>
           </Button>
@@ -376,6 +411,7 @@ export function DriverDashboard() {
           <DriverChatListDialog 
             drivers={allDrivers.filter(d => d.id !== currentDriver.id)}
             onSelectDriver={handleSelectDriverToChat}
+            onSelectDispatch={handleSelectDispatchToChat}
             onClose={() => setIsDriverListOpen(false)}
           />
       )}
