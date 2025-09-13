@@ -1,17 +1,17 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
-import { Role, DISPATCHER_ID } from '@/lib/types';
+import { Role, DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { DragDropContext, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield, Briefcase } from 'lucide-react';
-import { cn, getThreadId } from '@/lib/utils';
+import { Truck, PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, LogOut, Shield, Briefcase, MessageSquare } from 'lucide-react';
+import { cn, getThreadId, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,6 +30,9 @@ import { StartShiftForm } from './start-shift-form';
 import { endShift } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
 import { sendBrowserNotification } from '@/lib/notifications';
+import { Badge } from './ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { ChatView } from './chat-view';
 
 
 function DispatchDashboardUI() {
@@ -41,6 +44,8 @@ function DispatchDashboardUI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
+  const [isInactiveChatOpen, setIsInactiveChatOpen] = useState(false);
+  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
@@ -119,27 +124,22 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
-    // Combined query for all messages relevant to the current dispatcher
+    // Combined query for all messages relevant to the current dispatcher (P2P and Shift channels)
     const messagesQuery = query(
       collection(db, "messages"),
-      where("threadId", "array-contains", user.uid),
-      orderBy("timestamp", "asc")
+      where("threadId", "array-contains", user.uid)
     );
-
-    // Query for all public shift-related messages
+    
     const shiftMessagesQuery = query(
-        collection(db, "messages"),
-        where("threadId", "array-contains", DISPATCHER_ID),
-        orderBy("timestamp", "asc")
+      collection(db, "messages"),
+      where("threadId", "array-contains", DISPATCHER_ID)
     );
-
 
     let p2pMessages: Message[] = [];
     let shiftMessages: Message[] = [];
 
     const mergeAndSetMessages = () => {
         const all = [...p2pMessages, ...shiftMessages];
-
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values())
             .filter(m => m.timestamp)
             .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
@@ -185,15 +185,47 @@ function DispatchDashboardUI() {
     };
   }, [user]);
   
-  const activeShifts = shifts
+  const activeShifts = useMemo(() => shifts
     .filter(s => s.status === 'active')
     .map(shift => {
         const driver = drivers.find(d => d.id === shift.driverId);
         const vehicle = vehicles.find(v => v.id === shift.vehicleId);
         return { ...shift, driver, vehicle };
     })
-    .filter(s => s.driver && s.vehicle);
+    .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
+
+  const p2pMessages = useMemo(() => messages.filter(m => m.threadId.includes(user?.uid ?? '') && !m.threadId.includes(DISPATCHER_ID)), [messages, user]);
+  const shiftChannelMessages = useMemo(() => messages.filter(m => m.threadId.includes(DISPATCHER_ID)), [messages]);
+
+  const inactiveDriverMsgs = useMemo(() => {
+    if (!user) return { count: 0, drivers: [] };
+    const activeDriverIds = new Set(activeShifts.map(s => s.driverId));
+    const unreadP2PMessages = p2pMessages.filter(m => m.recipientId === user.uid && !m.isRead);
+
+    const unreadByDriver: Record<string, number> = {};
     
+    unreadP2PMessages.forEach(msg => {
+      if (!activeDriverIds.has(msg.senderId)) {
+        unreadByDriver[msg.senderId] = (unreadByDriver[msg.senderId] || 0) + 1;
+      }
+    });
+
+    const driverDetails = Object.keys(unreadByDriver).map(driverId => {
+        const driver = allUsers.find(u => u.id === driverId);
+        return {
+            id: driverId,
+            name: driver?.displayName || 'Unknown Driver',
+            unreadCount: unreadByDriver[driverId],
+            photoURL: driver?.photoURL
+        };
+    });
+
+    return {
+      count: Object.keys(unreadByDriver).length,
+      drivers: driverDetails,
+    }
+  }, [p2pMessages, activeShifts, user, allUsers]);
+
   
   const allPendingRides = rides.filter(r => r.status === 'pending');
   
@@ -412,14 +444,35 @@ function DispatchDashboardUI() {
     if (!db || !user) return;
     
     const batch = writeBatch(db);
-    
-    const unreadP2P = messages.filter(m => m.recipientId === user.uid && m.senderId === participantId && !m.isRead);
+    const threadId = getThreadId(user.uid, participantId);
+    const unreadP2P = p2pMessages.filter(m => getThreadId(m.senderId, m.recipientId) === threadId && m.recipientId === user.uid && !m.isRead);
+
     unreadP2P.forEach(message => {
         batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
 
     await batch.commit();
   };
+
+  const openChatWith = (contactId: string) => {
+    setCurrentThreadId(contactId);
+    handleMarkMessagesAsRead(contactId);
+    setIsInactiveChatOpen(false);
+  };
+
+  const currentParticipant = useMemo(() => {
+    if (!currentThreadId) return null;
+     const contact = allUsers.find(c => c.id === currentThreadId);
+     if (!contact) return null;
+     return {
+          id: contact.id,
+          uid: contact.id,
+          name: contact.name,
+          displayName: contact.displayName,
+          photoURL: contact.photoURL,
+          email: contact.email
+     } as AppUser
+  }, [allUsers, currentThreadId]);
 
 
   const handleEndShift = async (shift: Shift) => {
@@ -432,9 +485,6 @@ function DispatchDashboardUI() {
   }
   
   const canAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
-  
-  const p2pMessages = messages.filter(m => m.threadId.includes(user?.uid ?? ''));
-  const shiftMessages = messages.filter(m => m.threadId.includes(DISPATCHER_ID));
 
   const renderDesktopView = () => {
     return (
@@ -588,7 +638,7 @@ function DispatchDashboardUI() {
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
               allShifts={activeShifts}
               allDrivers={drivers}
-              messages={shiftMessages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
+              messages={shiftChannelMessages.filter(m => getThreadId(m.senderId, m.recipientId) === getThreadId(shift.driverId, DISPATCHER_ID))}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
@@ -674,7 +724,7 @@ function DispatchDashboardUI() {
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                             allShifts={activeShifts}
                             allDrivers={drivers}
-                            messages={shiftMessages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
+                            messages={shiftChannelMessages.filter(m => getThreadId(m.senderId, m.recipientId) === getThreadId(shift.driverId, DISPATCHER_ID))}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
@@ -725,6 +775,13 @@ function DispatchDashboardUI() {
             >
                 <StartShiftForm onFormSubmit={() => setIsShiftFormOpen(false)} />
             </ResponsiveDialog>
+            {inactiveDriverMsgs.count > 0 && (
+                <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={() => setIsInactiveChatOpen(true)}>
+                    <MessageSquare />
+                    Inactive Chats
+                    <Badge variant="destructive" className="ml-2">{inactiveDriverMsgs.count}</Badge>
+                </Button>
+            )}
         </div>
         <div className="ml-auto items-center gap-2 hidden md:flex">
              <TooltipProvider>
@@ -793,6 +850,45 @@ function DispatchDashboardUI() {
           }}
           onChangeStatus={handleChangeStatus}
         />
+
+        <ResponsiveDialog
+            open={isInactiveChatOpen}
+            onOpenChange={setIsInactiveChatOpen}
+            title="Inactive Driver Messages"
+        >
+            <div className="p-4 space-y-2">
+                {inactiveDriverMsgs.drivers.map(driver => (
+                    <Button 
+                        key={driver.id} 
+                        variant="ghost" 
+                        className="w-full justify-start h-12"
+                        onClick={() => openChatWith(driver.id)}
+                    >
+                        <Avatar className="h-8 w-8 mr-3">
+                            <AvatarImage src={driver.photoURL ?? `https://i.pravatar.cc/40?u=${driver.id}`} />
+                            <AvatarFallback>{driver.name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <span className="flex-1 text-left">{formatUserName(driver.name)}</span>
+                        <Badge>{driver.unreadCount}</Badge>
+                    </Button>
+                ))}
+            </div>
+        </ResponsiveDialog>
+
+        {currentParticipant && user && (
+            <ResponsiveDialog
+                open={!!currentThreadId}
+                onOpenChange={(isOpen) => !isOpen && setCurrentThreadId(null)}
+                title={`Chat with ${formatUserName(currentParticipant.name || '')}`}
+            >
+                <ChatView
+                    participant={currentParticipant}
+                    messages={p2pMessages.filter(m => getThreadId(m.senderId, m.recipientId) === getThreadId(user.uid, currentParticipant.id))}
+                    allDrivers={drivers}
+                    onSendMessage={handleSendMessage}
+                />
+            </ResponsiveDialog>
+        )}
     </div>
   );
 }

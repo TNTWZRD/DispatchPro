@@ -61,7 +61,7 @@ function ChatList({ allUsers, allDrivers, messages, onSendMessage, onMarkMessage
     const getUnreadCount = (contactId: string) => {
         if (!user) return 0;
         const threadId = getThreadId(user.uid, contactId);
-        return messages.filter(m => m.threadId === threadId && m.recipientId === user.uid && !m.isRead).length;
+        return messages.filter(m => getThreadId(m.senderId, m.recipientId) === threadId && m.recipientId === user.uid && !m.isRead).length;
     };
     
     const openChat = (contactId: string) => {
@@ -128,12 +128,11 @@ function ChatList({ allUsers, allDrivers, messages, onSendMessage, onMarkMessage
                 <ResponsiveDialog
                     open={!!currentThreadId}
                     onOpenChange={(isOpen) => !isOpen && setCurrentThreadId(null)}
-                    title={`Chat with ${formatUserName(currentParticipant.name)}`}
+                    title={`Chat with ${formatUserName(currentParticipant.name || '')}`}
                 >
                     <ChatView
-                        threadId={getThreadId(user.uid, currentParticipant.id)}
                         participant={currentParticipant}
-                        messages={messages.filter(m => m.threadId === getThreadId(user.uid, currentParticipant.id))}
+                        messages={messages.filter(m => getThreadId(m.senderId, m.recipientId) === getThreadId(user.uid, currentParticipant.id))}
                         allDrivers={allDrivers}
                         onSendMessage={onSendMessage}
                     />
@@ -162,8 +161,7 @@ export function Sidebar({ rides, drivers, allUsers, messages, onAssignSuggestion
   if (isMobile || !user) return null;
 
   const onShiftDrivers = drivers.filter(d => d.status === 'on-shift');
-  const p2pMessages = messages.filter(m => !m.threadId.includes(DISPATCHER_ID));
-
+  
   return (
     <Collapsible
       open={isOpen}
@@ -182,7 +180,7 @@ export function Sidebar({ rides, drivers, allUsers, messages, onAssignSuggestion
             <ChatList 
                 allUsers={allUsers}
                 allDrivers={drivers}
-                messages={p2pMessages} 
+                messages={messages} 
                 onSendMessage={onSendMessage} 
                 onMarkMessagesAsRead={onMarkMessagesAsRead} 
             />
