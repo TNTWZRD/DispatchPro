@@ -226,16 +226,19 @@ function DispatchDashboardUI() {
     p2pMessages.forEach(msg => {
       if (msg.recipientId === user.uid && !msg.isRead) {
         const contactId = msg.senderId;
-        if (contactId === DISPATCHER_ID) {
-          dispatchUnreadCount++;
-        } else {
-          const contact = contactsMap.get(contactId);
-          if (contact) {
+        const contact = contactsMap.get(contactId);
+        if (contact) {
             contact.privateUnread += 1;
-          }
+        }
+      } else if (msg.recipientId === DISPATCHER_ID && msg.senderId !== user.uid && !msg.isRead) {
+        // Message is to the dispatch channel, from another user, and unread
+        const isSelfInThread = msg.threadId.includes(user.uid);
+        if (isSelfInThread) {
+          dispatchUnreadCount++;
         }
       }
     });
+
 
     shiftChannelMessages.forEach(msg => {
       const contactId = msg.senderId === user.uid ? msg.recipientId : msg.senderId;
@@ -1047,6 +1050,7 @@ export function DispatchDashboard() {
 }
 
     
+
 
 
 
