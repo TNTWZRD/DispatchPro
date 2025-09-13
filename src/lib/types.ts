@@ -122,7 +122,7 @@ export type Ride = {
 
 export type Message = {
   id: string;
-  threadId: string; // Uniquely identifies a conversation between two users (e.g., uid1-uid2)
+  threadId: string[]; // Array containing the two participant IDs
   sender: 'driver' | 'dispatcher';
   senderId: string;
   recipientId: string;

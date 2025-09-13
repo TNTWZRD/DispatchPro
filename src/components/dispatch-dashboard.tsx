@@ -119,37 +119,30 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
-    // P2P messages for the logged-in dispatcher
-    const receivedP2PQuery = query(collection(db, 'messages'), where('recipientId', '==', user.uid), orderBy('timestamp', 'asc'));
-    const sentP2PQuery = query(collection(db, 'messages'), where('senderId', '==', user.uid), orderBy('timestamp', 'asc'));
-
-    // Shift messages for any dispatcher
-    const shiftMessagesReceivedQuery = query(
+    // Combined query for all messages relevant to the current dispatcher
+    const messagesQuery = query(
       collection(db, "messages"),
-      where("recipientId", "==", DISPATCHER_ID),
-      orderBy("timestamp", "asc")
-    );
-     const shiftMessagesSentQuery = query(
-      collection(db, "messages"),
-      where("sender", "==", 'dispatcher'),
-      where('threadId', 'not-in', [user.uid]), // A guess to separate p2p from shift
+      where("threadId", "array-contains", user.uid),
       orderBy("timestamp", "asc")
     );
 
+    // Query for all public shift-related messages
+    const shiftMessagesQuery = query(
+        collection(db, "messages"),
+        where("threadId", "array-contains", DISPATCHER_ID),
+        orderBy("timestamp", "asc")
+    );
 
-    let receivedP2PMessages: Message[] = [];
-    let sentP2PMessages: Message[] = [];
-    let receivedShiftMessages: Message[] = [];
-    let sentShiftMessages: Message[] = [];
+
+    let p2pMessages: Message[] = [];
+    let shiftMessages: Message[] = [];
 
     const mergeAndSetMessages = () => {
-        const p2p = [...receivedP2PMessages, ...sentP2PMessages];
-        const shift = [...receivedShiftMessages, ...sentShiftMessages];
-        const all = [...p2p, ...shift];
+        const all = [...p2pMessages, ...shiftMessages];
 
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values())
             .filter(m => m.timestamp)
-            .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+            .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
         
         const incomingMessages = uniqueMessages.filter(m => m.recipientId === user.uid || m.recipientId === DISPATCHER_ID);
         const prevIncomingMessages = prevMessagesRef.current.filter(m => m.recipientId === user.uid || m.recipientId === DISPATCHER_ID);
@@ -167,34 +160,19 @@ function DispatchDashboardUI() {
         setMessages(uniqueMessages);
     }
     
-    const unsubP2PReceived = onSnapshot(receivedP2PQuery, (snapshot) => {
-        receivedP2PMessages = snapshot.docs.map(doc => ({
+    const unsubP2P = onSnapshot(messagesQuery, (snapshot) => {
+        p2pMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
         } as Message));
         mergeAndSetMessages();
     });
     
-    const unsubP2PSent = onSnapshot(sentP2PQuery, (snapshot) => {
-        sentP2PMessages = snapshot.docs.map(doc => ({
+    const unsubShifts = onSnapshot(shiftMessagesQuery, (snapshot) => {
+        shiftMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
         } as Message));
         mergeAndSetMessages();
     });
-
-    const unsubShiftReceived = onSnapshot(shiftMessagesReceivedQuery, (snapshot) => {
-        receivedShiftMessages = snapshot.docs.map(doc => ({
-            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
-        } as Message));
-        mergeAndSetMessages();
-    });
-
-    const unsubShiftSent = onSnapshot(shiftMessagesSentQuery, (snapshot) => {
-        sentShiftMessages = snapshot.docs.map(doc => ({
-            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
-        } as Message));
-        mergeAndSetMessages();
-    });
-
 
     return () => {
         ridesUnsub();
@@ -202,10 +180,8 @@ function DispatchDashboardUI() {
         usersUnsub();
         vehiclesUnsub();
         shiftsUnsub();
-        unsubP2PReceived();
-        unsubP2PSent();
-        unsubShiftReceived();
-        unsubShiftSent();
+        unsubP2P();
+        unsubShifts();
     };
   }, [user]);
   
@@ -437,9 +413,7 @@ function DispatchDashboardUI() {
     
     const batch = writeBatch(db);
     
-    // Mark P2P messages as read
-    const p2pThreadId = getThreadId(user.uid, participantId);
-    const unreadP2P = messages.filter(m => m.threadId === p2pThreadId && m.recipientId === user.uid && !m.isRead);
+    const unreadP2P = messages.filter(m => m.recipientId === user.uid && m.senderId === participantId && !m.isRead);
     unreadP2P.forEach(message => {
         batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
@@ -458,6 +432,9 @@ function DispatchDashboardUI() {
   }
   
   const canAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
+  
+  const p2pMessages = messages.filter(m => m.threadId.includes(user?.uid ?? ''));
+  const shiftMessages = messages.filter(m => m.threadId.includes(DISPATCHER_ID));
 
   const renderDesktopView = () => {
     return (
@@ -611,7 +588,7 @@ function DispatchDashboardUI() {
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
               allShifts={activeShifts}
               allDrivers={drivers}
-              messages={messages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
+              messages={shiftMessages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
@@ -619,7 +596,7 @@ function DispatchDashboardUI() {
               onEditRide={handleOpenEdit}
               onUnscheduleRide={handleUnscheduleRide}
               onSendMessage={handleSendMessage}
-              onMarkMessagesAsRead={handleMarkMessagesAsRead}
+              onMarkMessagesAsRead={() => { /* Not needed for public channel */}}
               onEndShift={handleEndShift}
               className="w-full lg:w-[350px] xl:w-[400px]"
             />
@@ -697,7 +674,7 @@ function DispatchDashboardUI() {
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                             allShifts={activeShifts}
                             allDrivers={drivers}
-                            messages={messages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
+                            messages={shiftMessages.filter(m => m.threadId === getThreadId(DISPATCHER_ID, shift.driverId))}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
@@ -705,7 +682,7 @@ function DispatchDashboardUI() {
                             onEditRide={handleOpenEdit}
                             onUnscheduleRide={handleUnscheduleRide}
                             onSendMessage={handleSendMessage}
-                            onMarkMessagesAsRead={handleMarkMessagesAsRead}
+                            onMarkMessagesAsRead={() => {/* Not needed */}}
                             onEndShift={handleEndShift}
                           />
                       </div>
@@ -788,7 +765,7 @@ function DispatchDashboardUI() {
             rides={rides} 
             drivers={drivers}
             allUsers={allUsers}
-            messages={messages}
+            messages={p2pMessages}
             onAssignSuggestion={handleAssignDriver}
             onSendMessage={handleSendMessage}
             onMarkMessagesAsRead={handleMarkMessagesAsRead}

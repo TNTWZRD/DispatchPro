@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, CornerUpLeft, MessageSquare } from 'lucide-react';
-import { cn, formatUserName, getThreadId } from '@/lib/utils';
+import { cn, formatUserName, getThreadIds } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -23,14 +23,13 @@ import { Label } from './ui/label';
 
 
 type ChatViewProps = {
-  threadId: string;
   participant: Driver | AppUser;
   messages: Message[];
   allDrivers: Driver[];
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
 };
 
-export function ChatView({ threadId, participant, messages, allDrivers, onSendMessage }: ChatViewProps) {
+export function ChatView({ participant, messages, allDrivers, onSendMessage }: ChatViewProps) {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -57,7 +56,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
   const handleSendMessage = () => {
     if (text.trim() && user) {
       onSendMessage({ 
-        threadId: threadId,
+        threadId: getThreadIds(user.uid, participant.id),
         sender: senderType,
         senderId: user.uid, 
         recipientId: participant.id,
@@ -74,7 +73,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
       const reader = new FileReader();
       reader.onloadend = () => {
         onSendMessage({ 
-            threadId: threadId,
+            threadId: getThreadIds(user.uid, participant.id),
             sender: senderType,
             senderId: user.uid,
             recipientId: participant.id,
@@ -104,7 +103,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
             try {
                 const result = await processChatMessage({ audioDataUri });
                 onSendMessage({ 
-                    threadId: threadId,
+                    threadId: getThreadIds(user.uid, participant.id),
                     sender: senderType,
                     senderId: user.uid,
                     recipientId: participant.id,

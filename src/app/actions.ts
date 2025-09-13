@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import type { Message } from '@/lib/types';
+import { getThreadIds } from '@/lib/utils';
 
 export async function deleteMessage(messageId: string) {
     try {
@@ -25,11 +26,10 @@ export async function forwardMessage(message: Message, recipientId: string, send
 
         const newMessage: Omit<Message, 'id'> = {
             ...originalMessage,
-            // The driverId now acts as the "threadId", linking the conversation
-            // between the original sender and the new recipient.
-            driverId: originalMessage.sender === 'dispatcher' ? recipientId : originalMessage.driverId,
-            recipientId: originalMessage.sender === 'dispatcher' ? originalMessage.driverId : recipientId,
+            threadId: getThreadIds(senderId, recipientId),
+            recipientId: recipientId,
             senderId: senderId,
+            sender: originalMessage.sender, // Keep original sender type
             timestamp: serverTimestamp() as any,
             isRead: false,
             forwardedFrom: originalMessage.senderId || originalMessage.sender,

@@ -17,3 +17,7 @@ export function formatUserName(name: string) {
 export const getThreadId = (uid1: string, uid2: string) => {
     return [uid1, uid2].sort().join('-');
 }
+
+export const getThreadIds = (uid1: string, uid2: string): string[] => {
+  return [uid1, uid2].sort();
+}
