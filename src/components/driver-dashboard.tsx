@@ -98,33 +98,55 @@ export function DriverDashboard() {
         setRides(newRides);
     });
 
-    const messagesQuery = query(
+    const messagesReceivedQuery = query(
       collection(db, "messages"),
       where("recipientId", "==", currentDriver.id),
       orderBy("timestamp", "asc")
     );
-    const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-        const newMessages = snapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-            timestamp: toDate(doc.data().timestamp),
-        } as Message));
+    const messagesSentQuery = query(
+      collection(db, "messages"),
+      where("senderId", "==", currentDriver.id),
+      orderBy("timestamp", "asc")
+    );
 
-        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage.sender === 'dispatcher') {
+    let receivedMessages: Message[] = [];
+    let sentMessages: Message[] = [];
+
+    const mergeAndSetMessages = () => {
+        const all = [...receivedMessages, ...sentMessages];
+        const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
+        uniqueMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        if (prevMessagesRef.current.length > 0 && uniqueMessages.length > prevMessagesRef.current.length) {
+            const lastMessage = uniqueMessages[uniqueMessages.length - 1];
+            if (lastMessage && lastMessage.sender === 'dispatcher') {
                 sendBrowserNotification(
                     "New message from Dispatch",
                     lastMessage.text || "Sent an image or audio"
                 );
             }
         }
-        setMessages(newMessages);
+        setMessages(uniqueMessages);
+    }
+    
+    const unsubReceived = onSnapshot(messagesReceivedQuery, (snapshot) => {
+        receivedMessages = snapshot.docs.map(doc => ({
+            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
+        } as Message));
+        mergeAndSetMessages();
+    });
+
+    const unsubSent = onSnapshot(messagesSentQuery, (snapshot) => {
+        sentMessages = snapshot.docs.map(doc => ({
+            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
+        } as Message));
+        mergeAndSetMessages();
     });
 
     return () => {
         ridesUnsub();
-        messagesUnsub();
+        unsubReceived();
+        unsubSent();
     }
   }, [currentDriver]);
 
@@ -165,11 +187,10 @@ export function DriverDashboard() {
 
   const driverMessages = useMemo(() => {
     if (!currentDriver) return [];
-    return messages.filter(m => 
-        (m.senderId === currentDriver.id && m.recipientId === dispatcherUser.id) ||
-        (m.senderId === dispatcherUser.id && m.recipientId === currentDriver.id)
-    );
-  }, [messages, currentDriver, dispatcherUser.id]);
+    // The driver-dashboard only cares about the conversation with the dispatcher.
+    // The driverId on the message acts as the threadId.
+    return messages.filter(m => m.driverId === currentDriver.id);
+  }, [messages, currentDriver]);
 
 
   const unreadMessagesCount = useMemo(() => {

@@ -9,7 +9,7 @@ import { Mic, StopCircle, Loader2, AlertTriangle, Command, X } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { DialogTrigger } from './ui/dialog';
+import { DialogDescription, DialogTrigger } from './ui/dialog';
 import { ResponsiveDialog } from './responsive-dialog';
 
 type VoiceControlProps = {
@@ -242,10 +242,13 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
           </div>
         ) : (
           <div className="py-4">
+            <DialogDescription>
+              Press the button to record a command or log a new call from a passenger.
+            </DialogDescription>
             <Button
               onClick={isRecording ? handleStopRecording : handleStartRecording}
               disabled={isProcessing}
-              className={cn("w-full h-24 text-lg", isRecording && "bg-red-600 hover:bg-red-700")}
+              className={cn("w-full h-24 text-lg mt-4", isRecording && "bg-red-600 hover:bg-red-700")}
             >
               {isProcessing ? (
                 <Loader2 className="mr-2 h-6 w-6 animate-spin" />

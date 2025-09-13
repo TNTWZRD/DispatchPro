@@ -106,25 +106,26 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
-    // Listen for messages where the dispatcher is the recipient OR the sender
-    const messagesQuery = query(
+    const messagesReceivedQuery = query(
       collection(db, "messages"),
-      or(
-        where("recipientId", "==", user.uid),
-        where("senderId", "==", user.uid)
-      ),
+      where("recipientId", "==", user.uid),
       orderBy("timestamp", "asc")
     );
-    
-    const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
-        const newMessages = snapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-            timestamp: toDate(doc.data().timestamp),
-        } as Message));
+    const messagesSentQuery = query(
+      collection(db, "messages"),
+      where("senderId", "==", user.uid),
+      orderBy("timestamp", "asc")
+    );
+
+    let receivedMessages: Message[] = [];
+    let sentMessages: Message[] = [];
+
+    const mergeAndSetMessages = () => {
+        const all = [...receivedMessages, ...sentMessages];
+        const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
+        uniqueMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
         
-        // Notify only for incoming messages
-        const incomingMessages = newMessages.filter(m => m.recipientId === user.uid);
+        const incomingMessages = uniqueMessages.filter(m => m.recipientId === user.uid);
         const prevIncomingMessages = prevMessagesRef.current.filter(m => m.recipientId === user.uid);
 
         if (prevMessagesRef.current.length > 0 && incomingMessages.length > prevIncomingMessages.length) {
@@ -137,7 +138,21 @@ function DispatchDashboardUI() {
                 );
             }
         }
-        setMessages(newMessages);
+        setMessages(uniqueMessages);
+    }
+    
+    const unsubReceived = onSnapshot(messagesReceivedQuery, (snapshot) => {
+        receivedMessages = snapshot.docs.map(doc => ({
+            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
+        } as Message));
+        mergeAndSetMessages();
+    });
+
+    const unsubSent = onSnapshot(messagesSentQuery, (snapshot) => {
+        sentMessages = snapshot.docs.map(doc => ({
+            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
+        } as Message));
+        mergeAndSetMessages();
     });
 
 
@@ -146,7 +161,8 @@ function DispatchDashboardUI() {
         driversUnsub();
         vehiclesUnsub();
         shiftsUnsub();
-        messagesUnsub();
+        unsubReceived();
+        unsubSent();
     };
   }, [user, drivers]);
   
