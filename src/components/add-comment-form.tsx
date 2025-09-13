@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { useActionState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { addTicketComment } from '@/app/admin/actions';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
