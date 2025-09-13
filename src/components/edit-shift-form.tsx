@@ -19,7 +19,7 @@ import {
 import { Loader2, Save, Briefcase } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, or } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, or, and } from 'firebase/firestore';
 import type { Shift, Vehicle, Driver } from '@/lib/types';
 import { formatUserName } from '@/lib/utils';
 
@@ -56,12 +56,14 @@ export function EditShiftForm({ shift, driver, isOpen, onOpenChange }: EditShift
   useEffect(() => {
     if (!shift) return;
     const vehiclesQuery = query(
-        collection(db, 'vehicles'), 
+      collection(db, 'vehicles'),
+      and(
         where('status', '==', 'active'),
         or(
           where('currentShiftId', '==', null),
           where('currentShiftId', '==', shift.id)
         )
+      )
     );
     const unsubVehicles = onSnapshot(vehiclesQuery, snapshot => {
         setAvailableVehicles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle)));
