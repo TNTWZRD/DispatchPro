@@ -180,7 +180,7 @@ function DispatchDashboardUI() {
     const shift: Message[] = [];
     messages.forEach(m => {
         if (!m.threadId) return;
-        // P2P messages (including internal dispatch log) have exactly 2 participants
+        // P2P messages have exactly 2 participants
         if (m.threadId.length === 2) {
             p2p.push(m);
         } else {
@@ -226,13 +226,15 @@ function DispatchDashboardUI() {
     let dispatchUnreadCount = 0;
 
     p2pMessages.forEach(msg => {
-        if (msg.isRead || msg.senderId === user.uid) return;
+        if (msg.isRead) return;
 
-        // Case 1: This is a message for the internal dispatch log, and I didn't send it.
+        // Case 1: Message for the internal dispatch log.
         if (msg.recipientId === DISPATCHER_ID) {
-            dispatchUnreadCount++;
+            if (msg.senderId !== user.uid) { // Don't count own messages as unread
+                 dispatchUnreadCount++;
+            }
         }
-        // Case 2: This is a standard P2P message for me.
+        // Case 2: Standard P2P message for me.
         else if (msg.recipientId === user.uid) {
             const contact = contactsMap.get(msg.senderId);
             if (contact) {
@@ -477,25 +479,28 @@ function DispatchDashboardUI() {
 
     const batch = writeBatch(db);
     let messagesToMark: Message[];
-    let unread: Message[];
 
     if (participantId === DISPATCHER_ID) {
-        messagesToMark = p2pMessages;
-        unread = messagesToMark.filter(m =>
+        messagesToMark = p2pMessages.filter(m =>
             m.recipientId === DISPATCHER_ID && !m.isRead && m.senderId !== user.uid
         );
+    } else if (isPublic) {
+        messagesToMark = shiftChannelMessages.filter(m =>
+            m.senderId === participantId && m.recipientId === user.uid && !m.isRead
+        );
     } else {
-        messagesToMark = isPublic ? shiftChannelMessages : p2pMessages;
-        unread = messagesToMark.filter(m =>
-            (m.senderId === participantId && m.recipientId === user.uid) && !m.isRead
+        messagesToMark = p2pMessages.filter(m =>
+            m.senderId === participantId && m.recipientId === user.uid && !m.isRead
         );
     }
 
-    unread.forEach(message => {
+    messagesToMark.forEach(message => {
         batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
 
-    await batch.commit();
+    if (messagesToMark.length > 0) {
+      await batch.commit();
+    }
   };
 
   const openPublicChatWith = (contact: AppUser) => {
@@ -1068,4 +1073,5 @@ export function DispatchDashboard() {
 
 
     
+
 
