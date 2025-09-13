@@ -26,7 +26,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, or, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, or, Timestamp, writeBatch, getDocs } from 'firebase/firestore';
 import { StartShiftForm } from './start-shift-form';
 import { endShift } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -126,7 +126,6 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
-    // For dispatchers, fetch all conversations involving them AND all conversations with the Dispatcher entity
     const messagesQuery = query(
       collection(db, "messages"),
       or(
@@ -138,9 +137,9 @@ function DispatchDashboardUI() {
     const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
         const allMessages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp) } as Message));
         
-        const newIncomingMessages = allMessages.filter(m => m.recipientId === user.uid && !m.isRead);
+        const newIncomingMessages = allMessages.filter(m => m.recipientId === user.uid && !m.isReadBy?.includes(user.uid));
         
-        if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isRead).length) {
+        if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isReadBy?.includes(user.uid)).length) {
             const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
             if (lastMessage) {
                 const sender = allUsers.find(u => u.id === lastMessage.senderId);
@@ -177,7 +176,7 @@ function DispatchDashboardUI() {
     })
     .filter(s => s.driver && s.vehicle), [shifts, drivers, vehicles]);
 
-  const { p2pMessages, dispatchLogMessages } = useMemo(() => {
+  const { p2pMessages, dispatchChannelMessages } = useMemo(() => {
     const p2p: Message[] = [];
     const dispatchLog: Message[] = [];
     messages.forEach(m => {
@@ -188,7 +187,7 @@ function DispatchDashboardUI() {
             p2p.push(m);
         }
     });
-    return { p2pMessages: p2p, dispatchLogMessages: dispatchLog };
+    return { p2pMessages: p2p, dispatchChannelMessages: dispatchLog };
   }, [messages]);
   
   const chatDirectory = useMemo(() => {
@@ -218,7 +217,7 @@ function DispatchDashboardUI() {
 
     // Calculate unread counts for P2P
     p2pMessages.forEach(msg => {
-        if (msg.isRead || msg.recipientId !== user.uid) return;
+        if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
         const contact = p2pContactsMap.get(msg.senderId);
         if (contact) {
             contact.unread++;
@@ -226,9 +225,8 @@ function DispatchDashboardUI() {
     });
 
     // Calculate unread for Dispatcher Logs
-    dispatchLogMessages.forEach(msg => {
-      // A message in the dispatch log is unread for the current dispatcher if they are not the sender
-      if (msg.isReadBy?.includes(user.uid) || msg.senderId === user.uid) return;
+    dispatchChannelMessages.forEach(msg => {
+      if (msg.isReadBy?.includes(user.uid)) return;
 
       const otherUserId = msg.threadId.find(id => id !== DISPATCHER_ID);
       if (!otherUserId) return;
@@ -254,7 +252,7 @@ function DispatchDashboardUI() {
     const totalUnread = p2pContacts.reduce((sum, c) => sum + c.unread, 0) + dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0);
 
     return { p2pContacts, dispatchLogContacts, totalUnread };
-  }, [p2pMessages, dispatchLogMessages, user, allUsers, drivers]);
+  }, [p2pMessages, dispatchChannelMessages, user, allUsers, drivers]);
 
 
   const allPendingRides = rides.filter(r => r.status === 'pending');
@@ -478,7 +476,7 @@ function DispatchDashboardUI() {
 
     if (isDispatchLog) {
         // This is a special case from the directory, find the actual thread participant
-        const otherUserId = currentChatTarget?.id; 
+        const otherUserId = (currentChatTarget as any)?.context?.id; 
         if (!otherUserId) return;
         const threadId = getThreadIds(otherUserId, DISPATCHER_ID);
         messagesToUpdateQuery = query(
@@ -509,7 +507,6 @@ function DispatchDashboardUI() {
 
   
   const openChatWith = (contact: AppUser, isDispatchLog: boolean = false) => {
-    // If it's a dispatch log, the participant is the dispatcher entity, but we store the other user for context
     const target = isDispatchLog ? { ...dispatcherUser, context: contact } : contact;
     setCurrentChatTarget(target as AppUser);
     handleMarkMessagesAsRead(target);
@@ -911,11 +908,25 @@ function DispatchDashboardUI() {
                  {chatDirectory.dispatchLogContacts.length > 0 && (
                      <>
                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
+                         <Button 
+                            variant="ghost" 
+                            className="w-full justify-start h-14"
+                            onClick={() => openChatWith(dispatcherUser, true)}
+                        >
+                            <Avatar className="h-10 w-10 mr-4">
+                                <AvatarFallback><MessageSquare /></AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left">
+                                <p>Internal Dispatch Log</p>
+                            </div>
+                            {chatDirectory.dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0) > 0 && 
+                                <Badge>{chatDirectory.dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0)}</Badge>}
+                        </Button>
                         {chatDirectory.dispatchLogContacts.map(({ user: contact, unread }) => (
                             <Button 
                                 key={contact.id} 
                                 variant="ghost" 
-                                className="w-full justify-start h-14"
+                                className="w-full justify-start h-14 pl-10"
                                 onClick={() => openChatWith(contact, true)}
                             >
                                 <Avatar className="h-10 w-10 mr-4">
@@ -976,7 +987,7 @@ function DispatchDashboardUI() {
                     participant={currentChatTarget}
                     messages={
                         currentChatTarget.id === DISPATCHER_ID
-                        ? dispatchLogMessages.filter(m => m.threadId.includes((currentChatTarget as any).context.id))
+                        ? dispatchChannelMessages.filter(m => m.threadId.includes((currentChatTarget as any).context.id))
                         : p2pMessages.filter(m => m.threadId.includes(user.uid) && m.threadId.includes(currentChatTarget.id))
                     }
                     allDrivers={drivers}
