@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -197,27 +196,22 @@ function DispatchDashboardUI() {
     const p2pContactsMap = new Map<string, { user: AppUser, unread: number }>();
     const dispatchLogContactsMap = new Map<string, { user: AppUser, unread: number }>();
 
-    allUsers.forEach(u => {
+    // Initialize all users and drivers as potential contacts
+    const allPossibleContacts = [...allUsers, ...drivers.filter(d => !allUsers.some(u => u.id === d.id))];
+    const uniqueContacts = Array.from(new Map(allPossibleContacts.map(item => [item.id, item])).values());
+
+    uniqueContacts.forEach(u => {
         if (u.id === user.uid || u.id === DISPATCHER_ID) return;
         const driverInfo = drivers.find(d => d.id === u.id);
         const contactUser = { ...u, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
         p2pContactsMap.set(u.id, { user: contactUser, unread: 0 });
     });
-     drivers.forEach(d => {
-        if (d.id === user.uid) return;
-        if (!p2pContactsMap.has(d.id)) {
-            const contactUser = {
-                id: d.id, uid: d.id, name: d.name, displayName: d.name, status: d.status,
-                photoURL: `https://i.pravatar.cc/40?u=${d.id}`
-            } as AppUser & { status: Driver['status']};
-             p2pContactsMap.set(d.id, { user: contactUser, unread: 0 });
-        }
-    });
 
 
     p2pMessages.forEach(msg => {
         if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
-        const contact = p2pContactsMap.get(msg.senderId);
+        const contactId = msg.senderId;
+        const contact = p2pContactsMap.get(contactId);
         if (contact) {
             contact.unread++;
         }
@@ -231,7 +225,7 @@ function DispatchDashboardUI() {
       
       let contactEntry = dispatchLogContactsMap.get(otherUserId);
       if (!contactEntry) {
-          const contactUser = allUsers.find(u => u.id === otherUserId) || drivers.find(d => d.id === otherUserId);
+          const contactUser = uniqueContacts.find(u => u.id === otherUserId);
           if (contactUser) {
               const driverInfo = drivers.find(d => d.id === contactUser.id);
               const fullContactUser = {...contactUser, status: driverInfo?.status || 'offline' } as AppUser & {status: Driver['status']}
@@ -471,23 +465,25 @@ function DispatchDashboardUI() {
  const handleMarkMessagesAsRead = async (participant: AppUser) => {
     if (!db || !user) return;
     
-    const isDispatchLog = participant.id === DISPATCHER_ID;
+    const isDispatchLog = (participant as any).context;
     let messagesToUpdateQuery;
 
     if (isDispatchLog) {
         // This is a special case from the directory, find the actual thread participant
-        const otherUserId = (currentChatTarget as any)?.context?.id; 
+        const otherUserId = (participant as any).context.id; 
         if (!otherUserId) return;
         const threadId = getThreadIds(otherUserId, DISPATCHER_ID);
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
-            where('threadId', '==', threadId)
+            where('threadId', '==', threadId),
+            where('recipientId', '==', DISPATCHER_ID)
         );
     } else {
         const threadId = getThreadIds(user.uid, participant.id);
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
-            where('threadId', '==', threadId)
+            where('threadId', '==', threadId),
+            where('recipientId', '==', user.uid)
         );
     }
 
@@ -707,7 +703,7 @@ function DispatchDashboardUI() {
           <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
           {hasScheduledRides && <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>}
           {activeShifts.map(shift => (
-            <TabsTrigger key={shift.id} value={shift.id}>{shift.driver?.name.split(' ')[0]}</TabsTrigger>
+            <TabsTrigger key={shift.id} value={shift.id}>{shift.driver.name.split(' ')[0]}</TabsTrigger>
           ))}
         </TabsList>
         
@@ -917,7 +913,7 @@ function DispatchDashboardUI() {
                             >
                                 <Avatar className="h-10 w-10 mr-4">
                                     <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                    <AvatarFallback>{(contact.name || contact.email || 'U')[0]}</AvatarFallback>
+                                    <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 text-left">
                                     <p>{formatUserName(contact.name, contact.email)}</p>
@@ -946,7 +942,7 @@ function DispatchDashboardUI() {
                             >
                                 <Avatar className="h-10 w-10 mr-4">
                                     <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                    <AvatarFallback>{(contact.name || contact.email || 'U')[0]}</AvatarFallback>
+                                    <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 text-left">
                                     <p>{formatUserName(contact.name, contact.email)}</p>
@@ -967,7 +963,11 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
+                title={`Chat with ${
+                    (currentChatTarget as any).context
+                        ? formatUserName((currentChatTarget as any).context.name, (currentChatTarget as any).context.email)
+                        : formatUserName(currentChatTarget.name, currentChatTarget.email)
+                }`}
             >
                 <ChatView
                     participant={currentChatTarget}
@@ -1000,3 +1000,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
