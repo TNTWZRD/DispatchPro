@@ -21,6 +21,7 @@ import { formatUserName, getThreadIds } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { toggleStarMessage } from '@/app/actions';
 
 
 function DriverChatListDialog({ drivers, onSelectDriver, onSelectDispatch, onClose }: { drivers: Driver[], onSelectDriver: (driver: Driver) => void, onSelectDispatch: () => void, onClose: () => void }) {
