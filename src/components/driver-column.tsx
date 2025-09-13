@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
 import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff, MessageSquare } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { toggleStarMessage } from '@/app/actions';
 
 
 type DriverColumnProps = {
@@ -26,6 +27,7 @@ type DriverColumnProps = {
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
   onUnscheduleRide: (rideId: string) => void;
+  onToggleStar: typeof toggleStarMessage;
   onEndShift: (shift: Shift) => void;
   onOpenChat?: () => void;
   className?: string;
@@ -49,6 +51,7 @@ export function DriverColumn({
     onUnassignDriver, 
     onEditRide, 
     onUnscheduleRide, 
+    onToggleStar,
     onEndShift,
     onOpenChat,
     className
@@ -137,6 +140,7 @@ export function DriverColumn({
               onUnassignDriver={onUnassignDriver}
               onEdit={onEditRide}
               onUnschedule={onUnscheduleRide}
+              onToggleStar={onToggleStar}
             />
           ))
         )}
@@ -159,6 +163,7 @@ export function DriverColumn({
                   onUnassignDriver={onUnassignDriver}
                   onEdit={onEditRide}
                   onUnschedule={onUnscheduleRide}
+                  onToggleStar={onToggleStar}
                 />
               ))}
             </div>

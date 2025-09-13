@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -29,12 +29,14 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, or, Timestamp, writeBatch, getDocs } from 'firebase/firestore';
 import { StartShiftForm } from './start-shift-form';
 import { endShift } from '@/app/admin/actions';
+import { toggleStarMessage } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { sendBrowserNotification } from '@/lib/notifications';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ChatView } from './chat-view';
 import { Separator } from './ui/separator';
+import { format, formatDistanceToNowStrict } from 'date-fns';
 
 
 function DispatchDashboardUI() {
@@ -199,7 +201,7 @@ function DispatchDashboardUI() {
  const chatDirectory = useMemo(() => {
     if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
     
-    type ContactEntry = { user: AppUser, unread: number, lastMessage?: Date };
+    type ContactEntry = { user: AppUser, unread: number, hasStarred: boolean, lastMessage?: Message };
     const p2pContactsMap = new Map<string, ContactEntry>();
     const dispatchLogContactsMap = new Map<string, ContactEntry>();
     
@@ -219,7 +221,7 @@ function DispatchDashboardUI() {
         if (contactUser) {
            const driverInfo = drivers.find(d => d.id === contactId);
            const fullContactUser = { ...contactUser, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
-           p2pContactsMap.set(contactId, { user: fullContactUser, unread: 0 });
+           p2pContactsMap.set(contactId, { user: fullContactUser, unread: 0, hasStarred: false });
         }
       }
       
@@ -228,8 +230,8 @@ function DispatchDashboardUI() {
         if (msg.recipientId === user.uid && !msg.isReadBy?.includes(user.uid)) {
             contact.unread++;
         }
-        if (!contact.lastMessage || msg.timestamp > contact.lastMessage) {
-            contact.lastMessage = msg.timestamp;
+        if (!contact.lastMessage || msg.timestamp > contact.lastMessage.timestamp) {
+            contact.lastMessage = msg;
         }
       }
     });
@@ -240,40 +242,43 @@ function DispatchDashboardUI() {
       if (!otherUserId) return;
 
       const hasBeenReadByAnyDispatcher = msg.isReadBy?.some(readerId => dispatcherUserIds.includes(readerId));
-      const isUnread = !hasBeenReadByAnyDispatcher && !msg.isStarred;
+      
+      let contactEntry: ContactEntry | undefined;
 
-      if (otherUserId === user.uid) { // This is the dispatcher's own log thread
-        let selfEntry = dispatchLogContactsMap.get(user.uid);
-        if (!selfEntry) {
+      // Handle "My Dispatch Log" for the current dispatcher
+      if (otherUserId === user.uid) { 
+        contactEntry = dispatchLogContactsMap.get(user.uid);
+        if (!contactEntry) {
           const selfUser = { ...user, name: "My Dispatch Log" } as AppUser;
-          selfEntry = { user: selfUser, unread: 0 };
-          dispatchLogContactsMap.set(user.uid, selfEntry);
+          contactEntry = { user: selfUser, unread: 0, hasStarred: false };
+          dispatchLogContactsMap.set(user.uid, contactEntry);
         }
-        if (isUnread && msg.senderId === DISPATCHER_ID) {
-          selfEntry.unread++;
-        }
-         if (!selfEntry.lastMessage || msg.timestamp > selfEntry.lastMessage) {
-            selfEntry.lastMessage = msg.timestamp;
+        // Only count unread if it comes FROM dispatch, not from self
+        if (msg.senderId === DISPATCHER_ID && !msg.isReadBy?.includes(user.uid)) {
+          contactEntry.unread++;
         }
       } else {
-        let contactEntry = dispatchLogContactsMap.get(otherUserId);
+        contactEntry = dispatchLogContactsMap.get(otherUserId);
         if (!contactEntry) {
           const contactUser = uniqueContacts.find(u => u.id === otherUserId);
           if (contactUser) {
             const driverInfo = drivers.find(d => d.id === contactUser.id);
             const fullContactUser = { ...contactUser, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status'] };
-            contactEntry = { user: fullContactUser, unread: 0 };
+            contactEntry = { user: fullContactUser, unread: 0, hasStarred: false };
             dispatchLogContactsMap.set(otherUserId, contactEntry);
           }
         }
-        if (contactEntry) {
-            if(isUnread) {
-                contactEntry.unread++;
-            }
-            if (!contactEntry.lastMessage || msg.timestamp > contactEntry.lastMessage) {
-                contactEntry.lastMessage = msg.timestamp;
-            }
+        // A message is unread if it's starred OR if no dispatcher has read it yet
+        if (contactEntry && (msg.isStarred || !hasBeenReadByAnyDispatcher)) {
+            contactEntry.unread++;
         }
+      }
+
+      if (contactEntry) {
+          if (msg.isStarred) contactEntry.hasStarred = true;
+          if (!contactEntry.lastMessage || msg.timestamp > contactEntry.lastMessage.timestamp) {
+              contactEntry.lastMessage = msg;
+          }
       }
     });
     
@@ -281,10 +286,10 @@ function DispatchDashboardUI() {
     if (user && !p2pContactsMap.has(user.id)) {
         const driverInfo = drivers.find(d => d.id === user.id);
         const selfUser = { ...user, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
-        p2pContactsMap.set(user.id, {user: selfUser, unread: 0});
+        p2pContactsMap.set(user.id, {user: selfUser, unread: 0, hasStarred: false});
     }
 
-    const sortFn = (a: ContactEntry, b: ContactEntry) => (b.lastMessage?.getTime() || 0) - (a.lastMessage?.getTime() || 0);
+    const sortFn = (a: ContactEntry, b: ContactEntry) => (b.lastMessage?.timestamp?.getTime() || 0) - (a.lastMessage?.timestamp?.getTime() || 0);
     
     const p2pContacts = Array.from(p2pContactsMap.values()).sort(sortFn);
     const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort(sortFn);
@@ -537,9 +542,19 @@ function DispatchDashboardUI() {
     messagesSnapshot.forEach(docSnapshot => {
         const message = docSnapshot.data() as Message;
         const readers = message.isReadBy || [];
-        const shouldMarkAsRead = isDispatchLog 
-          ? !readers.some(id => dispatcherUserIds.includes(id)) // If it's a dispatch log, mark read if NO dispatcher has read it
-          : !readers.includes(user.uid); // For P2P, only check current user
+        
+        let shouldMarkAsRead = false;
+        if (isDispatchLog) {
+          // If it's a dispatch log, just add the current dispatcher's ID
+          if (!readers.includes(user.uid)) {
+            shouldMarkAsRead = true;
+          }
+        } else {
+          // For P2P, only check if the current user has read it.
+          if (!readers.includes(user.uid)) {
+            shouldMarkAsRead = true;
+          }
+        }
 
         if (shouldMarkAsRead) {
             const newIsReadBy = [...readers, user.uid];
@@ -619,6 +634,7 @@ function DispatchDashboardUI() {
                           onUnassignDriver={handleUnassignDriver}
                           onEdit={handleOpenEdit}
                           onUnschedule={handleUnscheduleRide}
+                          onToggleStar={toggleStarMessage}
                         />
                       ))}
                       {provided.placeholder}
@@ -662,6 +678,7 @@ function DispatchDashboardUI() {
                               onUnassignDriver={handleUnassignDriver}
                               onEdit={handleOpenEdit}
                               onUnschedule={handleUnscheduleRide}
+                              onToggleStar={toggleStarMessage}
                             />
                           </div>
                         )}
@@ -713,6 +730,7 @@ function DispatchDashboardUI() {
                                 onUnassignDriver={handleUnassignDriver}
                                 onEdit={handleOpenEdit}
                                 onUnschedule={handleUnscheduleRide}
+                                onToggleStar={toggleStarMessage}
                               />
                             </div>
                           )}
@@ -742,6 +760,7 @@ function DispatchDashboardUI() {
                   onUnassignDriver={handleUnassignDriver}
                   onEditRide={handleOpenEdit}
                   onUnscheduleRide={handleUnscheduleRide}
+                  onToggleStar={toggleStarMessage}
                   onEndShift={handleEndShift}
                   onOpenChat={driverUser ? () => openChatWith(driverUser) : undefined}
                   className="w-full lg:w-[350px] xl:w-[400px]"
@@ -780,6 +799,7 @@ function DispatchDashboardUI() {
                         onUnassignDriver={handleUnassignDriver}
                         onEdit={handleOpenEdit}
                         onUnschedule={handleUnscheduleRide}
+                        onToggleStar={toggleStarMessage}
                       />
                     ))}
                     {pendingRides.length === 0 && (
@@ -805,6 +825,7 @@ function DispatchDashboardUI() {
                           onUnassignDriver={handleUnassignDriver}
                           onEdit={handleOpenEdit}
                           onUnschedule={handleUnscheduleRide}
+                          onToggleStar={toggleStarMessage}
                         />
                       ))}
                     </div>
@@ -829,6 +850,7 @@ function DispatchDashboardUI() {
                               onUnassignDriver={handleUnassignDriver}
                               onEditRide={handleOpenEdit}
                               onUnscheduleRide={handleUnscheduleRide}
+                              onToggleStar={toggleStarMessage}
                               onEndShift={handleEndShift}
                               onOpenChat={driverUser ? () => openChatWith(driverUser) : undefined}
                             />
@@ -841,6 +863,20 @@ function DispatchDashboardUI() {
         </div>
       </Tabs>
   )};
+
+  const getMessageSnippet = (msg?: Message) => {
+    if (!msg) return { snippet: 'No messages yet', sender: '' };
+    const senderName = msg.senderId === user?.uid ? 'You' : formatUserName(allUsers.find(u => u.id === msg.senderId)?.name, allUsers.find(u => u.id === msg.senderId)?.email);
+    let snippet = '';
+    if (msg.text) {
+      snippet = msg.text.length > 30 ? `${msg.text.substring(0, 30)}...` : msg.text;
+    } else if (msg.imageUrl) {
+      snippet = 'Sent an image';
+    } else if (msg.audioUrl) {
+      snippet = 'Sent an audio message';
+    }
+    return { snippet, sender: `${senderName}: ` };
+  }
 
   return (
     <div className="h-full flex flex-col bg-secondary/50">
@@ -958,60 +994,78 @@ function DispatchDashboardUI() {
             onOpenChange={setIsChatDirectoryOpen}
             title="My Messages"
         >
-             <div className="p-4 space-y-2">
+             <div className="p-4 space-y-1">
                  {chatDirectory.dispatchLogContacts.length > 0 && (
                      <>
                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
-                        {chatDirectory.dispatchLogContacts.map(({ user: contact, unread }) => (
-                            <Button 
-                                key={contact.id} 
-                                variant="ghost" 
-                                className="w-full justify-start h-14"
-                                onClick={() => openChatWith(contact, true)}
-                            >
-                                <Avatar className="h-10 w-10 mr-4">
-                                    <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                    <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 text-left">
-                                    <p>{contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, contact.email)}</p>
-                                    <div className="flex items-center gap-2">
-                                        {(contact as any).status && getStatusIndicator((contact as any).status)}
-                                        <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
+                        {chatDirectory.dispatchLogContacts.map(({ user: contact, unread, hasStarred, lastMessage }) => {
+                            const { snippet, sender } = getMessageSnippet(lastMessage);
+                            return (
+                                <Button 
+                                    key={contact.id} 
+                                    variant="ghost" 
+                                    className="w-full justify-start h-auto py-2"
+                                    onClick={() => openChatWith(contact, true)}
+                                >
+                                    <Avatar className="h-10 w-10 mr-4">
+                                        <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                                        <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 text-left">
+                                        <div className="flex justify-between items-center">
+                                            <p className="font-semibold">{contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, contact.email)}</p>
+                                            {lastMessage?.timestamp && (
+                                                <span className="text-xs text-muted-foreground">{formatDistanceToNowStrict(lastMessage.timestamp, { addSuffix: true })}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground truncate">{sender}{snippet}</span>
+                                        </div>
                                     </div>
-                                </div>
-                                {unread > 0 && <Badge>{unread}</Badge>}
-                            </Button>
-                        ))}
+                                    <div className="flex flex-col items-end justify-center ml-2 gap-1">
+                                        {unread > 0 && <Badge>{unread}</Badge>}
+                                        {hasStarred && <Star className="h-4 w-4 text-yellow-500 fill-yellow-400" />}
+                                    </div>
+                                </Button>
+                            );
+                        })}
                      </>
                  )}
 
                 {chatDirectory.p2pContacts.length > 0 && chatDirectory.dispatchLogContacts.length > 0 && <Separator className="my-4"/>}
 
-                {chatDirectory.p2pContacts.length > 0 && (
+                {chatDirectory.p2pContacts.filter(c => c.user.id !== user?.id).length > 0 && (
                     <>
                          <h4 className="text-sm font-semibold text-muted-foreground px-2">Private Chats</h4>
-                        {chatDirectory.p2pContacts.map(({ user: contact, unread }) => (
-                            <Button 
-                                key={contact.id} 
-                                variant="ghost" 
-                                className="w-full justify-start h-14"
-                                onClick={() => openChatWith(contact)}
-                            >
-                                <Avatar className="h-10 w-10 mr-4">
-                                    <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                    <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 text-left">
-                                    <p>{formatUserName(contact.name, contact.email)}</p>
-                                    <div className="flex items-center gap-2">
-                                       {(contact as any).status && getStatusIndicator((contact as any).status)}
-                                        <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
+                        {chatDirectory.p2pContacts.filter(c => c.user.id !== user?.id).map(({ user: contact, unread, hasStarred, lastMessage }) => {
+                            const { snippet, sender } = getMessageSnippet(lastMessage);
+                             return (
+                                <Button 
+                                    key={contact.id} 
+                                    variant="ghost" 
+                                    className="w-full justify-start h-auto py-2"
+                                    onClick={() => openChatWith(contact)}
+                                >
+                                    <Avatar className="h-10 w-10 mr-4">
+                                        <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                                        <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 text-left">
+                                        <div className="flex justify-between items-center">
+                                            <p>{formatUserName(contact.name, contact.email)}</p>
+                                             {lastMessage?.timestamp && (
+                                                <span className="text-xs text-muted-foreground">{formatDistanceToNowStrict(lastMessage.timestamp, { addSuffix: true })}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {(contact as any).status && getStatusIndicator((contact as any).status)}
+                                            <span className="text-xs text-muted-foreground truncate">{sender}{snippet}</span>
+                                        </div>
                                     </div>
-                                </div>
-                                {unread > 0 && <Badge>{unread}</Badge>}
-                            </Button>
-                        ))}
+                                    {unread > 0 && <Badge className="ml-2">{unread}</Badge>}
+                                </Button>
+                            );
+                        })}
                     </>
                 )}
             </div>
@@ -1021,7 +1075,13 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${(currentChatTarget as any).context ? (currentChatTarget.context as AppUser).name : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
+                title={`Chat with ${
+                    (currentChatTarget as any).context 
+                        ? formatUserName((currentChatTarget.context as AppUser).name, (currentChatTarget.context as AppUser).email)
+                        : currentChatTarget.name === 'My Dispatch Log' 
+                            ? 'My Dispatch Log' 
+                            : formatUserName(currentChatTarget.name, currentChatTarget.email)
+                }`}
             >
                 <ChatView
                     participant={currentChatTarget}
@@ -1032,6 +1092,7 @@ function DispatchDashboardUI() {
                     }
                     allDrivers={drivers}
                     onSendMessage={handleSendMessage}
+                    onToggleStar={toggleStarMessage}
                     threadId={
                         (currentChatTarget as any).context
                         ? getThreadIds((currentChatTarget as any).context.id, DISPATCHER_ID)
@@ -1058,6 +1119,8 @@ export function DispatchDashboard() {
     
 
     
+
+
 
 
 

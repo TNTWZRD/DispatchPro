@@ -10,13 +10,14 @@ import { Card } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2 } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useCondensedMode } from '@/context/condensed-mode-context';
 import { ResponsiveDialog } from './responsive-dialog';
+import { type toggleStarMessage } from '@/app/actions';
 
 
 type RideCardProps = {
@@ -28,6 +29,7 @@ type RideCardProps = {
   onUnassignDriver: (rideId: string) => void;
   onEdit: (ride: Ride) => void;
   onUnschedule: (rideId: string) => void;
+  onToggleStar: typeof toggleStarMessage;
 };
 
 const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }> = {
@@ -38,7 +40,7 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
   cancelled: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
 };
 
-export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule }: RideCardProps) {
+export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule, onToggleStar }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);

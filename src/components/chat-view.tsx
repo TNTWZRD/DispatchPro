@@ -28,10 +28,11 @@ type ChatViewProps = {
   messages: Message[];
   allDrivers: Driver[];
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isReadBy'>) => void;
+  onToggleStar: typeof toggleStarMessage;
   threadId: string[];
 };
 
-export function ChatView({ participant, messages, allDrivers, onSendMessage, threadId }: ChatViewProps) {
+export function ChatView({ participant, messages, allDrivers, onSendMessage, onToggleStar, threadId }: ChatViewProps) {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -141,7 +142,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
   }
 
   const handleToggleStar = async (messageId: string, isStarred: boolean) => {
-    const result = await toggleStarMessage(messageId, isStarred);
+    const result = await onToggleStar(messageId, isStarred);
     if (result.type === 'success') {
       toast({ title: result.message });
     } else {
@@ -165,20 +166,20 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
   const canPerformActions = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
   const getParticipantAvatar = (senderId: string) => {
-    const participantUser = allDrivers.find(d => d.id === senderId) || allDrivers.find(d => d.id === senderId) as AppUser;
-
-    if (senderId === DISPATCHER_ID) { // Should not happen but for safety
+    if (senderId === DISPATCHER_ID) { 
       return (
         <Avatar className="h-8 w-8">
             <AvatarFallback><MessageSquare /></AvatarFallback>
         </Avatar>
       );
     }
+
+    const participantUser = allDrivers.find(d => d.id === senderId) || allDrivers.find(d => d.id === senderId) as AppUser;
     
     return (
         <Avatar className="h-8 w-8">
             <AvatarImage src={(participantUser as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${senderId}`} />
-            <AvatarFallback>{(formatUserName(participantUser.name, (participantUser as AppUser).email) || 'U')[0]}</AvatarFallback>
+            <AvatarFallback>{(formatUserName(participantUser?.name, (participantUser as AppUser)?.email) || 'U')[0]}</AvatarFallback>
         </Avatar>
     );
   }
