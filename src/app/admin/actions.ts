@@ -201,6 +201,44 @@ export async function createVehicle(prevState: any, formData: FormData) {
     }
 }
 
+const updateVehicleSchema = z.object({
+  vehicleId: z.string(),
+  nickname: z.string().min(2, { message: "Nickname must be at least 2 characters." }),
+  make: z.string().optional(),
+  model: z.string().optional(),
+  year: z.coerce.number().optional(),
+  vin: z.string().optional(),
+  mileage: z.coerce.number().optional(),
+});
+
+export async function updateVehicle(prevState: any, formData: FormData) {
+    const validatedFields = updateVehicleSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+        return {
+            type: "error",
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Invalid vehicle details provided.",
+        };
+    }
+
+    try {
+        const { vehicleId, ...updateData } = validatedFields.data;
+        const vehicleRef = doc(db, 'vehicles', vehicleId);
+        await updateDoc(vehicleRef, { ...updateData, updatedAt: serverTimestamp() });
+        
+        revalidatePath(`/admin/vehicles/${vehicleId}`);
+        revalidatePath('/admin/vehicles');
+        return { type: "success", message: "Vehicle updated successfully." };
+
+    } catch (error: any) {
+        console.error("Failed to update vehicle:", error);
+        return { type: "error", message: `Failed to update vehicle: ${error.message}` };
+    }
+}
+
 const createTicketSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),

@@ -8,12 +8,13 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Vehicle } from '@/lib/types';
 import { Role } from '@/lib/types';
-import { Loader2, Truck, Wrench } from 'lucide-react';
+import { Loader2, Truck, Wrench, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NewTicketForm } from '@/components/new-ticket-form';
 import { MaintenanceTicketsTable } from '@/components/maintenance-tickets-table';
 import { VehicleNotesForm } from '@/components/vehicle-notes-form';
 import { Button } from '@/components/ui/button';
+import { EditVehicleForm } from '@/components/edit-vehicle-form';
 
 export default function VehicleDetailsPage() {
     const { user, loading, hasRole } = useAuth();
@@ -24,6 +25,7 @@ export default function VehicleDetailsPage() {
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
     const [vehicleLoading, setVehicleLoading] = useState(true);
     const [isNotesFormOpen, setIsNotesFormOpen] = useState(false);
+    const [isEditFormOpen, setIsEditFormOpen] = useState(false);
 
     const canAccess = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
@@ -89,7 +91,12 @@ export default function VehicleDetailsPage() {
                                 <Truck className="h-7 w-7 text-primary" />
                                 {vehicle.nickname}
                             </div>
-                            <Button variant="outline" onClick={() => setIsNotesFormOpen(true)}>Edit Notes</Button>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" onClick={() => setIsNotesFormOpen(true)}>Edit Notes</Button>
+                                <Button variant="default" onClick={() => setIsEditFormOpen(true)}>
+                                    <Edit className="mr-2" /> Edit Vehicle
+                                </Button>
+                            </div>
                         </CardTitle>
                         <CardDescription>
                             {vehicle.year} {vehicle.make} {vehicle.model}
@@ -134,6 +141,12 @@ export default function VehicleDetailsPage() {
                 vehicle={vehicle}
                 isOpen={isNotesFormOpen}
                 onOpenChange={setIsNotesFormOpen}
+            />
+
+            <EditVehicleForm
+                vehicle={vehicle}
+                isOpen={isEditFormOpen}
+                onOpenChange={setIsEditFormOpen}
             />
         </div>
     );
