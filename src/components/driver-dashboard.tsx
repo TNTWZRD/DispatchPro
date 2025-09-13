@@ -105,9 +105,12 @@ export function DriverDashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (!currentDriver) return;
+    if (!currentDriver || !currentDriver.currentShiftId) {
+      setRides([]);
+      return;
+    }
 
-    const ridesQuery = query(collection(db, "rides"), where("driverId", "==", currentDriver.id));
+    const ridesQuery = query(collection(db, "rides"), where("shiftId", "==", currentDriver.currentShiftId));
     const ridesUnsub = onSnapshot(ridesQuery, (snapshot) => {
         const newRides = snapshot.docs.map(doc => ({
             ...doc.data(),
