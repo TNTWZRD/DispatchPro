@@ -78,6 +78,14 @@ export type Shift = {
     notes?: string;
 }
 
+export type TicketActivity = {
+    id: string;
+    userId: string;
+    timestamp: Date;
+    type: 'comment' | 'status_change';
+    content: string; 
+};
+
 export type MaintenanceTicket = {
     id:string;
     vehicleId: string;
@@ -88,6 +96,7 @@ export type MaintenanceTicket = {
     reportedById: string;
     createdAt: Date;
     updatedAt: Date;
+    activity?: TicketActivity[];
 }
 
 export type Ride = {

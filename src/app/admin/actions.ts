@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion } from 'firebase/firestore';
 import type { Driver, MaintenanceTicket, Vehicle, Shift } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
@@ -263,7 +263,7 @@ export async function createTicket(prevState: any, formData: FormData) {
   try {
     const { vehicleId, title, description, priority, reportedById } = validatedFields.data;
     
-    const newTicket: Omit<MaintenanceTicket, 'id' | 'createdAt' | 'updatedAt'> = {
+    const newTicket: Omit<MaintenanceTicket, 'id' | 'createdAt' | 'updatedAt' | 'activity'> = {
       vehicleId,
       title,
       description: description || '',
@@ -271,20 +271,82 @@ export async function createTicket(prevState: any, formData: FormData) {
       status: 'open',
       reportedById,
     };
-
-    await addDoc(collection(db, 'tickets'), {
+    
+    const ticketRef = await addDoc(collection(db, 'tickets'), {
       ...newTicket,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    
+    const activityRef = collection(db, 'tickets', ticketRef.id, 'activity');
+    await addDoc(activityRef, {
+        userId: reportedById,
+        timestamp: serverTimestamp(),
+        type: 'status_change',
+        content: `Ticket created and set to "open".`,
+    })
 
     revalidatePath(`/admin/vehicles/${vehicleId}`);
+    revalidatePath(`/admin/maintenance`);
     return { type: 'success', message: 'Maintenance ticket created successfully.' };
 
   } catch (error: any) {
     console.error("Failed to create ticket:", error);
     return { type: "error", message: `Failed to create ticket: ${error.message}` };
   }
+}
+
+
+const updateTicketSchema = z.object({
+  ticketId: z.string(),
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  description: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high']),
+});
+
+export async function updateTicket(prevState: any, formData: FormData) {
+    const validatedFields = updateTicketSchema.safeParse(Object.fromEntries(formData.entries()));
+    if (!validatedFields.success) {
+        return { type: "error", message: "Invalid data.", errors: validatedFields.error.flatten().fieldErrors };
+    }
+    try {
+        const { ticketId, ...updateData } = validatedFields.data;
+        await updateDoc(doc(db, 'tickets', ticketId), {
+            ...updateData,
+            updatedAt: serverTimestamp(),
+        });
+        revalidatePath(`/admin/maintenance/${ticketId}`);
+        return { type: "success", message: "Ticket updated successfully." };
+    } catch (e: any) {
+        return { type: "error", message: `Failed to update ticket: ${e.message}` };
+    }
+}
+
+const addCommentSchema = z.object({
+    ticketId: z.string(),
+    userId: z.string(),
+    comment: z.string().min(1, "Comment cannot be empty."),
+});
+
+export async function addTicketComment(prevState: any, formData: FormData) {
+    const validatedFields = addCommentSchema.safeParse(Object.fromEntries(formData.entries()));
+    if (!validatedFields.success) {
+        return { type: "error", message: "Invalid comment." };
+    }
+    try {
+        const { ticketId, userId, comment } = validatedFields.data;
+        const activityRef = collection(db, 'tickets', ticketId, 'activity');
+        await addDoc(activityRef, {
+            userId,
+            timestamp: serverTimestamp(),
+            type: 'comment',
+            content: comment,
+        });
+        revalidatePath(`/admin/maintenance/${ticketId}`);
+        return { type: "success", message: "Comment added." };
+    } catch (e: any) {
+        return { type: "error", message: `Failed to add comment: ${e.message}` };
+    }
 }
 
 const startShiftSchema = z.object({

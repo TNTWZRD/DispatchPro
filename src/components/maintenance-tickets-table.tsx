@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { MaintenanceTicket } from '@/lib/types';
 import {
   Table,
@@ -19,6 +19,8 @@ import { Loader2, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from './ui/dropdown-menu';
+import { useAuth } from '@/context/auth-context';
+import Link from 'next/link';
 
 
 const getStatusVariant = (status: MaintenanceTicket['status']) => {
@@ -42,6 +44,7 @@ export function MaintenanceTicketsTable({ vehicleId }: { vehicleId: string }) {
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     const q = query(
@@ -66,10 +69,18 @@ export function MaintenanceTicketsTable({ vehicleId }: { vehicleId: string }) {
     return () => unsub();
   }, [vehicleId]);
 
-  const handleStatusChange = async (ticketId: string, status: MaintenanceTicket['status']) => {
-    const ticketRef = doc(db, 'tickets', ticketId);
+  const handleStatusChange = async (ticket: MaintenanceTicket, newStatus: MaintenanceTicket['status']) => {
+    if (!user) return;
+    const ticketRef = doc(db, 'tickets', ticket.id);
+    const activityRef = collection(db, 'tickets', ticket.id, 'activity');
     try {
-        await updateDoc(ticketRef, { status });
+        await updateDoc(ticketRef, { status: newStatus, updatedAt: serverTimestamp() });
+        await addDoc(activityRef, {
+            userId: user.uid,
+            timestamp: serverTimestamp(),
+            type: 'status_change',
+            content: `Status changed from "${ticket.status}" to "${newStatus}".`,
+        });
         toast({ title: "Status Updated", description: "Ticket status changed successfully."});
     } catch(e) {
         toast({ variant: 'destructive', title: "Update Failed", description: "Could not update ticket status."});
@@ -109,7 +120,11 @@ export function MaintenanceTicketsTable({ vehicleId }: { vehicleId: string }) {
         <TableBody>
           {tickets.map((ticket) => (
             <TableRow key={ticket.id}>
-              <TableCell className="font-medium">{ticket.title}</TableCell>
+              <TableCell className="font-medium">
+                 <Link href={`/admin/maintenance/${ticket.id}`} className="hover:underline">
+                    {ticket.title}
+                </Link>
+              </TableCell>
               <TableCell>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -119,7 +134,7 @@ export function MaintenanceTicketsTable({ vehicleId }: { vehicleId: string }) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuRadioGroup value={ticket.status} onValueChange={(value) => handleStatusChange(ticket.id, value as MaintenanceTicket['status'])}>
+                        <DropdownMenuRadioGroup value={ticket.status} onValueChange={(value) => handleStatusChange(ticket, value as MaintenanceTicket['status'])}>
                             <DropdownMenuRadioItem value="open">Open</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="in-progress">In Progress</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="closed">Closed</DropdownMenuRadioItem>
