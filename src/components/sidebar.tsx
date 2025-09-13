@@ -14,6 +14,7 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { ChatView } from './chat-view';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/context/auth-context';
+import { Badge } from '@/components/ui/badge';
 
 
 type ChatListProps = {
