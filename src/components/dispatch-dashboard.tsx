@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import type { Ride, Driver, RideStatus, Message, Shift, Vehicle } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
 import { Role, DISPATCHER_ID } from '@/lib/types';
 import { DragDropContext, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +35,7 @@ import { sendBrowserNotification } from '@/lib/notifications';
 function DispatchDashboardUI() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -91,6 +92,19 @@ function DispatchDashboardUI() {
     const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
         setDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
     });
+
+    const usersUnsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+      setAllUsers(snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          uid: doc.id,
+          name: data.displayName,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+        } as AppUser;
+      }));
+    });
     
     const vehiclesUnsub = onSnapshot(collection(db, "vehicles"), (snapshot) => {
         setVehicles(snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Vehicle)));
@@ -106,17 +120,11 @@ function DispatchDashboardUI() {
     });
     
     // P2P messages for the logged-in dispatcher
-    const p2pQuery = query(
-      collection(db, "messages"),
-      where("threadId", "==", user.uid), // This is not quite right, will be fixed below
-      orderBy("timestamp", "asc")
-    );
-    // Let's make two queries for P2P
     const receivedP2PQuery = query(collection(db, 'messages'), where('recipientId', '==', user.uid), orderBy('timestamp', 'asc'));
     const sentP2PQuery = query(collection(db, 'messages'), where('senderId', '==', user.uid), orderBy('timestamp', 'asc'));
 
     // Shift messages for any dispatcher
-    const shiftMessagesQuery = query(
+    const shiftMessagesReceivedQuery = query(
       collection(db, "messages"),
       where("recipientId", "==", DISPATCHER_ID),
       orderBy("timestamp", "asc")
@@ -173,8 +181,15 @@ function DispatchDashboardUI() {
         mergeAndSetMessages();
     });
 
-    const unsubShiftReceived = onSnapshot(shiftMessagesQuery, (snapshot) => {
+    const unsubShiftReceived = onSnapshot(shiftMessagesReceivedQuery, (snapshot) => {
         receivedShiftMessages = snapshot.docs.map(doc => ({
+            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
+        } as Message));
+        mergeAndSetMessages();
+    });
+
+    const unsubShiftSent = onSnapshot(shiftMessagesSentQuery, (snapshot) => {
+        sentShiftMessages = snapshot.docs.map(doc => ({
             ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
         } as Message));
         mergeAndSetMessages();
@@ -184,11 +199,13 @@ function DispatchDashboardUI() {
     return () => {
         ridesUnsub();
         driversUnsub();
+        usersUnsub();
         vehiclesUnsub();
         shiftsUnsub();
         unsubP2PReceived();
         unsubP2PSent();
         unsubShiftReceived();
+        unsubShiftSent();
     };
   }, [user]);
   
@@ -417,18 +434,16 @@ function DispatchDashboardUI() {
   
   const handleMarkMessagesAsRead = async (participantId: string) => {
     if (!db || !user) return;
-    const threadId = getThreadId(user.uid, participantId);
+    
     const batch = writeBatch(db);
-    const unreadMessages = messages.filter(m => 
-        (m.threadId === threadId || m.threadId === getThreadId(DISPATCHER_ID, participantId)) && 
-        (m.recipientId === user.uid || m.recipientId === DISPATCHER_ID) && 
-        !m.isRead &&
-        m.senderId === participantId
-    );
-    unreadMessages.forEach(message => {
-        const msgRef = doc(db, 'messages', message.id);
-        batch.update(msgRef, { isRead: true });
+    
+    // Mark P2P messages as read
+    const p2pThreadId = getThreadId(user.uid, participantId);
+    const unreadP2P = messages.filter(m => m.threadId === p2pThreadId && m.recipientId === user.uid && !m.isRead);
+    unreadP2P.forEach(message => {
+        batch.update(doc(db, 'messages', message.id), { isRead: true });
     });
+
     await batch.commit();
   };
 
@@ -772,6 +787,7 @@ function DispatchDashboardUI() {
         <Sidebar 
             rides={rides} 
             drivers={drivers}
+            allUsers={allUsers}
             messages={messages}
             onAssignSuggestion={handleAssignDriver}
             onSendMessage={handleSendMessage}
