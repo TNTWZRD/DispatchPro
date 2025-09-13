@@ -26,7 +26,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { ResponsiveDialog } from './responsive-dialog';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, where, query, orderBy, Timestamp, writeBatch, or } from 'firebase/firestore';
 import { StartShiftForm } from './start-shift-form';
 import { endShift } from '@/app/admin/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -106,11 +106,16 @@ function DispatchDashboardUI() {
         } as Shift)));
     });
     
+    // Listen for messages where the dispatcher is the recipient OR the sender
     const messagesQuery = query(
       collection(db, "messages"),
-      where("recipientId", "==", user.uid),
+      or(
+        where("recipientId", "==", user.uid),
+        where("senderId", "==", user.uid)
+      ),
       orderBy("timestamp", "asc")
     );
+    
     const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
         const newMessages = snapshot.docs.map(doc => ({
             ...doc.data(),
@@ -118,13 +123,19 @@ function DispatchDashboardUI() {
             timestamp: toDate(doc.data().timestamp),
         } as Message));
         
-        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = newMessages[newMessages.length - 1];
-            const driver = drivers.find(d => d.id === lastMessage.senderId);
-             sendBrowserNotification(
-                `New message from ${driver?.name || 'Driver'}`,
-                lastMessage.text || "Sent an image or audio"
-             );
+        // Notify only for incoming messages
+        const incomingMessages = newMessages.filter(m => m.recipientId === user.uid);
+        const prevIncomingMessages = prevMessagesRef.current.filter(m => m.recipientId === user.uid);
+
+        if (prevMessagesRef.current.length > 0 && incomingMessages.length > prevIncomingMessages.length) {
+            const lastMessage = incomingMessages[incomingMessages.length - 1];
+            if (lastMessage) {
+                const driver = drivers.find(d => d.id === lastMessage.senderId);
+                sendBrowserNotification(
+                    `New message from ${driver?.name || 'Driver'}`,
+                    lastMessage.text || "Sent an image or audio"
+                );
+            }
         }
         setMessages(newMessages);
     });
@@ -712,7 +723,10 @@ function DispatchDashboardUI() {
         <Sidebar 
             rides={rides} 
             drivers={drivers}
-            onAssignSuggestion={handleAssignDriver} 
+            messages={messages}
+            onAssignSuggestion={handleAssignDriver}
+            onSendMessage={handleSendMessage}
+            onMarkMessagesAsRead={handleMarkMessagesAsRead}
         />
         
         <div className='flex-1 flex flex-col min-w-0'>

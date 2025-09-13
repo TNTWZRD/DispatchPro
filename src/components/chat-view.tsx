@@ -40,7 +40,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   
   const { user, hasRole } = useAuth();
   const { toast } = useToast();
@@ -48,8 +48,8 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
   const senderType = hasRole(Role.DRIVER) ? 'driver' : 'dispatcher';
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    if (scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -158,7 +158,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
 
   return (
     <div className="flex flex-col h-[70vh]">
-      <ScrollArea className="flex-1" viewportRef={scrollAreaRef}>
+      <ScrollArea className="flex-1" viewportRef={scrollViewportRef}>
         <div className="p-4 space-y-4">
           {messages.map((message) => (
             <ContextMenu key={message.id}>
@@ -169,7 +169,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
                   {message.senderId !== user?.uid && (
                     <Avatar className="h-8 w-8">
                        <AvatarImage src={(participant as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${participant.id}`} />
-                       <AvatarFallback>{participant.name?.[0] || (participant as AppUser).email?.[0] || 'U'}</AvatarFallback>
+                       <AvatarFallback>{participant.name?.[0] || 'U'}</AvatarFallback>
                     </Avatar>
                   )}
                   <div

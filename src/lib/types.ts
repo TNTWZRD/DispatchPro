@@ -21,10 +21,10 @@ export type Location = {
 
 export type AppUser = {
     uid: string;
-    id: string; // Add id to match Driver type for easier use in components
+    id: string; 
     email: string | null;
-    name: string | null; // Add name to match Driver type
-    displayName: string | null;
+    name: string | null;
+    displayName?: string | null; // Keep for firebase compatibility, but prefer `name`
     role: Role;
     photoURL?: string | null;
     createdAt?: Date;

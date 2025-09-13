@@ -14,9 +14,10 @@ import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
 import { formatUserName } from '@/lib/utils';
+import { Badge } from './ui/badge';
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -205,12 +206,14 @@ export function DriverDashboard() {
   };
   
   const handleChatOpen = async (isOpen: boolean) => {
-    if(isOpen) {
-        if (!currentDriver) return;
+    if(isOpen && currentDriver) {
+        const batch = writeBatch(db);
         const unread = driverMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead);
-        for(const message of unread) {
-            await updateDoc(doc(db, 'messages', message.id), { isRead: true });
-        }
+        unread.forEach(message => {
+            const msgRef = doc(db, 'messages', message.id);
+            batch.update(msgRef, { isRead: true });
+        });
+        await batch.commit();
     }
     setIsChatOpen(isOpen);
   };
@@ -235,20 +238,7 @@ export function DriverDashboard() {
 
   return (
     <div className="h-full flex flex-col bg-secondary/50">
-      <div className="flex h-16 shrink-0 items-center border-b bg-card px-6 shadow-sm">
-        <div className="flex items-center gap-3 ml-auto">
-            <Button variant="outline" className="relative" onClick={() => handleChatOpen(true)}>
-                <MessageCircle className="mr-2" /> Chat
-                {unreadMessagesCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                    {unreadMessagesCount}
-                    </span>
-                )}
-            </Button>
-        </div>
-      </div>
-      
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24">
         <div className="mx-auto max-w-2xl space-y-6">
             {!currentRide && completedRides.length === 0 ? (
                 <Card>
@@ -308,6 +298,19 @@ export function DriverDashboard() {
             )}
         </div>
       </main>
+
+      <Button
+        variant="default"
+        size="lg"
+        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-50 p-0"
+        onClick={() => handleChatOpen(true)}
+      >
+        <MessageCircle className="h-8 w-8" />
+        {unreadMessagesCount > 0 && (
+          <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadMessagesCount}</Badge>
+        )}
+        <span className="sr-only">Open Chat</span>
+      </Button>
       
       <ResponsiveDialog
         open={!!editingRide}
