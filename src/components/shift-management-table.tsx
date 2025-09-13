@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -22,6 +23,7 @@ import { endShift } from '@/app/admin/actions';
 import { formatUserName } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { ShiftNotesForm } from './shift-notes-form';
+import { EditShiftForm } from './edit-shift-form';
 
 type ShiftManagementTableProps = {
     selectedDate: Date;
@@ -33,6 +35,7 @@ export function ShiftManagementTable({ selectedDate }: ShiftManagementTableProps
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingShiftNotes, setEditingShiftNotes] = useState<Shift | null>(null);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const { toast } = useToast();
 
@@ -97,12 +100,14 @@ export function ShiftManagementTable({ selectedDate }: ShiftManagementTableProps
           (!shift.endTime || ride.droppedOffAt <= shift.endTime)
       );
       const totalFare = completedRides.reduce((sum, ride) => sum + (ride.totalFare || 0), 0);
+      const driver = drivers.find(d => d.id === shift.driverId);
       return {
         ...shift,
         totalFare,
+        driver,
       };
     });
-  }, [shifts, rides]);
+  }, [shifts, rides, drivers]);
 
 
   const getDriverName = (driverId: string) => {
@@ -179,10 +184,10 @@ export function ShiftManagementTable({ selectedDate }: ShiftManagementTableProps
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => {}} disabled>
+                        <DropdownMenuItem onSelect={() => setEditingShift(shift)}>
                            <Edit /> Edit Shift
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setEditingShift(shift)}>
+                        <DropdownMenuItem onSelect={() => setEditingShiftNotes(shift)}>
                             <FileText /> Add/Edit Notes
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -201,10 +206,19 @@ export function ShiftManagementTable({ selectedDate }: ShiftManagementTableProps
     </div>
     
     <ShiftNotesForm
+        shift={editingShiftNotes}
+        isOpen={!!editingShiftNotes}
+        onOpenChange={(isOpen) => {
+            if(!isOpen) setEditingShiftNotes(null);
+        }}
+    />
+
+    <EditShiftForm
         shift={editingShift}
+        driver={editingShift?.driver}
         isOpen={!!editingShift}
         onOpenChange={(isOpen) => {
-            if(!isOpen) setEditingShift(null);
+            if (!isOpen) setEditingShift(null);
         }}
     />
     </>

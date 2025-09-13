@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc } from 'firebase/firestore';
 import type { Driver, MaintenanceTicket, Vehicle, Shift } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
@@ -398,6 +398,63 @@ export async function startShift(prevState: any, formData: FormData) {
   } catch(error: any) {
     console.error("Failed to start shift:", error);
     return { type: "error", message: `Failed to start shift: ${error.message}` };
+  }
+}
+
+const updateShiftSchema = z.object({
+  shiftId: z.string(),
+  vehicleId: z.string().min(1, "Please select a vehicle."),
+});
+
+export async function updateShift(prevState: any, formData: FormData) {
+  const validatedFields = updateShiftSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+
+  if (!validatedFields.success) {
+    return {
+      type: "error",
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Invalid data.",
+    };
+  }
+  
+  const { shiftId, vehicleId: newVehicleId } = validatedFields.data;
+  
+  const batch = writeBatch(db);
+  const shiftRef = doc(db, 'shifts', shiftId);
+
+  try {
+    const shiftDoc = await getDoc(shiftRef);
+    if (!shiftDoc.exists()) {
+      return { type: "error", message: "Shift not found." };
+    }
+
+    const oldVehicleId = shiftDoc.data().vehicleId;
+    
+    if (oldVehicleId === newVehicleId) {
+       return { type: "success", message: "No changes made." };
+    }
+
+    // 1. Update the shift document
+    batch.update(shiftRef, { vehicleId: newVehicleId });
+
+    // 2. Update the new vehicle
+    const newVehicleRef = doc(db, 'vehicles', newVehicleId);
+    batch.update(newVehicleRef, { currentShiftId: shiftId });
+
+    // 3. Update the old vehicle
+    const oldVehicleRef = doc(db, 'vehicles', oldVehicleId);
+    batch.update(oldVehicleRef, { currentShiftId: null });
+
+    await batch.commit();
+    revalidatePath('/admin/shifts');
+    revalidatePath('/');
+    return { type: "success", message: "Shift updated successfully." };
+
+  } catch(error: any) {
+    console.error("Failed to update shift:", error);
+    return { type: "error", message: `Failed to update shift: ${error.message}` };
   }
 }
 
