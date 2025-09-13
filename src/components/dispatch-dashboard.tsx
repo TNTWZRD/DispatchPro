@@ -124,7 +124,7 @@ function DispatchDashboardUI() {
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
         uniqueMessages
           .filter(m => m.timestamp)
-          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+          .sort((a, b) => (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0));
         
         const incomingMessages = uniqueMessages.filter(m => m.recipientId === user.uid);
         const prevIncomingMessages = prevMessagesRef.current.filter(m => m.recipientId === user.uid);
@@ -380,20 +380,28 @@ function DispatchDashboardUI() {
     setEditingRide(null);
     setIsFormOpen(true);
   }
+  
+  const getThreadId = (uid1: string, uid2: string) => {
+    return [uid1, uid2].sort().join('-');
+  }
+
 
   const handleSendMessage = async (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => {
-    if (!db) return;
+    if (!db || !user) return;
+
     await addDoc(collection(db, 'messages'), {
         ...message,
+        threadId: getThreadId(message.senderId, message.recipientId),
         timestamp: serverTimestamp(),
         isRead: false,
     });
   };
   
-  const handleMarkMessagesAsRead = async (driverId: string) => {
+  const handleMarkMessagesAsRead = async (participantId: string) => {
     if (!db || !user) return;
+    const threadId = getThreadId(user.uid, participantId);
     const batch = writeBatch(db);
-    const unreadMessages = messages.filter(m => m.driverId === driverId && m.recipientId === user.uid && !m.isRead);
+    const unreadMessages = messages.filter(m => m.threadId === threadId && m.recipientId === user.uid && !m.isRead);
     unreadMessages.forEach(message => {
         const msgRef = doc(db, 'messages', message.id);
         batch.update(msgRef, { isRead: true });
@@ -564,7 +572,7 @@ function DispatchDashboardUI() {
               rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
               allShifts={activeShifts}
               allDrivers={drivers}
-              messages={messages.filter(m => m.driverId === shift.driverId)}
+              messages={messages.filter(m => m.threadId === getThreadId(user?.uid || '', shift.driverId))}
               onAssignDriver={handleAssignDriver}
               onChangeStatus={handleChangeStatus}
               onSetFare={handleSetFare}
@@ -650,7 +658,7 @@ function DispatchDashboardUI() {
                             rides={rides.filter(r => ['assigned', 'in-progress', 'completed'].includes(r.status) && r.shiftId === shift.id)}
                             allShifts={activeShifts}
                             allDrivers={drivers}
-                            messages={messages.filter(m => m.driverId === shift.driverId)}
+                            messages={messages.filter(m => m.threadId === getThreadId(user?.uid || '', shift.driverId))}
                             onAssignDriver={handleAssignDriver}
                             onChangeStatus={handleChangeStatus}
                             onSetFare={handleSetFare}
@@ -776,5 +784,3 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
-
-    

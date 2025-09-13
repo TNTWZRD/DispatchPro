@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import type { Ride, Driver, Message, Shift, AppUser } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
-import { CheckCircle, MessageCircle, LogOut } from 'lucide-react';
+import { CheckCircle, MessageCircle, LogOut, Users, X } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ResponsiveDialog } from './responsive-dialog';
 import { DriverEditForm } from './driver-edit-form';
@@ -17,6 +17,32 @@ import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTim
 import { sendBrowserNotification } from '@/lib/notifications';
 import { formatUserName } from '@/lib/utils';
 import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+
+const getThreadId = (uid1: string, uid2: string) => {
+    return [uid1, uid2].sort().join('-');
+}
+
+function DriverChatListDialog({ drivers, onSelectDriver, onClose }: { drivers: Driver[], onSelectDriver: (driver: Driver) => void, onClose: () => void }) {
+    return (
+        <ResponsiveDialog open={true} onOpenChange={(isOpen) => !isOpen && onClose()} title="Chat with another driver">
+            <ScrollArea className="h-[60vh] p-2">
+                <div className="space-y-2">
+                {drivers.map(driver => (
+                    <Button key={driver.id} variant="ghost" className="w-full justify-start h-14" onClick={() => onSelectDriver(driver)}>
+                         <Avatar className="h-10 w-10 mr-4">
+                            <AvatarImage src={`https://i.pravatar.cc/40?u=${driver.id}`} />
+                            <AvatarFallback>{driver.name?.[0] || 'D'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-left">{formatUserName(driver.name)}</span>
+                    </Button>
+                ))}
+                </div>
+            </ScrollArea>
+        </ResponsiveDialog>
+    )
+}
 
 export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
@@ -24,7 +50,9 @@ export function DriverDashboard() {
   const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  const [chatParticipant, setChatParticipant] = useState<Driver | AppUser | null>(null);
+  const [isDriverListOpen, setIsDriverListOpen] = useState(false);
   
   const { user, logout } = useAuth();
   
@@ -97,59 +125,36 @@ export function DriverDashboard() {
         setRides(newRides);
     });
 
-    const messagesReceivedQuery = query(
+    // Listen to all threads the current driver is a part of
+    const messagesQuery = query(
       collection(db, "messages"),
-      where("recipientId", "==", currentDriver.id),
+      where("threadId", "array-contains", currentDriver.id),
       orderBy("timestamp", "asc")
     );
-    const messagesSentQuery = query(
-      collection(db, "messages"),
-      where("senderId", "==", currentDriver.id),
-      orderBy("timestamp", "asc")
-    );
+    
+    const messagesUnsub = onSnapshot(messagesQuery, (snapshot) => {
+        const newMessages = snapshot.docs.map(doc => ({
+            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
+        } as Message));
 
-    let receivedMessages: Message[] = [];
-    let sentMessages: Message[] = [];
-
-    const mergeAndSetMessages = () => {
-        const all = [...receivedMessages, ...sentMessages];
-        const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
-        uniqueMessages
-          .filter(m => m.timestamp)
-          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-        if (prevMessagesRef.current.length > 0 && uniqueMessages.length > prevMessagesRef.current.length) {
-            const lastMessage = uniqueMessages[uniqueMessages.length - 1];
-            if (lastMessage && lastMessage.sender === 'dispatcher') {
+        if (prevMessagesRef.current.length > 0 && newMessages.length > prevMessagesRef.current.length) {
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.recipientId === currentDriver.id) {
+                const senderName = allDrivers.find(d => d.id === lastMessage.senderId)?.name || 'Dispatch';
                 sendBrowserNotification(
-                    "New message from Dispatch",
+                    `New message from ${formatUserName(senderName)}`,
                     lastMessage.text || "Sent an image or audio"
                 );
             }
         }
-        setMessages(uniqueMessages);
-    }
-    
-    const unsubReceived = onSnapshot(messagesReceivedQuery, (snapshot) => {
-        receivedMessages = snapshot.docs.map(doc => ({
-            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
-        } as Message));
-        mergeAndSetMessages();
-    });
-
-    const unsubSent = onSnapshot(messagesSentQuery, (snapshot) => {
-        sentMessages = snapshot.docs.map(doc => ({
-            ...doc.data(), id: doc.id, timestamp: toDate(doc.data().timestamp)
-        } as Message));
-        mergeAndSetMessages();
+        setMessages(newMessages);
     });
 
     return () => {
         ridesUnsub();
-        unsubReceived();
-        unsubSent();
+        messagesUnsub();
     }
-  }, [currentDriver]);
+  }, [currentDriver, allDrivers]);
 
 
   const driverRides = useMemo(() => {
@@ -179,31 +184,27 @@ export function DriverDashboard() {
   }, [driverRides, currentRide]);
 
   const dispatcherUser: AppUser = useMemo(() => {
-    // This is a placeholder for the dispatcher user.
-    // In a real app, you might fetch the actual dispatcher's user object.
-    const dispatcher = allDrivers.find(d => d.name === 'dispatcher'); // A bit of a hack
     return {
-        id: dispatcher?.id || 'dispatcher-main',
-        uid: dispatcher?.id || 'dispatcher-main',
+        id: 'dispatcher-main', // a static ID for the dispatcher entity
+        uid: 'dispatcher-main',
         name: 'Dispatch',
         displayName: 'Dispatch',
         email: '',
         role: 2,
     };
-  }, [allDrivers]);
+  }, []);
 
-  const driverMessages = useMemo(() => {
-    if (!currentDriver) return [];
-    // The driver-dashboard only cares about the conversation with the dispatcher.
-    // The driverId on the message acts as the threadId.
-    return messages.filter(m => m.driverId === currentDriver.id);
+  const getUnreadCount = (participantId: string) => {
+    if (!currentDriver) return 0;
+    const threadId = getThreadId(currentDriver.id, participantId);
+    return messages.filter(m => m.threadId === threadId && m.recipientId === currentDriver.id && !m.isRead).length;
+  }
+  
+  const totalUnread = useMemo(() => {
+    if(!currentDriver) return 0;
+    return messages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
   }, [messages, currentDriver]);
 
-
-  const unreadMessagesCount = useMemo(() => {
-    if (!currentDriver) return 0;
-    return driverMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead).length;
-  }, [driverMessages, currentDriver]);
   
   const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
     const rideToUpdate = rides.find(ride => ride.id === rideId);
@@ -233,18 +234,25 @@ export function DriverDashboard() {
     });
   };
   
-  const handleChatOpen = async (isOpen: boolean) => {
-    if(isOpen && currentDriver) {
-        const batch = writeBatch(db);
-        const unread = driverMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead);
-        unread.forEach(message => {
-            const msgRef = doc(db, 'messages', message.id);
-            batch.update(msgRef, { isRead: true });
-        });
-        await batch.commit();
-    }
-    setIsChatOpen(isOpen);
+  const openChatWith = async (participant: Driver | AppUser) => {
+    if(!currentDriver) return;
+
+    setChatParticipant(participant);
+    const threadId = getThreadId(currentDriver.id, participant.id);
+    const batch = writeBatch(db);
+    const unread = messages.filter(m => m.threadId === threadId && m.recipientId === currentDriver.id && !m.isRead);
+    
+    unread.forEach(message => {
+        const msgRef = doc(db, 'messages', message.id);
+        batch.update(msgRef, { isRead: true });
+    });
+    await batch.commit();
   };
+
+  const handleSelectDriverToChat = (driver: Driver) => {
+      setIsDriverListOpen(false);
+      openChatWith(driver);
+  }
 
   if (!currentDriver) {
     return (
@@ -327,18 +335,30 @@ export function DriverDashboard() {
         </div>
       </main>
 
-      <Button
-        variant="default"
-        size="lg"
-        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-50 p-0"
-        onClick={() => handleChatOpen(true)}
-      >
-        <MessageCircle className="h-8 w-8" />
-        {unreadMessagesCount > 0 && (
-          <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{unreadMessagesCount}</Badge>
-        )}
-        <span className="sr-only">Open Chat</span>
-      </Button>
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3">
+          <Button
+            variant="secondary"
+            size="lg"
+            className="h-14 w-14 rounded-full shadow-lg p-0"
+            onClick={() => setIsDriverListOpen(true)}
+          >
+            <Users className="h-7 w-7" />
+            <span className="sr-only">Chat with other drivers</span>
+          </Button>
+          <Button
+            variant="default"
+            size="lg"
+            className="h-16 w-16 rounded-full shadow-lg p-0"
+            onClick={() => openChatWith(dispatcherUser)}
+          >
+            <MessageCircle className="h-8 w-8" />
+            {totalUnread > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-6 w-6 justify-center p-0">{totalUnread}</Badge>
+            )}
+            <span className="sr-only">Open Chat with Dispatch</span>
+          </Button>
+      </div>
+
       
       <ResponsiveDialog
         open={!!editingRide}
@@ -354,21 +374,30 @@ export function DriverDashboard() {
         )}
       </ResponsiveDialog>
       
-      <ResponsiveDialog
-        open={isChatOpen}
-        onOpenChange={handleChatOpen}
-        title={`Chat with ${dispatcherUser.name}`}
-      >
+      {isDriverListOpen && (
+          <DriverChatListDialog 
+            drivers={allDrivers.filter(d => d.id !== currentDriver.id)}
+            onSelectDriver={handleSelectDriverToChat}
+            onClose={() => setIsDriverListOpen(false)}
+          />
+      )}
+
+      {chatParticipant && (
+        <ResponsiveDialog
+            open={!!chatParticipant}
+            onOpenChange={(isOpen) => !isOpen && setChatParticipant(null)}
+            title={`Chat with ${formatUserName(chatParticipant.name || (chatParticipant as AppUser).displayName || 'User')}`}
+        >
           <ChatView
-            threadId={currentDriver.id}
-            participant={dispatcherUser}
-            messages={driverMessages}
+            threadId={getThreadId(currentDriver.id, chatParticipant.id)}
+            participant={chatParticipant}
+            messages={messages.filter(m => m.threadId === getThreadId(currentDriver.id, chatParticipant.id))}
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
           />
       </ResponsiveDialog>
+      )}
+
     </div>
   );
 }
-
-    

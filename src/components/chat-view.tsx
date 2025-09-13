@@ -57,7 +57,8 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
   const handleSendMessage = () => {
     if (text.trim() && user) {
       onSendMessage({ 
-        driverId: threadId, 
+        threadId: threadId,
+        driverId: hasRole(Role.DRIVER) ? user.uid : participant.id, // For legacy compatibility
         sender: senderType,
         senderId: user.uid, 
         recipientId: participant.id,
@@ -74,7 +75,8 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
       const reader = new FileReader();
       reader.onloadend = () => {
         onSendMessage({ 
-            driverId: threadId, 
+            threadId: threadId,
+            driverId: hasRole(Role.DRIVER) ? user.uid : participant.id,
             sender: senderType,
             senderId: user.uid,
             recipientId: participant.id,
@@ -104,7 +106,8 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
             try {
                 const result = await processChatMessage({ audioDataUri });
                 onSendMessage({ 
-                    driverId: threadId, 
+                    threadId: threadId,
+                    driverId: hasRole(Role.DRIVER) ? user.uid : participant.id,
                     sender: senderType,
                     senderId: user.uid,
                     recipientId: participant.id,
@@ -169,7 +172,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
                   {message.senderId !== user?.uid && (
                     <Avatar className="h-8 w-8">
                        <AvatarImage src={(participant as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${participant.id}`} />
-                       <AvatarFallback>{(participant.name || participant.displayName)?.[0] || 'U'}</AvatarFallback>
+                       <AvatarFallback>{(participant.name || (participant as AppUser).displayName)?.[0] || 'U'}</AvatarFallback>
                     </Avatar>
                   )}
                   <div

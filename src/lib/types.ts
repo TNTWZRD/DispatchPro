@@ -110,7 +110,8 @@ export type Ride = {
 
 export type Message = {
   id: string;
-  driverId: string; // Represents the chat thread, usually with a driver
+  threadId: string; // Uniquely identifies a conversation between two users
+  driverId: string; // Represents the chat thread, usually with a driver - DEPRECATED
   sender: 'driver' | 'dispatcher';
   senderId: string;
   recipientId: string;
