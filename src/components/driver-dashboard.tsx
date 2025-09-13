@@ -177,13 +177,19 @@ export function DriverDashboard() {
     return driverRides.filter(r => r.id !== currentRide?.id)
   }, [driverRides, currentRide]);
 
-  const dispatcherUser: AppUser = useMemo(() => ({
-    id: 'dispatcher',
-    uid: 'dispatcher',
-    name: 'Dispatch',
-    email: '',
-    role: 2,
-  }), []);
+  const dispatcherUser: AppUser = useMemo(() => {
+    // This is a placeholder for the dispatcher user.
+    // In a real app, you might fetch the actual dispatcher's user object.
+    const dispatcher = allDrivers.find(d => d.name === 'dispatcher'); // A bit of a hack
+    return {
+        id: dispatcher?.id || 'dispatcher-main',
+        uid: dispatcher?.id || 'dispatcher-main',
+        name: 'Dispatch',
+        displayName: 'Dispatch',
+        email: '',
+        role: 2,
+    };
+  }, [allDrivers]);
 
   const driverMessages = useMemo(() => {
     if (!currentDriver) return [];

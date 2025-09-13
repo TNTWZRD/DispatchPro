@@ -169,7 +169,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
                   {message.senderId !== user?.uid && (
                     <Avatar className="h-8 w-8">
                        <AvatarImage src={(participant as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${participant.id}`} />
-                       <AvatarFallback>{participant.name?.[0] || 'U'}</AvatarFallback>
+                       <AvatarFallback>{(participant.name || participant.displayName)?.[0] || 'U'}</AvatarFallback>
                     </Avatar>
                   )}
                   <div
@@ -191,7 +191,7 @@ export function ChatView({ threadId, participant, messages, allDrivers, onSendMe
                     {message.audioUrl && (
                       <audio controls src={message.audioUrl} className="w-full mt-2" />
                     )}
-                    {isValid(new Date(message.timestamp)) && (
+                    {message.timestamp && isValid(new Date(message.timestamp)) && (
                       <p className="text-xs opacity-70 mt-1 text-right">{format(new Date(message.timestamp), 'p')}</p>
                     )}
                   </div>
