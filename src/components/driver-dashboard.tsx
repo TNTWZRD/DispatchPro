@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -80,10 +79,10 @@ export function DriverDashboard() {
             createdAt: toDate(doc.data().createdAt),
             updatedAt: toDate(doc.data().updatedAt),
             scheduledTime: doc.data().scheduledTime ? toDate(doc.data().scheduledTime) : undefined,
-            assignedAt: doc.data().assignedAt ? toDate(doc.data().assignedAt) : undefined,
-            pickedUpAt: doc.data().pickedUpAt ? toDate(doc.data().pickedUpAt) : undefined,
-            droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
-            cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
+            assignedAt: toDate(doc.data().assignedAt),
+            pickedUpAt: toDate(doc.data().pickedUpAt),
+            droppedOffAt: toDate(doc.data().droppedOffAt),
+            cancelledAt: toDate(doc.data().cancelledAt),
         } as Ride));
         
         if (prevRidesRef.current.length > 0 && newRides.length > prevRidesRef.current.length) {
@@ -115,7 +114,9 @@ export function DriverDashboard() {
     const mergeAndSetMessages = () => {
         const all = [...receivedMessages, ...sentMessages];
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
-        uniqueMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        uniqueMessages
+          .filter(m => m.timestamp)
+          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         if (prevMessagesRef.current.length > 0 && uniqueMessages.length > prevMessagesRef.current.length) {
             const lastMessage = uniqueMessages[uniqueMessages.length - 1];
@@ -369,3 +370,5 @@ export function DriverDashboard() {
     </div>
   );
 }
+
+    

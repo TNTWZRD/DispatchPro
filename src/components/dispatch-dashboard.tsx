@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useContext } from 'react';
@@ -123,7 +122,9 @@ function DispatchDashboardUI() {
     const mergeAndSetMessages = () => {
         const all = [...receivedMessages, ...sentMessages];
         const uniqueMessages = Array.from(new Map(all.map(m => [m.id, m])).values());
-        uniqueMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        uniqueMessages
+          .filter(m => m.timestamp)
+          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
         
         const incomingMessages = uniqueMessages.filter(m => m.recipientId === user.uid);
         const prevIncomingMessages = prevMessagesRef.current.filter(m => m.recipientId === user.uid);
@@ -164,7 +165,7 @@ function DispatchDashboardUI() {
         unsubReceived();
         unsubSent();
     };
-  }, [user, drivers]);
+  }, [user]);
   
   const activeShifts = shifts
     .filter(s => s.status === 'active')
@@ -775,3 +776,5 @@ export function DispatchDashboard() {
     </ZoomProvider>
   )
 }
+
+    
