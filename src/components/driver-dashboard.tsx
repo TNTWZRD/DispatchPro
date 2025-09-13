@@ -236,11 +236,14 @@ export function DriverDashboard() {
     return dispatchLogMessages.filter(m => !m.isReadBy?.includes(currentDriver.id)).length;
   }, [dispatchLogMessages, currentDriver]);
   
-  const handleEditRide = async (rideId: string, details: { cashTip?: number, notes?: string }) => {
+  const handleEditRide = async (rideId: string, details: { cashTip?: number; notes?: string }) => {
     const rideToUpdate = rides.find(ride => ride.id === rideId);
     if (!rideToUpdate) return;
     
-    const newPaymentDetails = { ...(rideToUpdate.paymentDetails || {}), cashTip: details.cashTip };
+    const newPaymentDetails = { 
+        ...(rideToUpdate.paymentDetails || {}), 
+        cashTip: details.cashTip ?? null 
+    };
     const newNotes = details.notes;
 
     await updateDoc(doc(db, 'rides', rideId), {
