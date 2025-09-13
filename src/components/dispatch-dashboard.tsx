@@ -181,7 +181,11 @@ function DispatchDashboardUI() {
     messages.forEach(m => {
       if (!m.threadId) return;
       if (m.threadId.length === 2) {
+        if (m.threadId.includes(DISPATCHER_ID)) {
           p2p.push(m);
+        } else {
+          p2p.push(m);
+        }
       } else {
           shift.push(m);
       }
@@ -224,21 +228,19 @@ function DispatchDashboardUI() {
     let dispatchUnreadCount = 0;
 
     p2pMessages.forEach(msg => {
-        if (msg.isRead) return;
-
-        // Message is for the internal dispatch log
-        if (msg.recipientId === DISPATCHER_ID) {
-            // A message to the dispatch log should always be "unread" for the channel,
-            // regardless of who sent it.
-            dispatchUnreadCount++;
+      if (msg.isRead) return;
+    
+      // Case 1: Message is for the internal dispatch log
+      if (msg.recipientId === DISPATCHER_ID) {
+        dispatchUnreadCount++;
+      }
+      // Case 2: Message is a standard P2P chat for the current user
+      else if (msg.recipientId === user.uid) {
+        const contact = contactsMap.get(msg.senderId);
+        if (contact) {
+          contact.privateUnread++;
         }
-        // Message is a standard P2P chat for the current user
-        else if (msg.recipientId === user.uid && msg.senderId !== user.uid) {
-            const contact = contactsMap.get(msg.senderId);
-            if (contact) {
-                contact.privateUnread++;
-            }
-        }
+      }
     });
 
     shiftChannelMessages.forEach(msg => {
