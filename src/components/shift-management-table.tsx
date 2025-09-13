@@ -1,10 +1,11 @@
 
+
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import type { Shift, Driver, Vehicle } from '@/lib/types';
+import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import type { Shift, Driver, Vehicle, Ride } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -15,50 +16,79 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, PowerOff } from 'lucide-react';
+import { Loader2, PowerOff, MoreHorizontal, Edit, FileText, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { endShift } from '@/app/admin/actions';
 import { formatUserName } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
+import { ShiftNotesForm } from './shift-notes-form';
 
 export function ShiftManagementTable() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const shiftsQuery = query(collection(db, 'shifts'), orderBy('startTime', 'desc'));
     const unsubShifts = onSnapshot(shiftsQuery, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
+      setShifts(snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         startTime: doc.data().startTime?.toDate(),
         endTime: doc.data().endTime?.toDate(),
-      }) as Shift);
-      setShifts(data);
+      }) as Shift));
       if(loading) setLoading(false);
     });
 
     const driversQuery = query(collection(db, 'drivers'));
     const unsubDrivers = onSnapshot(driversQuery, (snapshot) => {
       setDrivers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Driver)));
-      if(loading) setLoading(false);
     });
 
     const vehiclesQuery = query(collection(db, 'vehicles'));
     const unsubVehicles = onSnapshot(vehiclesQuery, (snapshot) => {
       setVehicles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle)));
-      if(loading) setLoading(false);
+    });
+
+    const ridesQuery = query(collection(db, 'rides'), where('status', '==', 'completed'));
+    const unsubRides = onSnapshot(ridesQuery, (snapshot) => {
+      setRides(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        droppedOffAt: doc.data().droppedOffAt?.toDate(),
+      }) as Ride));
     });
 
     return () => {
       unsubShifts();
       unsubDrivers();
       unsubVehicles();
+      unsubRides();
     };
   }, [loading]);
+
+  const shiftData = useMemo(() => {
+    return shifts.map(shift => {
+      const completedRides = rides.filter(ride => 
+          ride.shiftId === shift.id && 
+          ride.status === 'completed' &&
+          ride.droppedOffAt &&
+          ride.droppedOffAt >= shift.startTime &&
+          (!shift.endTime || ride.droppedOffAt <= shift.endTime)
+      );
+      const totalFare = completedRides.reduce((sum, ride) => sum + (ride.totalFare || 0), 0);
+      return {
+        ...shift,
+        totalFare,
+      };
+    });
+  }, [shifts, rides]);
+
 
   const getDriverName = (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
@@ -85,6 +115,7 @@ export function ShiftManagementTable() {
   }
 
   return (
+    <>
     <div className="border rounded-lg">
       <Table>
         <TableHeader>
@@ -94,11 +125,12 @@ export function ShiftManagementTable() {
             <TableHead>Vehicle</TableHead>
             <TableHead>Start Time</TableHead>
             <TableHead>End Time</TableHead>
+            <TableHead>Total Fare</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {shifts.map((shift) => (
+          {shiftData.map((shift) => (
             <TableRow key={shift.id}>
               <TableCell>
                 <Badge className={shift.status === 'active' ? 'bg-green-600' : 'bg-gray-500'}>
@@ -107,19 +139,50 @@ export function ShiftManagementTable() {
               </TableCell>
               <TableCell>{getDriverName(shift.driverId)}</TableCell>
               <TableCell>{getVehicleNickname(shift.vehicleId)}</TableCell>
-              <TableCell>{format(shift.startTime, 'PPpp')}</TableCell>
-              <TableCell>{shift.endTime ? format(shift.endTime, 'PPpp') : 'N/A'}</TableCell>
+              <TableCell>{format(shift.startTime, 'PPp')}</TableCell>
+              <TableCell>{shift.endTime ? format(shift.endTime, 'PPp') : 'N/A'}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    {shift.totalFare.toFixed(2)}
+                </div>
+              </TableCell>
               <TableCell className="text-right">
-                {shift.status === 'active' && (
-                    <Button variant="destructive" size="sm" onClick={() => handleEndShift(shift)}>
-                       <PowerOff className="mr-2" /> End Shift
-                    </Button>
-                )}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreHorizontal />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => {}} disabled>
+                           <Edit /> Edit Shift
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setEditingShift(shift)}>
+                            <FileText /> Add/Edit Notes
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {shift.status === 'active' && (
+                            <DropdownMenuItem onSelect={() => handleEndShift(shift)} className="text-destructive">
+                                <PowerOff /> End Shift
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </div>
+    
+    <ShiftNotesForm
+        shift={editingShift}
+        isOpen={!!editingShift}
+        onOpenChange={(isOpen) => {
+            if(!isOpen) setEditingShift(null);
+        }}
+    />
+    </>
   );
 }

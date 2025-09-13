@@ -1,4 +1,5 @@
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-shift' | 'offline';
@@ -73,6 +74,7 @@ export type Shift = {
     status: 'active' | 'inactive';
     startTime: Date;
     endTime?: Date;
+    notes?: string;
 }
 
 export type MaintenanceTicket = {

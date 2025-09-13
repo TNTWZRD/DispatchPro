@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import 'dotenv/config';
@@ -322,5 +323,38 @@ export async function endShift(shiftId: string, driverId: string, vehicleId: str
     } catch (error: any) {
         console.error("Failed to end shift:", error);
         return { type: "error", message: `Failed to end shift: ${error.message}` };
+    }
+}
+
+const updateShiftNotesSchema = z.object({
+  shiftId: z.string(),
+  notes: z.string().optional(),
+});
+
+export async function updateShiftNotes(prevState: any, formData: FormData) {
+    const validatedFields = updateShiftNotesSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+        return {
+            type: "error",
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Invalid data provided.",
+        };
+    }
+    
+    const { shiftId, notes } = validatedFields.data;
+
+    try {
+        const shiftRef = doc(db, 'shifts', shiftId);
+        await updateDoc(shiftRef, {
+            notes: notes || '',
+        });
+        revalidatePath('/admin/shifts');
+        return { type: 'success', message: 'Shift notes updated.' };
+    } catch (error: any) {
+        console.error("Failed to update shift notes:", error);
+        return { type: 'error', message: `Failed to update notes: ${error.message}` };
     }
 }
