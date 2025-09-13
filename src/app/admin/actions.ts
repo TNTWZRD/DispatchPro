@@ -326,69 +326,55 @@ export async function endShift(shiftId: string, driverId: string, vehicleId: str
     }
 }
 
-const updateShiftNotesSchema = z.object({
-  shiftId: z.string(),
+const notesSchema = z.object({
   notes: z.string().optional(),
 });
 
 export async function updateShiftNotes(prevState: any, formData: FormData) {
-    const validatedFields = updateShiftNotesSchema.safeParse(
-        Object.fromEntries(formData.entries())
-    );
+  const shiftId = formData.get('shiftId') as string;
+  const validatedFields = notesSchema.safeParse({
+    notes: formData.get("notes"),
+  });
 
-    if (!validatedFields.success) {
-        return {
-            type: "error",
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: "Invalid data provided.",
-        };
-    }
-    
-    const { shiftId, notes } = validatedFields.data;
+  if (!shiftId || !validatedFields.success) {
+    return { type: "error", message: "Invalid data provided." };
+  }
 
-    try {
-        const shiftRef = doc(db, 'shifts', shiftId);
-        await updateDoc(shiftRef, {
-            notes: notes || '',
-        });
-        revalidatePath('/admin/shifts');
-        return { type: 'success', message: 'Shift notes updated.' };
-    } catch (error: any) {
-        console.error("Failed to update shift notes:", error);
-        return { type: 'error', message: `Failed to update notes: ${error.message}` };
-    }
+  try {
+    const shiftRef = doc(db, 'shifts', shiftId);
+    await updateDoc(shiftRef, {
+      notes: validatedFields.data.notes,
+    });
+    revalidatePath('/admin/shifts');
+    revalidatePath('/');
+    return { type: "success", message: "Shift notes updated successfully." };
+  } catch (error: any) {
+    console.error("Failed to update shift notes:", error);
+    return { type: "error", message: `Failed to update shift notes: ${error.message}` };
+  }
 }
 
-const updateVehicleNotesSchema = z.object({
-  vehicleId: z.string(),
-  notes: z.string().optional(),
-});
-
 export async function updateVehicleNotes(prevState: any, formData: FormData) {
-    const validatedFields = updateVehicleNotesSchema.safeParse(
-        Object.fromEntries(formData.entries())
-    );
+  const vehicleId = formData.get('vehicleId') as string;
+  const validatedFields = notesSchema.safeParse({
+    notes: formData.get("notes"),
+  });
 
-    if (!validatedFields.success) {
-        return {
-            type: "error",
-            errors: validatedFields.error.flatten().fieldErrors,
-            message: "Invalid data provided.",
-        };
-    }
-    
-    const { vehicleId, notes } = validatedFields.data;
+  if (!vehicleId || !validatedFields.success) {
+    return { type: "error", message: "Invalid data provided." };
+  }
 
-    try {
-        const vehicleRef = doc(db, 'vehicles', vehicleId);
-        await updateDoc(vehicleRef, {
-            notes: notes || '',
-            updatedAt: serverTimestamp(),
-        });
-        revalidatePath('/'); // Revalidate dashboard
-        return { type: 'success', message: 'Vehicle notes updated.' };
-    } catch (error: any) {
-        console.error("Failed to update vehicle notes:", error);
-        return { type: 'error', message: `Failed to update notes: ${error.message}` };
-    }
+  try {
+    const vehicleRef = doc(db, 'vehicles', vehicleId);
+    await updateDoc(vehicleRef, {
+      notes: validatedFields.data.notes,
+      updatedAt: serverTimestamp(),
+    });
+    revalidatePath(`/admin/vehicles/${vehicleId}`);
+    revalidatePath('/');
+    return { type: "success", message: "Vehicle notes updated successfully." };
+  } catch (error: any) {
+    console.error("Failed to update vehicle notes:", error);
+    return { type: "error", message: `Failed to update vehicle notes: ${error.message}` };
+  }
 }
