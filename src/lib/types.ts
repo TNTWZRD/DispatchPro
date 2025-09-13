@@ -36,6 +36,7 @@ export type AppUser = {
     email: string | null;
     name: string | null;
     displayName?: string | null; // Keep for firebase compatibility, but prefer `name`
+    phoneNumber?: string | null;
     role: Role;
     photoURL?: string | null;
     createdAt?: Date;

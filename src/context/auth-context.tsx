@@ -41,7 +41,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           ...data,
           id: userDoc.id,
           uid: userDoc.id,
-          name: data.displayName
+          name: data.displayName,
+          displayName: data.displayName
       } as AppUser;
 
       if (appUser.role & Role.DRIVER) {
@@ -50,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!driverDoc.exists()) {
           const newDriver: Omit<Driver, 'id'> = {
             name: appUser.displayName || appUser.email || 'Unnamed Driver',
-            phoneNumber: '',
+            phoneNumber: appUser.phoneNumber || '',
             rating: 5,
             status: 'offline',
             location: { x: 50, y: 50 },

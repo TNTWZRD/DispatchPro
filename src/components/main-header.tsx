@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Shield, Truck, LayoutDashboard } from 'lucide-react';
+import { LogOut, Shield, Truck, LayoutDashboard, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -97,6 +97,10 @@ export function MainHeader() {
                          <DropdownMenuSeparator />
                         </>
                     )}
+                    <DropdownMenuItem asChild>
+                       <Link href="/settings"><User className="mr-2"/> Settings</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => logout()}>
                         <LogOut className="mr-2"/>
                         Log out
