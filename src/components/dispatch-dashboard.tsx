@@ -224,29 +224,29 @@ function DispatchDashboardUI() {
     let dispatchUnreadCount = 0;
 
     p2pMessages.forEach(msg => {
-      if (msg.recipientId === user.uid && !msg.isRead) {
-        const contactId = msg.senderId;
-        const contact = contactsMap.get(contactId);
-        if (contact) {
-            contact.privateUnread += 1;
-        }
-      } else if (msg.recipientId === DISPATCHER_ID && msg.senderId !== user.uid && !msg.isRead) {
-        // Message is to the dispatch channel, from another user, and unread
-        const isSelfInThread = msg.threadId.includes(user.uid);
-        if (isSelfInThread) {
-          dispatchUnreadCount++;
+      if (!msg.isRead) {
+        if (msg.recipientId === DISPATCHER_ID && msg.senderId !== user.uid) {
+          // This message is for the internal dispatch log, and wasn't sent by the current user
+          const isSelfInThread = msg.threadId.includes(user.uid);
+          if (isSelfInThread) {
+            dispatchUnreadCount++;
+          }
+        } else if (msg.recipientId === user.uid) {
+          // This is a direct message to the current user
+          const contact = contactsMap.get(msg.senderId);
+          if (contact) {
+            contact.privateUnread++;
+          }
         }
       }
     });
 
-
     shiftChannelMessages.forEach(msg => {
-      const contactId = msg.senderId === user.uid ? msg.recipientId : msg.senderId;
-      if (contactId === DISPATCHER_ID) return; // Don't count messages from Dispatcher to self as unread.
-
-      const contact = contactsMap.get(contactId);
-      if (contact && msg.recipientId === user.uid && !msg.isRead) {
-        contact.publicUnread += 1;
+      if (msg.recipientId === user.uid && !msg.isRead) {
+        const contact = contactsMap.get(msg.senderId);
+        if (contact) {
+          contact.publicUnread += 1;
+        }
       }
     });
 
@@ -254,7 +254,6 @@ function DispatchDashboardUI() {
     
     const totalPrivateUnread = contacts.reduce((sum, c) => sum + c.privateUnread, 0) + dispatchUnreadCount;
     
-    // Total unread public messages is the count of unread messages where the current user is the recipient.
     const totalPublicUnread = shiftChannelMessages.filter(m => m.recipientId === user.uid && !m.isRead).length;
 
     return { contacts, totalPrivateUnread, totalPublicUnread, dispatchUnread: dispatchUnreadCount };
@@ -1055,3 +1054,6 @@ export function DispatchDashboard() {
 
 
 
+
+
+    
