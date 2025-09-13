@@ -65,6 +65,7 @@ export type Vehicle = {
     currentShiftId: string | null;
     createdAt: Date;
     updatedAt: Date;
+    notes?: string;
 }
 
 export type Shift = {

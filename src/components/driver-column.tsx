@@ -33,6 +33,7 @@ type DriverColumnProps = {
   onEndShift: (shift: Shift) => void;
   onOpenChat?: () => void;
   onEditShift: (shift: Shift) => void;
+  onEditVehicle: (vehicle: Vehicle) => void;
   unreadCount: number;
   className?: string;
 };
@@ -59,6 +60,7 @@ export function DriverColumn({
     onEndShift,
     onOpenChat,
     onEditShift,
+    onEditVehicle,
     unreadCount,
     className
 }: DriverColumnProps) {
@@ -125,7 +127,10 @@ export function DriverColumn({
                            <Edit /> Edit Shift
                         </DropdownMenuItem>
                          <DropdownMenuItem onSelect={() => onEditShift(shift)}>
-                            <FileText /> Add/Edit Notes
+                            <FileText /> Shift Notes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => onEditVehicle(vehicle)}>
+                            <Car /> Vehicle Notes
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialogTrigger asChild>

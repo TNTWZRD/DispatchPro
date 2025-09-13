@@ -38,6 +38,7 @@ import { ChatView } from './chat-view';
 import { Separator } from './ui/separator';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ShiftNotesForm } from './shift-notes-form';
+import { VehicleNotesForm } from './vehicle-notes-form';
 
 
 function DispatchDashboardUI() {
@@ -50,6 +51,7 @@ function DispatchDashboardUI() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isChatDirectoryOpen, setIsChatDirectoryOpen] = useState(false);
   const [currentChatTarget, setCurrentChatTarget] = useState<AppUser | Driver | null>(null);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
@@ -776,6 +778,7 @@ function DispatchDashboardUI() {
                   onEndShift={handleEndShift}
                   onOpenChat={() => openChatWith(shift.driver as Driver, true)}
                   onEditShift={setEditingShift}
+                  onEditVehicle={setEditingVehicle}
                   unreadCount={unreadCount}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
@@ -869,6 +872,7 @@ function DispatchDashboardUI() {
                               onEndShift={handleEndShift}
                               onOpenChat={() => openChatWith(shift.driver as Driver, true)}
                               onEditShift={setEditingShift}
+                              onEditVehicle={setEditingVehicle}
                               unreadCount={unreadCount}
                             />
                         </div>
@@ -1149,6 +1153,14 @@ function DispatchDashboardUI() {
             isOpen={!!editingShift}
             onOpenChange={(isOpen) => {
                 if(!isOpen) setEditingShift(null);
+            }}
+        />
+
+        <VehicleNotesForm
+            vehicle={editingVehicle}
+            isOpen={!!editingVehicle}
+            onOpenChange={(isOpen) => {
+                if(!isOpen) setEditingVehicle(null);
             }}
         />
 

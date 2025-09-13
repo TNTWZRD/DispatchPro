@@ -358,3 +358,37 @@ export async function updateShiftNotes(prevState: any, formData: FormData) {
         return { type: 'error', message: `Failed to update notes: ${error.message}` };
     }
 }
+
+const updateVehicleNotesSchema = z.object({
+  vehicleId: z.string(),
+  notes: z.string().optional(),
+});
+
+export async function updateVehicleNotes(prevState: any, formData: FormData) {
+    const validatedFields = updateVehicleNotesSchema.safeParse(
+        Object.fromEntries(formData.entries())
+    );
+
+    if (!validatedFields.success) {
+        return {
+            type: "error",
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: "Invalid data provided.",
+        };
+    }
+    
+    const { vehicleId, notes } = validatedFields.data;
+
+    try {
+        const vehicleRef = doc(db, 'vehicles', vehicleId);
+        await updateDoc(vehicleRef, {
+            notes: notes || '',
+            updatedAt: serverTimestamp(),
+        });
+        revalidatePath('/'); // Revalidate dashboard
+        return { type: 'success', message: 'Vehicle notes updated.' };
+    } catch (error: any) {
+        console.error("Failed to update vehicle notes:", error);
+        return { type: 'error', message: `Failed to update notes: ${error.message}` };
+    }
+}
