@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Shield, Truck, LayoutDashboard, User } from 'lucide-react';
+import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -36,6 +36,7 @@ const NavLink = ({ href, children }: { href: string; children: React.ReactNode }
 export function MainHeader() {
   const { user, firebaseUser, logout, hasRole, loading } = useAuth();
   const isMobile = useIsMobile();
+  const pathname = usePathname();
   
   if (loading || !user) {
     return (
@@ -53,6 +54,8 @@ export function MainHeader() {
   const canAccessDispatch = hasRole(Role.DISPATCHER);
   const canAccessDriver = hasRole(Role.DRIVER);
   const canAccessAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
+  
+  const isAdminPath = pathname.startsWith('/admin');
 
   return (
     <header className="flex h-16 shrink-0 items-center border-b bg-card px-4 md:px-6 shadow-sm">
@@ -68,7 +71,32 @@ export function MainHeader() {
         <nav className='hidden md:flex items-center gap-2'>
             {canAccessDispatch && <NavLink href="/"><LayoutDashboard className="mr-2"/> Dispatch</NavLink>}
             {canAccessDriver && <NavLink href="/driver"><Truck className="mr-2" /> Driver View</NavLink>}
-            {canAccessAdmin && <NavLink href="/admin"><Shield className="mr-2"/> Admin</NavLink>}
+            {canAccessAdmin && (
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant={isAdminPath ? "secondary" : "ghost"}>
+                            <Shield className="mr-2"/> Admin <ChevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        <DropdownMenuItem asChild>
+                            <Link href="/admin">
+                                <LayoutDashboard className="mr-2" /> User Management
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href="/admin/vehicles">
+                                <Truck className="mr-2" /> Manage Vehicles
+                            </Link>
+                        </DropdownMenuItem>
+                         <DropdownMenuItem asChild>
+                            <Link href="/admin/shifts">
+                                <Briefcase className="mr-2" /> Manage Shifts
+                            </Link>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </nav>
         
         <div className="ml-auto flex items-center gap-3">
