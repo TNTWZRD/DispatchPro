@@ -570,7 +570,7 @@ function DispatchDashboardUI() {
   
   const openChatWith = (contact: AppUser | Driver, isDispatchLog: boolean = false) => {
     const target = isDispatchLog 
-        ? { ...dispatcherUser, context: contact, name: (contact as AppUser).displayName || contact.name } 
+        ? { ...dispatcherUser, context: contact, name: formatUserName((contact as AppUser).displayName, (contact as AppUser).email) } 
         : contact;
 
     setCurrentChatTarget(target as AppUser | Driver);
@@ -761,7 +761,7 @@ function DispatchDashboardUI() {
                   onUnscheduleRide={handleUnscheduleRide}
                   onToggleStar={toggleStarMessage}
                   onEndShift={handleEndShift}
-                  onOpenChat={() => openChatWith(shift.driver)}
+                  onOpenChat={() => openChatWith(shift.driver, true)}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
             )
@@ -850,7 +850,7 @@ function DispatchDashboardUI() {
                               onUnscheduleRide={handleUnscheduleRide}
                               onToggleStar={toggleStarMessage}
                               onEndShift={handleEndShift}
-                              onOpenChat={() => openChatWith(shift.driver)}
+                              onOpenChat={() => openChatWith(shift.driver, true)}
                             />
                         </div>
                     </CarouselItem>
@@ -1140,6 +1140,7 @@ export function DispatchDashboard() {
     
 
     
+
 
 
 
