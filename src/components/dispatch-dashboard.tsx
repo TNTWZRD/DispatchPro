@@ -180,8 +180,6 @@ function DispatchDashboardUI() {
     const shift: Message[] = [];
     messages.forEach(m => {
       if (!m.threadId) return;
-      // A thread is P2P if it has exactly 2 participants, one of whom might be DISPATCHER_ID.
-      // Otherwise, it's a public shift channel message. This fixes the internal log.
       if (m.threadId.length === 2) {
           p2p.push(m);
       } else {
@@ -192,7 +190,7 @@ function DispatchDashboardUI() {
   }, [messages]);
   
   const chatDirectory = useMemo(() => {
-    if (!user) return { contacts: [], totalPrivateUnread: 0, totalPublicUnread: 0 };
+    if (!user) return { contacts: [], totalPrivateUnread: 0, totalPublicUnread: 0, dispatchUnread: 0 };
     
     const contactsMap = new Map<string, { id: string; name: string; photoURL?: string | null; status?: Driver['status']; privateUnread: number; publicUnread: number; }>();
 
@@ -222,13 +220,19 @@ function DispatchDashboardUI() {
             });
         }
     });
+    
+    let dispatchUnreadCount = 0;
 
     p2pMessages.forEach(msg => {
       if (msg.recipientId === user.uid && !msg.isRead) {
         const contactId = msg.senderId;
-        const contact = contactsMap.get(contactId);
-        if (contact) {
-          contact.privateUnread += 1;
+        if (contactId === DISPATCHER_ID) {
+          dispatchUnreadCount++;
+        } else {
+          const contact = contactsMap.get(contactId);
+          if (contact) {
+            contact.privateUnread += 1;
+          }
         }
       }
     });
@@ -245,12 +249,12 @@ function DispatchDashboardUI() {
 
     const contacts = Array.from(contactsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     
-    const totalPrivateUnread = contacts.reduce((sum, c) => sum + c.privateUnread, 0);
+    const totalPrivateUnread = contacts.reduce((sum, c) => sum + c.privateUnread, 0) + dispatchUnreadCount;
     
     // Total unread public messages is the count of unread messages where the current user is the recipient.
     const totalPublicUnread = shiftChannelMessages.filter(m => m.recipientId === user.uid && !m.isRead).length;
 
-    return { contacts, totalPrivateUnread, totalPublicUnread };
+    return { contacts, totalPrivateUnread, totalPublicUnread, dispatchUnread: dispatchUnreadCount };
   }, [p2pMessages, shiftChannelMessages, user, allUsers, drivers]);
 
 
@@ -472,12 +476,9 @@ function DispatchDashboardUI() {
     
     const batch = writeBatch(db);
     const messagesToMark = isPublic ? shiftChannelMessages : p2pMessages;
-    const recipientField = isPublic ? DISPATCHER_ID : user.uid;
-    const threadId = getThreadIds(participantId, recipientField);
-
+    
     const unread = messagesToMark.filter(m => 
-      m.threadId?.join() === threadId.join() && 
-      m.recipientId === user.uid && 
+      (m.senderId === participantId && m.recipientId === user.uid) && 
       !m.isRead
     );
     
@@ -968,8 +969,8 @@ function DispatchDashboardUI() {
                                 <p>Dispatch</p>
                                 <span className="text-xs text-muted-foreground">Internal Dispatch Log</span>
                             </div>
-                            {p2pMessages.filter(m => m.recipientId === user.uid && m.senderId === DISPATCHER_ID && !m.isRead).length > 0 && 
-                                <Badge>{p2pMessages.filter(m => m.recipientId === user.uid && m.senderId === DISPATCHER_ID && !m.isRead).length}</Badge>
+                            {chatDirectory.dispatchUnread > 0 && 
+                                <Badge>{chatDirectory.dispatchUnread}</Badge>
                             }
                         </Button>
                         <Separator />
@@ -1046,6 +1047,7 @@ export function DispatchDashboard() {
 }
 
     
+
 
 
 
