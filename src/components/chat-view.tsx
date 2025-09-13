@@ -24,7 +24,7 @@ import { Label } from './ui/label';
 
 
 type ChatViewProps = {
-  participant: AppUser;
+  participant: AppUser | Driver;
   messages: Message[];
   allDrivers: Driver[];
   onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isReadBy'>) => void;

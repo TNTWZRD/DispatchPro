@@ -49,7 +49,7 @@ function DispatchDashboardUI() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
   const [isChatDirectoryOpen, setIsChatDirectoryOpen] = useState(false);
-  const [currentChatTarget, setCurrentChatTarget] = useState<AppUser | null>(null);
+  const [currentChatTarget, setCurrentChatTarget] = useState<AppUser | Driver | null>(null);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
@@ -201,7 +201,7 @@ function DispatchDashboardUI() {
  const chatDirectory = useMemo(() => {
     if (!user) return { p2pContacts: [], dispatchLogContacts: [], totalUnread: 0 };
     
-    type ContactEntry = { user: AppUser, unread: number, hasStarred: boolean, lastMessage?: Message };
+    type ContactEntry = { user: AppUser | Driver, unread: number, hasStarred: boolean, lastMessage?: Message };
     const p2pContactsMap = new Map<string, ContactEntry>();
     const dispatchLogContactsMap = new Map<string, ContactEntry>();
     
@@ -513,7 +513,7 @@ function DispatchDashboardUI() {
     });
   };
   
- const handleMarkMessagesAsRead = async (participant: AppUser) => {
+ const handleMarkMessagesAsRead = async (participant: AppUser | Driver) => {
     if (!db || !user) return;
     
     const allDispatcherUsers = allUsers.filter(u => u.role & Role.DISPATCHER);
@@ -568,13 +568,13 @@ function DispatchDashboardUI() {
 };
 
   
-  const openChatWith = (contact: AppUser, isDispatchLog: boolean = false) => {
+  const openChatWith = (contact: AppUser | Driver, isDispatchLog: boolean = false) => {
     const target = isDispatchLog 
-        ? { ...dispatcherUser, context: contact, name: contact.name } 
+        ? { ...dispatcherUser, context: contact, name: (contact as AppUser).displayName || contact.name } 
         : contact;
 
-    setCurrentChatTarget(target as AppUser);
-    handleMarkMessagesAsRead(target as AppUser);
+    setCurrentChatTarget(target as AppUser | Driver);
+    handleMarkMessagesAsRead(target as AppUser | Driver);
     setIsChatDirectoryOpen(false);
   };
   
@@ -746,7 +746,6 @@ function DispatchDashboardUI() {
 
           {/* Driver Columns */}
           {activeShifts.map(shift => {
-            const driverUser = allUsers.find(u => u.id === shift.driverId);
             return (
                 <DriverColumn
                   key={shift.id}
@@ -762,7 +761,7 @@ function DispatchDashboardUI() {
                   onUnscheduleRide={handleUnscheduleRide}
                   onToggleStar={toggleStarMessage}
                   onEndShift={handleEndShift}
-                  onOpenChat={driverUser ? () => openChatWith(driverUser) : undefined}
+                  onOpenChat={() => openChatWith(shift.driver)}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
             )
@@ -835,7 +834,6 @@ function DispatchDashboardUI() {
 
                 {/* Driver Tabs */}
                 {activeShifts.map(shift => {
-                  const driverUser = allUsers.find(u => u.id === shift.driverId);
                   return (
                     <CarouselItem key={shift.id} className="overflow-y-auto">
                         <div className="pr-1">
@@ -852,7 +850,7 @@ function DispatchDashboardUI() {
                               onUnscheduleRide={handleUnscheduleRide}
                               onToggleStar={toggleStarMessage}
                               onEndShift={handleEndShift}
-                              onOpenChat={driverUser ? () => openChatWith(driverUser) : undefined}
+                              onOpenChat={() => openChatWith(shift.driver)}
                             />
                         </div>
                     </CarouselItem>
@@ -866,7 +864,8 @@ function DispatchDashboardUI() {
 
   const getMessageSnippet = (msg?: Message) => {
     if (!msg) return { snippet: 'No messages yet', sender: '' };
-    const senderName = msg.senderId === user?.uid ? 'You' : formatUserName(allUsers.find(u => u.id === msg.senderId)?.name, allUsers.find(u => u.id === msg.senderId)?.email);
+    const sender = allUsers.find(u => u.id === msg.senderId) || drivers.find(d => d.id === msg.senderId);
+    const senderName = msg.senderId === user?.uid ? 'You' : formatUserName(sender?.name, (sender as AppUser)?.email);
     let snippet = '';
     if (msg.text) {
       snippet = msg.text.length > 30 ? `${msg.text.substring(0, 30)}...` : msg.text;
@@ -987,7 +986,7 @@ function DispatchDashboardUI() {
                 toast({
                     variant: 'destructive',
                     title: 'Assignment Failed',
-                    description: `Could not assign to ${formatUserName(driver?.name, driver?.email)}. The driver is not on an active shift.`
+                    description: `Could not assign to ${formatUserName(driver?.name, (driver as AppUser)?.email)}. The driver is not on an active shift.`
                 });
             }
           }}
@@ -1009,7 +1008,7 @@ function DispatchDashboardUI() {
                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
                         {chatDirectory.dispatchLogContacts.map(({ user: contact, unread, hasStarred, lastMessage }) => {
                             const { snippet, sender } = getMessageSnippet(lastMessage);
-                            const displayName = contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, contact.email);
+                            const displayName = contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, (contact as AppUser).email);
                             return (
                                 <Button 
                                     key={contact.id} 
@@ -1018,7 +1017,7 @@ function DispatchDashboardUI() {
                                     onClick={() => openChatWith(contact, true)}
                                 >
                                     <Avatar className="h-10 w-10 mr-4">
-                                        <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                                        <AvatarImage src={(contact as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
                                         <AvatarFallback>{(displayName || 'U')[0]}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 text-left">
@@ -1057,12 +1056,12 @@ function DispatchDashboardUI() {
                                     onClick={() => openChatWith(contact)}
                                 >
                                     <Avatar className="h-10 w-10 mr-4">
-                                        <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                        <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
+                                        <AvatarImage src={(contact as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
+                                        <AvatarFallback>{(formatUserName(contact.name, (contact as AppUser).email) || 'U')[0]}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 text-left">
                                         <div className="flex justify-between items-center">
-                                            <p>{formatUserName(contact.name, contact.email)}</p>
+                                            <p>{formatUserName(contact.name, (contact as AppUser).email)}</p>
                                              {lastMessage?.timestamp && (
                                                 <span className="text-xs text-muted-foreground">{formatDistanceToNowStrict(lastMessage.timestamp, { addSuffix: true })}</span>
                                             )}
@@ -1093,10 +1092,10 @@ function DispatchDashboardUI() {
                         <span>
                             Chat with {
                                 (currentChatTarget as any).context 
-                                    ? formatUserName((currentChatTarget.context as AppUser).name, (currentChatTarget.context as AppUser).email)
+                                    ? formatUserName((currentChatTarget as any).context.name, (currentChatTarget as any).context.email)
                                     : currentChatTarget.name === 'My Dispatch Log' 
                                         ? 'My Dispatch Log' 
-                                        : formatUserName(currentChatTarget.name, currentChatTarget.email)
+                                        : formatUserName(currentChatTarget.name, (currentChatTarget as AppUser).email)
                             }
                         </span>
                     </div>
@@ -1139,6 +1138,7 @@ export function DispatchDashboard() {
     
 
     
+
 
 
 

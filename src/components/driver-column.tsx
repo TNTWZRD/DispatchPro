@@ -96,13 +96,13 @@ export function DriverColumn({
             </div>
             <div className='flex gap-1'>
                 {onOpenChat && (
-                    <Button variant="outline" size="sm" onClick={onOpenChat}>
+                    <Button variant="outline" size="icon" onClick={onOpenChat}>
                         <MessageSquare />
                     </Button>
                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" disabled={activeRides.length > 0}>
+                      <Button variant="destructive" size="icon" onClick={(e) => e.stopPropagation()} disabled={activeRides.length > 0}>
                         <PowerOff />
                       </Button>
                   </AlertDialogTrigger>
