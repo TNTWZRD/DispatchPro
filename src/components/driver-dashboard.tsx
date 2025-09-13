@@ -207,18 +207,21 @@ export function DriverDashboard() {
   }, [driverRides, currentRide]);
 
   const { p2pMessages, dispatchLogMessages } = useMemo(() => {
-    const p2p: Message[] = [];
-    const dispatchLog: Message[] = [];
     if (!currentDriver) return { p2pMessages: [], dispatchLogMessages: [] };
 
+    const p2p: Message[] = [];
+    const dispatchLog: Message[] = [];
+    
     messages.forEach(m => {
-        if (!m.threadId) return;
+        if (!m.threadId || m.threadId.length !== 2) return;
+        
         if (m.threadId.includes(DISPATCHER_ID)) {
-            dispatchLog.push(m);
-        } else {
-            p2p.push(m);
+          dispatchLog.push(m);
+        } else if (m.threadId.includes(currentDriver.id)) {
+          p2p.push(m);
         }
     });
+
     return { p2pMessages: p2p, dispatchLogMessages: dispatchLog };
   }, [messages, currentDriver]);
 
@@ -229,6 +232,7 @@ export function DriverDashboard() {
 
   const unreadDispatchLogCount = useMemo(() => {
     if (!currentDriver) return 0;
+    // A message in the dispatch log is unread if the driver has not read it.
     return dispatchLogMessages.filter(m => !m.isReadBy?.includes(currentDriver.id)).length;
   }, [dispatchLogMessages, currentDriver]);
   
@@ -269,8 +273,7 @@ export function DriverDashboard() {
     
     const messagesToMarkQuery = query(
         collection(db, 'messages'),
-        where('threadId', '==', threadId),
-        where('recipientId', '==', currentDriver.id)
+        where('threadId', '==', threadId)
     );
     const batch = writeBatch(db);
     const snapshot = await getDocs(messagesToMarkQuery);
