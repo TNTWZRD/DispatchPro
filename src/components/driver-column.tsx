@@ -14,6 +14,7 @@ import { StrictModeDroppable } from './strict-mode-droppable';
 import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff, MessageSquare } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { toggleStarMessage } from '@/app/actions';
+import { Badge } from './ui/badge';
 
 
 type DriverColumnProps = {
@@ -30,6 +31,7 @@ type DriverColumnProps = {
   onToggleStar: typeof toggleStarMessage;
   onEndShift: (shift: Shift) => void;
   onOpenChat?: () => void;
+  unreadCount: number;
   className?: string;
 };
 
@@ -54,6 +56,7 @@ export function DriverColumn({
     onToggleStar,
     onEndShift,
     onOpenChat,
+    unreadCount,
     className
 }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
@@ -94,10 +97,13 @@ export function DriverColumn({
                  </div>
               </div>
             </div>
-            <div className='flex gap-1'>
+            <div className='flex gap-1 relative'>
                 {onOpenChat && (
-                    <Button variant="outline" size="icon" onClick={onOpenChat}>
+                    <Button variant="outline" size="icon" onClick={onOpenChat} className="relative">
                         <MessageSquare />
+                        {unreadCount > 0 && (
+                            <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{unreadCount}</Badge>
+                        )}
                     </Button>
                 )}
                 <AlertDialog>

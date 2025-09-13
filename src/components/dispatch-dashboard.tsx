@@ -746,6 +746,8 @@ function DispatchDashboardUI() {
 
           {/* Driver Columns */}
           {activeShifts.map(shift => {
+            const driverDispatchLog = chatDirectory.dispatchLogContacts.find(c => c.user.id === shift.driverId);
+            const unreadCount = driverDispatchLog?.unread || 0;
             return (
                 <DriverColumn
                   key={shift.id}
@@ -762,6 +764,7 @@ function DispatchDashboardUI() {
                   onToggleStar={toggleStarMessage}
                   onEndShift={handleEndShift}
                   onOpenChat={() => openChatWith(shift.driver as Driver, true)}
+                  unreadCount={unreadCount}
                   className="w-full lg:w-[350px] xl:w-[400px]"
                 />
             )
@@ -834,6 +837,8 @@ function DispatchDashboardUI() {
 
                 {/* Driver Tabs */}
                 {activeShifts.map(shift => {
+                   const driverDispatchLog = chatDirectory.dispatchLogContacts.find(c => c.user.id === shift.driverId);
+                   const unreadCount = driverDispatchLog?.unread || 0;
                   return (
                     <CarouselItem key={shift.id} className="overflow-y-auto">
                         <div className="pr-1">
@@ -851,6 +856,7 @@ function DispatchDashboardUI() {
                               onToggleStar={toggleStarMessage}
                               onEndShift={handleEndShift}
                               onOpenChat={() => openChatWith(shift.driver as Driver, true)}
+                              unreadCount={unreadCount}
                             />
                         </div>
                     </CarouselItem>
