@@ -206,7 +206,8 @@ function DispatchDashboardUI() {
     const uniqueContacts = Array.from(new Map(allPossibleContacts.map(item => [item.id, item])).values());
     
     uniqueContacts.forEach(u => {
-      if (u.id === user.uid) return; // Don't add self to P2P list
+      // Don't add self to P2P list to start
+      if (u.id === user.uid) return; 
       const driverInfo = drivers.find(d => d.id === u.id);
       const contactUser = { ...u, status: driverInfo?.status || 'offline' } as AppUser & { status: Driver['status']};
       p2pContactsMap.set(u.id, { user: contactUser, unread: 0 });
@@ -214,7 +215,8 @@ function DispatchDashboardUI() {
 
     p2pMessages.forEach(msg => {
       if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
-      const contactId = msg.senderId;
+      
+      const contactId = msg.senderId === user.uid ? msg.recipientId : msg.senderId;
       const contact = p2pContactsMap.get(contactId);
       if (contact) {
         contact.unread++;
@@ -264,7 +266,7 @@ function DispatchDashboardUI() {
 
     const sortFn = (a: ContactEntry, b: ContactEntry) => (a.user.name || '').localeCompare(b.user.name || '');
     
-    const p2pContacts = Array.from(p2pContactsMap.values()).filter(c => c.user.id !== user.id).sort(sortFn);
+    const p2pContacts = Array.from(p2pContactsMap.values()).sort(sortFn);
     const dispatchLogContacts = Array.from(dispatchLogContactsMap.values()).sort(sortFn);
     
     const totalUnread = [...p2pContacts, ...dispatchLogContacts].reduce((sum, c) => sum + c.unread, 0);
@@ -499,7 +501,7 @@ function DispatchDashboardUI() {
         messagesToUpdateQuery = query(
             collection(db, 'messages'),
             where('threadId', '==', threadId),
-            where('recipientId', '==', otherUserId)
+            where('recipientId', '==', user.uid)
         );
     } else {
         const threadId = getThreadIds(user.uid, participant.id);
@@ -944,7 +946,7 @@ function DispatchDashboardUI() {
                                     <AvatarFallback>{(formatUserName(contact.name, contact.email) || 'U')[0]}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 text-left">
-                                    <p>{formatUserName(contact.name, contact.email)}</p>
+                                    <p>{contact.name === 'My Dispatch Log' ? contact.name : formatUserName(contact.name, contact.email)}</p>
                                     <div className="flex items-center gap-2">
                                         {(contact as any).status && getStatusIndicator((contact as any).status)}
                                         <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
@@ -991,7 +993,7 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${currentChatTarget.context ? formatUserName(currentChatTarget.context.name, currentChatTarget.context.email) : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
+                title={`Chat with ${currentChatTarget.name === 'My Dispatch Log' || (currentChatTarget.context && currentChatTarget.name !== 'My Dispatch Log') ? currentChatTarget.name : formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
             >
                 <ChatView
                     participant={currentChatTarget}
@@ -1028,3 +1030,4 @@ export function DispatchDashboard() {
     
 
     
+
