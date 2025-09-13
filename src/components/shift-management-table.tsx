@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import type { Shift, Driver, Vehicle, Ride } from '@/lib/types';
 import {
   Table,
@@ -17,14 +16,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, PowerOff, MoreHorizontal, Edit, FileText, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { endShift } from '@/app/admin/actions';
 import { formatUserName } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { ShiftNotesForm } from './shift-notes-form';
 
-export function ShiftManagementTable() {
+type ShiftManagementTableProps = {
+    selectedDate: Date;
+}
+
+export function ShiftManagementTable({ selectedDate }: ShiftManagementTableProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -34,7 +37,18 @@ export function ShiftManagementTable() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const shiftsQuery = query(collection(db, 'shifts'), orderBy('startTime', 'desc'));
+    setLoading(true);
+
+    const start = startOfDay(selectedDate);
+    const end = endOfDay(selectedDate);
+
+    const shiftsQuery = query(
+        collection(db, 'shifts'), 
+        where('startTime', '>=', Timestamp.fromDate(start)),
+        where('startTime', '<=', Timestamp.fromDate(end)),
+        orderBy('startTime', 'desc')
+    );
+
     const unsubShifts = onSnapshot(shiftsQuery, (snapshot) => {
       setShifts(snapshot.docs.map(doc => ({
         id: doc.id,
@@ -42,7 +56,7 @@ export function ShiftManagementTable() {
         startTime: doc.data().startTime?.toDate(),
         endTime: doc.data().endTime?.toDate(),
       }) as Shift));
-      if(loading) setLoading(false);
+      setLoading(false);
     });
 
     const driversQuery = query(collection(db, 'drivers'));
@@ -55,6 +69,7 @@ export function ShiftManagementTable() {
       setVehicles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle)));
     });
 
+    // We fetch all completed rides and filter in memory, as Firestore doesn't allow range filters on different fields.
     const ridesQuery = query(collection(db, 'rides'), where('status', '==', 'completed'));
     const unsubRides = onSnapshot(ridesQuery, (snapshot) => {
       setRides(snapshot.docs.map(doc => ({
@@ -70,7 +85,7 @@ export function ShiftManagementTable() {
       unsubVehicles();
       unsubRides();
     };
-  }, [loading]);
+  }, [selectedDate]);
 
   const shiftData = useMemo(() => {
     return shifts.map(shift => {
@@ -114,6 +129,15 @@ export function ShiftManagementTable() {
     );
   }
 
+  if (shifts.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-muted-foreground/30 text-center text-muted-foreground">
+            <p className="text-lg font-medium">No Shifts Found</p>
+            <p>There were no shifts on {format(selectedDate, 'PPP')}.</p>
+        </div>
+      )
+  }
+
   return (
     <>
     <div className="border rounded-lg">
@@ -139,8 +163,8 @@ export function ShiftManagementTable() {
               </TableCell>
               <TableCell>{getDriverName(shift.driverId)}</TableCell>
               <TableCell>{getVehicleNickname(shift.vehicleId)}</TableCell>
-              <TableCell>{format(shift.startTime, 'PPp')}</TableCell>
-              <TableCell>{shift.endTime ? format(shift.endTime, 'PPp') : 'N/A'}</TableCell>
+              <TableCell>{format(shift.startTime, 'p')}</TableCell>
+              <TableCell>{shift.endTime ? format(shift.endTime, 'p') : 'N/A'}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
