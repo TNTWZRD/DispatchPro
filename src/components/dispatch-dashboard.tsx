@@ -39,6 +39,7 @@ import { Separator } from './ui/separator';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ShiftNotesForm } from './shift-notes-form';
 import { VehicleNotesForm } from './vehicle-notes-form';
+import { EditShiftForm } from './edit-shift-form';
 
 
 function DispatchDashboardUI() {
@@ -648,7 +649,7 @@ function DispatchDashboardUI() {
                   <Card
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="shrink-0 flex flex-col bg-muted/50 w-full lg:w-[320px] xl:w-[360px]"
+                    className="shrink-0 flex flex-col bg-muted/50 w-full lg:w-[320px]"
                   >
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -684,7 +685,7 @@ function DispatchDashboardUI() {
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   className={cn(
-                    "shrink-0 flex flex-col w-full lg:w-[320px] xl:w-[360px]",
+                    "shrink-0 flex flex-col w-full lg:w-[320px]",
                     snapshot.isDraggingOver && "bg-accent/20"
                   )}
                 >
@@ -736,7 +737,7 @@ function DispatchDashboardUI() {
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     className={cn(
-                      "shrink-0 flex flex-col w-full lg:w-[320px] xl:w-[360px]",
+                      "shrink-0 flex flex-col w-full lg:w-[320px]",
                       snapshot.isDraggingOver && "bg-accent/20"
                     )}
                   >
@@ -800,7 +801,7 @@ function DispatchDashboardUI() {
                   onEditShift={setEditingShift}
                   onEditVehicle={setEditingVehicle}
                   unreadCount={unreadCount}
-                  className="w-full lg:w-[320px] xl:w-[360px]"
+                  className="w-full lg:w-[320px]"
                 />
             )
            })}
@@ -1181,6 +1182,15 @@ function DispatchDashboardUI() {
             isOpen={!!editingVehicle}
             onOpenChange={(isOpen) => {
                 if(!isOpen) setEditingVehicle(null);
+            }}
+        />
+
+        <EditShiftForm
+            shift={editingShift}
+            driver={drivers.find(d => d.id === editingShift?.driverId)}
+            isOpen={!!editingShift}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) setEditingShift(null);
             }}
         />
 

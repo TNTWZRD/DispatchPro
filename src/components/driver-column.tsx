@@ -123,7 +123,7 @@ export function DriverColumn({
                             <DollarSign /> Total Fare: ${shift.totalFare.toFixed(2)}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => {}} disabled>
+                        <DropdownMenuItem onSelect={() => onEditShift(shift)}>
                            <Edit /> Edit Shift
                         </DropdownMenuItem>
                          <DropdownMenuItem onSelect={() => onEditShift(shift)}>
