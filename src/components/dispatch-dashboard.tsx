@@ -417,17 +417,17 @@ function DispatchDashboardUI() {
         assignedAt: serverTimestamp()
     });
 
-    let messageText = `**New Ride Assignment**\n\n`;
-    messageText += `**Pickup:** ${rideToAssign.pickup.name}\n`;
+    let messageText = `New Ride Assignment\n\n`;
+    messageText += `Pickup: ${rideToAssign.pickup.name}\n`;
     if (rideToAssign.dropoff) {
-      messageText += `**Dropoff:** ${rideToAssign.dropoff.name}\n`;
+      messageText += `Dropoff: ${rideToAssign.dropoff.name}\n`;
     }
     if (rideToAssign.stops && rideToAssign.stops.length > 0) {
-        messageText += `**Stops:** ${rideToAssign.stops.map(s => s.name).join(', ')}\n`;
+        messageText += `Stops: ${rideToAssign.stops.map(s => s.name).join(', ')}\n`;
     }
-    messageText += `**Passengers:** ${rideToAssign.passengerCount || 1}\n`;
+    messageText += `Passengers: ${rideToAssign.passengerCount || 1}\n`;
     if (rideToAssign.notes) {
-      messageText += `**Notes:** ${rideToAssign.notes}\n`;
+      messageText += `Notes: ${rideToAssign.notes}\n`;
     }
 
     await handleSendMessage({
