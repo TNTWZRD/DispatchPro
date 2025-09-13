@@ -15,20 +15,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuItem
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronDown, Check } from 'lucide-react';
+import { Loader2, ChevronDown, Check, MoreHorizontal, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { formatUserName } from '@/lib/utils';
+import { EditUserForm } from './edit-user-form';
 
 const roleMap: { [key in keyof typeof Role]?: Role } = {
     DRIVER: Role.DRIVER,
@@ -51,6 +52,7 @@ const getRoleName = (roleValue: Role) => {
 export function UserManagementTable() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -166,39 +168,66 @@ export function UserManagementTable() {
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Roles</TableHead>
-            <TableHead>Created At</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.uid}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={user.photoURL ?? undefined} />
-                    <AvatarFallback>{(user.displayName || user.email || 'U')[0]}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{formatUserName(user.displayName, user.email)}</span>
-                </div>
-              </TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                 <RoleSelector user={user} />
-              </TableCell>
-              <TableCell>
-                {user.createdAt ? format(user.createdAt, 'PPpp') : 'N/A'}
-              </TableCell>
+    <>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Roles</TableHead>
+              <TableHead>Created At</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.uid}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src={user.photoURL ?? undefined} />
+                      <AvatarFallback>{(user.displayName || user.email || 'U')[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{formatUserName(user.displayName, user.email)}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <RoleSelector user={user} />
+                </TableCell>
+                <TableCell>
+                  {user.createdAt ? format(user.createdAt, 'PPpp') : 'N/A'}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setEditingUser(user)}>
+                        <Edit className="mr-2" /> Edit User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      
+      <EditUserForm
+        user={editingUser}
+        isOpen={!!editingUser}
+        setIsOpen={(isOpen) => {
+          if (!isOpen) {
+            setEditingUser(null);
+          }
+        }}
+      />
+    </>
   );
 }
