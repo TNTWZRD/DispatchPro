@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatUserName } from '@/lib/utils';
+import { formatUserName, cn } from '@/lib/utils';
 import { EditTicketForm } from '@/components/edit-ticket-form';
 import { AddCommentForm } from '@/components/add-comment-form';
 import Link from 'next/link';
