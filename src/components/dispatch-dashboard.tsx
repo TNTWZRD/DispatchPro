@@ -197,7 +197,6 @@ function DispatchDashboardUI() {
     const p2pContactsMap = new Map<string, { user: AppUser, unread: number }>();
     const dispatchLogContactsMap = new Map<string, { user: AppUser, unread: number }>();
 
-    // Populate all possible contacts first
     allUsers.forEach(u => {
         if (u.id === user.uid || u.id === DISPATCHER_ID) return;
         const driverInfo = drivers.find(d => d.id === u.id);
@@ -216,7 +215,6 @@ function DispatchDashboardUI() {
     });
 
 
-    // Calculate unread counts for P2P
     p2pMessages.forEach(msg => {
         if (msg.recipientId !== user.uid || msg.isReadBy?.includes(user.uid)) return;
         const contact = p2pContactsMap.get(msg.senderId);
@@ -225,7 +223,6 @@ function DispatchDashboardUI() {
         }
     });
 
-    // Calculate unread for Dispatcher Logs
     dispatchChannelMessages.forEach(msg => {
       if (msg.isReadBy?.includes(user.uid) || msg.senderId === user.uid) return;
 
@@ -911,33 +908,19 @@ function DispatchDashboardUI() {
                  {chatDirectory.dispatchLogContacts.length > 0 && (
                      <>
                         <h4 className="text-sm font-semibold text-muted-foreground px-2">Dispatcher Logs</h4>
-                         <Button 
-                            variant="ghost" 
-                            className="w-full justify-start h-14"
-                            onClick={() => openChatWith(dispatcherUser, true)}
-                        >
-                            <Avatar className="h-10 w-10 mr-4">
-                                <AvatarFallback><MessageSquare /></AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 text-left">
-                                <p>Internal Dispatch Log</p>
-                            </div>
-                            {chatDirectory.dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0) > 0 && 
-                                <Badge>{chatDirectory.dispatchLogContacts.reduce((sum, c) => sum + c.unread, 0)}</Badge>}
-                        </Button>
                         {chatDirectory.dispatchLogContacts.map(({ user: contact, unread }) => (
                             <Button 
                                 key={contact.id} 
                                 variant="ghost" 
-                                className="w-full justify-start h-14 pl-10"
+                                className="w-full justify-start h-14"
                                 onClick={() => openChatWith(contact, true)}
                             >
                                 <Avatar className="h-10 w-10 mr-4">
                                     <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                    <AvatarFallback>{contact.name?.[0] || 'U'}</AvatarFallback>
+                                    <AvatarFallback>{(contact.name || contact.email || 'U')[0]}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 text-left">
-                                    <p>{formatUserName(contact.name || '')}</p>
+                                    <p>{formatUserName(contact.name, contact.email)}</p>
                                     <div className="flex items-center gap-2">
                                         {(contact as any).status && getStatusIndicator((contact as any).status)}
                                         <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
@@ -963,10 +946,10 @@ function DispatchDashboardUI() {
                             >
                                 <Avatar className="h-10 w-10 mr-4">
                                     <AvatarImage src={contact.photoURL ?? `https://i.pravatar.cc/40?u=${contact.id}`} />
-                                    <AvatarFallback>{contact.name?.[0] || 'U'}</AvatarFallback>
+                                    <AvatarFallback>{(contact.name || contact.email || 'U')[0]}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 text-left">
-                                    <p>{formatUserName(contact.name || '')}</p>
+                                    <p>{formatUserName(contact.name, contact.email)}</p>
                                     <div className="flex items-center gap-2">
                                        {(contact as any).status && getStatusIndicator((contact as any).status)}
                                         <span className="text-xs text-muted-foreground capitalize">{(contact as any).status?.replace('-', ' ')}</span>
@@ -984,7 +967,7 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentChatTarget(null)}
-                title={`Chat with ${formatUserName(currentChatTarget.name || '')}`}
+                title={`Chat with ${formatUserName(currentChatTarget.name, currentChatTarget.email)}`}
             >
                 <ChatView
                     participant={currentChatTarget}

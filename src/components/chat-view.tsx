@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, MessageSquare } from 'lucide-react';
-import { cn, getThreadIds } from '@/lib/utils';
+import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -169,7 +169,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
     return (
         <Avatar className="h-8 w-8">
             <AvatarImage src={(participantUser as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${senderId}`} />
-            <AvatarFallback>{(participantUser.name || (participantUser as AppUser).displayName)?.[0] || 'U'}</AvatarFallback>
+            <AvatarFallback>{(formatUserName(participantUser.name, (participantUser as AppUser).email) || 'U')[0]}</AvatarFallback>
         </Avatar>
     );
   }

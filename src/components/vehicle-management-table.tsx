@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import type { Vehicle, Driver, Shift } from '@/lib/types';
+import type { Vehicle, Driver, Shift, AppUser } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -41,7 +41,7 @@ const getStatusVariant = (status: Vehicle['status']) => {
 
 export function VehicleManagementTable() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -62,9 +62,9 @@ export function VehicleManagementTable() {
       setLoading(false);
     });
 
-    const driversQuery = query(collection(db, 'drivers'));
-    const unsubDrivers = onSnapshot(driversQuery, (snapshot) => {
-        setDrivers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Driver)));
+    const usersQuery = query(collection(db, 'users'));
+    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
+        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
     });
 
     const shiftsQuery = query(collection(db, 'shifts'));
@@ -74,7 +74,7 @@ export function VehicleManagementTable() {
 
     return () => {
         unsubVehicles();
-        unsubDrivers();
+        unsubUsers();
         unsubShifts();
     };
   }, []);
@@ -83,8 +83,8 @@ export function VehicleManagementTable() {
     if (!vehicle.currentShiftId) return 'Unassigned';
     const activeShift = shifts.find(s => s.id === vehicle.currentShiftId);
     if (!activeShift) return 'Unassigned';
-    const driver = drivers.find(d => d.id === activeShift.driverId);
-    return driver ? formatUserName(driver.name) : 'Unknown Driver';
+    const driver = users.find(d => d.id === activeShift.driverId);
+    return driver ? formatUserName(driver.name, driver.email) : 'Unknown Driver';
   }
 
   const handleStatusChange = async (vehicleId: string, status: Vehicle['status']) => {

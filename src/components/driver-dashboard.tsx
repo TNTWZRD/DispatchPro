@@ -39,7 +39,7 @@ function DriverChatListDialog({ drivers, onSelectDriver, onSelectDispatch, onClo
                     <Button key={driver.id} variant="ghost" className="w-full justify-start h-14" onClick={() => onSelectDriver(driver)}>
                          <Avatar className="h-10 w-10 mr-4">
                             <AvatarImage src={`https://i.pravatar.cc/40?u=${driver.id}`} />
-                            <AvatarFallback>{driver.name?.[0] || 'D'}</AvatarFallback>
+                            <AvatarFallback>{(driver.name || '')[0] || 'D'}</AvatarFallback>
                         </Avatar>
                         <span className="text-left">{formatUserName(driver.name)}</span>
                     </Button>
@@ -159,7 +159,7 @@ export function DriverDashboard() {
               : allDrivers.find(d => d.id === lastMessage.senderId);
 
           sendBrowserNotification(
-              `New message from ${formatUserName(sender?.name || 'User')}`,
+              `New message from ${formatUserName(sender?.name, (sender as AppUser)?.email)}`,
               lastMessage.text || "Sent an image or audio"
           );
       }
@@ -432,7 +432,7 @@ export function DriverDashboard() {
         <ResponsiveDialog
             open={!!chatParticipant}
             onOpenChange={(isOpen) => !isOpen && setChatParticipant(null)}
-            title={`Chat with ${formatUserName(chatParticipant.name || (chatParticipant as AppUser).displayName || 'User')}`}
+            title={`Chat with ${formatUserName(chatParticipant.name, (chatParticipant as AppUser).email)}`}
         >
           <ChatView
             participant={chatParticipant}

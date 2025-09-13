@@ -183,9 +183,9 @@ export function UserManagementTable() {
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarImage src={user.photoURL ?? undefined} />
-                    <AvatarFallback>{user.displayName?.[0] || user.email?.[0]}</AvatarFallback>
+                    <AvatarFallback>{(user.displayName || user.email || 'U')[0]}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{formatUserName(user.displayName || 'N/A')}</span>
+                  <span className="font-medium">{formatUserName(user.displayName, user.email)}</span>
                 </div>
               </TableCell>
               <TableCell>{user.email}</TableCell>
