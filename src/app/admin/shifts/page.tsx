@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { AdminBreadcrumb } from '@/components/admin-breadcrumb';
 
 export default function ShiftsPage() {
     const { user, loading, hasRole } = useAuth();
@@ -46,56 +47,59 @@ export default function ShiftsPage() {
 
     return (
         <div className="h-full overflow-y-auto p-4 md:p-6 bg-secondary/50">
-            <Card className="max-w-6xl mx-auto">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Briefcase className="h-6 w-6 text-primary" />
-                        Shift Management
-                    </CardTitle>
-                    <CardDescription>
-                        Start, end, and view all driver shifts for the selected day.
-                    </CardDescription>
-                </CardHeader>
-                 <CardContent className="flex flex-col gap-4">
-                    <div className="flex justify-between items-center gap-2 flex-wrap">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-[280px] justify-start text-left font-normal",
-                                    !selectedDate && "text-muted-foreground"
-                                )}
-                                >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+            <div className="max-w-6xl mx-auto flex flex-col gap-6">
+                <AdminBreadcrumb segments={[{ name: 'Admin', href: '/admin' }, { name: 'Shifts' }]} />
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Briefcase className="h-6 w-6 text-primary" />
+                            Shift Management
+                        </CardTitle>
+                        <CardDescription>
+                            Start, end, and view all driver shifts for the selected day.
+                        </CardDescription>
+                    </CardHeader>
+                     <CardContent className="flex flex-col gap-4">
+                        <div className="flex justify-between items-center gap-2 flex-wrap">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-[280px] justify-start text-left font-normal",
+                                        !selectedDate && "text-muted-foreground"
+                                    )}
+                                    >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={(date) => setSelectedDate(date || new Date())}
+                                    initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <div className="flex justify-end gap-2">
+                                <Button onClick={() => setIsFormOpen(true)}>
+                                   <PlusCircle className="mr-2" /> Start New Shift
                                 </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={(date) => setSelectedDate(date || new Date())}
-                                initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                        <div className="flex justify-end gap-2">
-                            <Button onClick={() => setIsFormOpen(true)}>
-                               <PlusCircle className="mr-2" /> Start New Shift
-                            </Button>
-                            <ResponsiveDialog
-                                open={isFormOpen}
-                                onOpenChange={setIsFormOpen}
-                                title="Start New Shift"
-                            >
-                                <StartShiftForm onFormSubmit={() => setIsFormOpen(false)} />
-                            </ResponsiveDialog>
+                                <ResponsiveDialog
+                                    open={isFormOpen}
+                                    onOpenChange={setIsFormOpen}
+                                    title="Start New Shift"
+                                >
+                                    <StartShiftForm onFormSubmit={() => setIsFormOpen(false)} />
+                                </ResponsiveDialog>
+                            </div>
                         </div>
-                    </div>
-                    <ShiftManagementTable selectedDate={selectedDate} />
-                 </CardContent>
-            </Card>
+                        <ShiftManagementTable selectedDate={selectedDate} />
+                     </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }

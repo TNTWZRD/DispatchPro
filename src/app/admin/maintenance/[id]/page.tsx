@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter, useParams } from 'next/navigation';
 import { doc, onSnapshot, collection, query, orderBy, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -20,6 +20,7 @@ import { AddCommentForm } from '@/components/add-comment-form';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { AdminBreadcrumb } from '@/components/admin-breadcrumb';
 
 const getStatusVariant = (status?: MaintenanceTicket['status']) => {
     if (!status) return 'bg-gray-500';
@@ -153,6 +154,11 @@ export default function TicketDetailsPage() {
     return (
         <div className="h-full overflow-y-auto p-4 md:p-6 bg-secondary/50">
             <div className="max-w-4xl mx-auto flex flex-col gap-6">
+                 <AdminBreadcrumb segments={[
+                    { name: 'Admin', href: '/admin' }, 
+                    { name: 'Maintenance', href: '/admin/maintenance'},
+                    { name: `Ticket #${ticket.id.substring(0,6)}` }
+                ]} />
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-start">

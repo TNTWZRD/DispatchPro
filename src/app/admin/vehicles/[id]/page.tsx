@@ -15,6 +15,7 @@ import { MaintenanceTicketsTable } from '@/components/maintenance-tickets-table'
 import { VehicleNotesForm } from '@/components/vehicle-notes-form';
 import { Button } from '@/components/ui/button';
 import { EditVehicleForm } from '@/components/edit-vehicle-form';
+import { AdminBreadcrumb } from '@/components/admin-breadcrumb';
 
 export default function VehicleDetailsPage() {
     const { user, loading, hasRole } = useAuth();
@@ -84,6 +85,11 @@ export default function VehicleDetailsPage() {
     return (
         <div className="h-full overflow-y-auto p-4 md:p-6 bg-secondary/50">
             <div className="max-w-6xl mx-auto flex flex-col gap-6">
+                <AdminBreadcrumb segments={[
+                    { name: 'Admin', href: '/admin' }, 
+                    { name: 'Vehicles', href: '/admin/vehicles'},
+                    { name: vehicle.nickname }
+                ]} />
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between text-2xl">
