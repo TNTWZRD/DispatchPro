@@ -180,8 +180,6 @@ function DispatchDashboardUI() {
     const shift: Message[] = [];
     messages.forEach(m => {
       if (!m.threadId) return;
-      // P2P messages are threads with exactly 2 participants.
-      // This correctly includes dispatcher-to-dispatcher and the special dispatcher-to-DISPATCHER_ID logs.
       if (m.threadId.length === 2) {
           p2p.push(m);
       } else {
@@ -226,22 +224,21 @@ function DispatchDashboardUI() {
     let dispatchUnreadCount = 0;
 
     p2pMessages.forEach(msg => {
-      if (msg.isRead || msg.senderId === user.uid) return;
+        if (msg.isRead) return;
 
-      // Correctly attribute unread messages for the internal dispatch log
-      if (msg.recipientId === DISPATCHER_ID) {
-          const isSelfInThread = msg.threadId.includes(user.uid);
-          if (isSelfInThread) {
+        // Message is for the internal dispatch log
+        if (msg.recipientId === DISPATCHER_ID) {
+            // A message to the dispatch log should always be "unread" for the channel,
+            // regardless of who sent it.
             dispatchUnreadCount++;
-          }
-      } 
-      // Handle standard private messages
-      else if (msg.recipientId === user.uid) {
-        const contact = contactsMap.get(msg.senderId);
-        if (contact) {
-          contact.privateUnread++;
         }
-      }
+        // Message is a standard P2P chat for the current user
+        else if (msg.recipientId === user.uid && msg.senderId !== user.uid) {
+            const contact = contactsMap.get(msg.senderId);
+            if (contact) {
+                contact.privateUnread++;
+            }
+        }
     });
 
     shiftChannelMessages.forEach(msg => {
@@ -1061,3 +1058,6 @@ export function DispatchDashboard() {
 
     
 
+
+
+    
