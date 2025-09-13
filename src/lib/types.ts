@@ -1,6 +1,7 @@
 
 
 
+
 export type RideStatus = 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
 
 export type DriverStatus = 'available' | 'on-shift' | 'offline';
@@ -124,7 +125,6 @@ export type Ride = {
 export type Message = {
   id: string;
   threadId: string[];
-  sender: 'driver' | 'dispatcher';
   senderId: string;
   recipientId: string;
   text?: string;
@@ -132,5 +132,4 @@ export type Message = {
   audioUrl?: string;
   timestamp: Date;
   isRead: boolean;
-  forwardedFrom?: string;
 };

@@ -25,14 +25,14 @@ export async function forwardMessage(message: Message, recipientId: string, send
         const { id, ...originalMessage } = message;
 
         const newMessage: Omit<Message, 'id'> = {
-            ...originalMessage,
             threadId: getThreadIds(senderId, recipientId),
             recipientId: recipientId,
             senderId: senderId,
-            sender: originalMessage.sender, // Keep original sender type
             timestamp: serverTimestamp() as any,
             isRead: false,
-            forwardedFrom: originalMessage.senderId || originalMessage.sender,
+            text: originalMessage.text,
+            imageUrl: originalMessage.imageUrl,
+            audioUrl: originalMessage.audioUrl,
         };
 
         await addDoc(collection(db, 'messages'), newMessage);

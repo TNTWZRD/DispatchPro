@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, CornerUpLeft, MessageSquare } from 'lucide-react';
-import { cn, formatUserName, getThreadIds } from '@/lib/utils';
+import { Paperclip, Mic, Send, StopCircle, Loader2, Forward, Trash2, MessageSquare } from 'lucide-react';
+import { cn, getThreadIds } from '@/lib/utils';
 import { format, isValid } from 'date-fns';
 import { processChatMessage } from '@/ai/flows/chat-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -46,8 +46,6 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
   const { user, hasRole } = useAuth();
   const { toast } = useToast();
   
-  const senderType = hasRole(Role.DRIVER) ? 'driver' : 'dispatcher';
-
   useEffect(() => {
     if (scrollViewportRef.current) {
         scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
@@ -59,7 +57,6 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
     if (text.trim() && user) {
       onSendMessage({ 
         threadId: threadId,
-        sender: senderType,
         senderId: user.uid, 
         recipientId: participant.id,
         text 
@@ -76,7 +73,6 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
       reader.onloadend = () => {
         onSendMessage({ 
             threadId: threadId,
-            sender: senderType,
             senderId: user.uid,
             recipientId: participant.id,
             imageUrl: reader.result as string 
@@ -106,7 +102,6 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                 const result = await processChatMessage({ audioDataUri });
                 onSendMessage({ 
                     threadId: threadId,
-                    sender: senderType,
                     senderId: user.uid,
                     recipientId: participant.id,
                     text: result.responseText, 
@@ -157,19 +152,21 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
   
   const canDelete = hasRole(Role.DISPATCHER) || hasRole(Role.ADMIN) || hasRole(Role.OWNER);
 
-  const getParticipantAvatar = () => {
-    const participantUser = participant as AppUser;
-    if (participantUser.id === DISPATCHER_ID) {
+  const getParticipantAvatar = (senderId: string) => {
+    const participantUser = allDrivers.find(d => d.id === senderId) || participant as AppUser;
+
+    if (senderId === DISPATCHER_ID || (participantUser && participantUser.id === DISPATCHER_ID)) {
       return (
         <Avatar className="h-8 w-8">
             <AvatarFallback><MessageSquare /></AvatarFallback>
         </Avatar>
       );
     }
+    
     return (
         <Avatar className="h-8 w-8">
-            <AvatarImage src={participantUser.photoURL ?? `https://i.pravatar.cc/40?u=${participantUser.id}`} />
-            <AvatarFallback>{(participantUser.name || participantUser.displayName)?.[0] || 'U'}</AvatarFallback>
+            <AvatarImage src={(participantUser as AppUser).photoURL ?? `https://i.pravatar.cc/40?u=${senderId}`} />
+            <AvatarFallback>{(participantUser.name || (participantUser as AppUser).displayName)?.[0] || 'U'}</AvatarFallback>
         </Avatar>
     );
   }
@@ -184,19 +181,13 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                 <div
                   className={cn('flex items-end gap-2', message.senderId === user?.uid ? 'justify-end' : 'justify-start')}
                 >
-                  {message.senderId !== user?.uid && getParticipantAvatar()}
+                  {message.senderId !== user?.uid && getParticipantAvatar(message.senderId)}
                   <div
                     className={cn(
                       'max-w-xs md:max-w-md rounded-lg px-3 py-2',
                       message.senderId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     )}
                   >
-                    {message.forwardedFrom && (
-                       <div className="text-xs opacity-80 flex items-center gap-1 mb-1">
-                           <CornerUpLeft className="h-3 w-3" /> 
-                           Forwarded
-                        </div>
-                    )}
                     {message.text && <p className="text-sm break-words">{message.text}</p>}
                     {message.imageUrl && (
                       <Image src={message.imageUrl} alt="Uploaded content" width={200} height={200} className="rounded-md mt-2" />
@@ -269,9 +260,10 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                 <Label>Forward to:</Label>
                  <Select value={forwardRecipient} onValueChange={setForwardRecipient}>
                     <SelectTrigger>
-                        <SelectValue placeholder="Select a driver..." />
+                        <SelectValue placeholder="Select a recipient..." />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value={DISPATCHER_ID}>Dispatch</SelectItem>
                         {allDrivers.filter(d => d.id !== user?.uid).map(driver => (
                             <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
                         ))}

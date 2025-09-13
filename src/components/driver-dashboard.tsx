@@ -15,7 +15,7 @@ import { ChatView } from './chat-view';
 import { Button } from './ui/button';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, addDoc, serverTimestamp, getDoc, Timestamp, orderBy, writeBatch, or } from 'firebase/firestore';
 import { sendBrowserNotification } from '@/lib/notifications';
 import { formatUserName, getThreadIds } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -93,8 +93,6 @@ export function DriverDashboard() {
         if (doc.exists()) {
             setCurrentDriver({ ...doc.data(), id: doc.id } as Driver);
         } else {
-            // Driver profile might not exist yet if they've just registered
-            // It will be created by the auth context if they have the DRIVER role
             setCurrentDriver(null);
         }
     });
@@ -178,7 +176,7 @@ export function DriverDashboard() {
         ridesUnsub();
         unsubMessages();
     }
-  }, [currentDriver, allDrivers]);
+  }, [currentDriver]);
 
 
   const driverRides = useMemo(() => {
@@ -265,9 +263,15 @@ export function DriverDashboard() {
     setChatParticipant(participant);
     const threadId = getThreadIds(currentDriver.id, participant.id);
     const batch = writeBatch(db);
-    const unread = messages.filter(m => m.threadId?.join() === threadId.join() && m.recipientId === currentDriver.id && !m.isRead);
     
-    unread.forEach(message => {
+    let messagesToMark: Message[];
+    if (participant.id === DISPATCHER_ID) {
+      messagesToMark = dispatchMessages.filter(m => m.recipientId === currentDriver.id && !m.isRead);
+    } else {
+      messagesToMark = p2pMessages.filter(m => m.recipientId === currentDriver.id && m.senderId === participant.id && !m.isRead);
+    }
+    
+    messagesToMark.forEach(message => {
         const msgRef = doc(db, 'messages', message.id);
         batch.update(msgRef, { isRead: true });
     });
@@ -424,7 +428,7 @@ export function DriverDashboard() {
         >
           <ChatView
             participant={chatParticipant}
-            messages={messages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
+            messages={chatParticipant.id === DISPATCHER_ID ? dispatchMessages : p2pMessages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
             threadId={getThreadIds(currentDriver.id, chatParticipant.id)}

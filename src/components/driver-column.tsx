@@ -3,18 +3,15 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
-import { DISPATCHER_ID, dispatcherUser } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Shift, Vehicle } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RideCard } from './ride-card';
-import { cn, formatUserName, getThreadIds } from '@/lib/utils';
+import { cn, formatUserName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { CheckCircle2, ChevronDown, ChevronUp, MessageCircle, Briefcase, Car, PowerOff } from 'lucide-react';
-import { ResponsiveDialog } from './responsive-dialog';
-import { ChatView } from './chat-view';
+import { CheckCircle2, ChevronDown, ChevronUp, Briefcase, Car, PowerOff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 
@@ -23,15 +20,12 @@ type DriverColumnProps = {
   rides: Ride[];
   allShifts: (Shift & { driver?: any; vehicle?: any })[];
   allDrivers: Driver[];
-  unreadCount: number;
   onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
   onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
   onUnscheduleRide: (rideId: string) => void;
-  onSendMessage: (message: Omit<Message, 'id' | 'timestamp' | 'isRead'>) => void;
-  onMarkMessagesAsRead: (driverId: string) => void;
   onEndShift: (shift: Shift) => void;
   className?: string;
 };
@@ -48,21 +42,16 @@ export function DriverColumn({
     shift,
     rides, 
     allShifts,
-    allDrivers,
-    unreadCount, 
     onAssignDriver, 
     onChangeStatus, 
     onSetFare, 
     onUnassignDriver, 
     onEditRide, 
     onUnscheduleRide, 
-    onSendMessage,
-    onMarkMessagesAsRead,
     onEndShift,
     className
 }: DriverColumnProps) {
   const [showCompleted, setShowCompleted] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   
   const isMobile = useIsMobile();
   const driver = shift.driver;
@@ -78,14 +67,6 @@ export function DriverColumn({
   
   const hasActiveRides = activeRides.length > 0;
   const hasCompletedRides = completedRides.length > 0;
-  
-  const handleChatOpen = (isOpen: boolean) => {
-    if (!driver) return;
-    if(isOpen) {
-        onMarkMessagesAsRead(driver.id);
-    }
-    setIsChatOpen(isOpen);
-  }
   
   if (!driver || !vehicle) return null;
 
@@ -109,14 +90,6 @@ export function DriverColumn({
               </div>
             </div>
             <div className='flex gap-1'>
-                <Button variant="outline" size="sm" className="relative" onClick={() => handleChatOpen(true)}>
-                    <MessageCircle />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
-                        {unreadCount}
-                      </span>
-                    )}
-                </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" disabled={activeRides.length > 0}>
@@ -203,29 +176,12 @@ export function DriverColumn({
     </>
   );
 
-  const ChatDialog = (
-    <ResponsiveDialog
-        open={isChatOpen}
-        onOpenChange={handleChatOpen}
-        title={`Shift Channel: ${formatUserName(driver.name)}`}
-    >
-        <ChatView
-          participant={driver as AppUser}
-          messages={[]} // Messages are passed from parent now. This needs a bigger refactor to pass down, so we clear for now to avoid bugs.
-          allDrivers={allDrivers}
-          onSendMessage={onSendMessage}
-          threadId={getThreadIds(driver.id, DISPATCHER_ID)}
-        />
-    </ResponsiveDialog>
-  );
-
   if (isMobile) {
     return (
       <div className="w-full shrink-0 flex flex-col space-y-4">
         <Card>
           {renderContent()}
         </Card>
-        {ChatDialog}
       </div>
     );
   }
@@ -249,7 +205,6 @@ export function DriverColumn({
         </Card>
       )}
     </StrictModeDroppable>
-    {ChatDialog}
     </>
   );
 }
