@@ -210,7 +210,7 @@ export function DriverColumn({
         title={`Shift Channel: ${formatUserName(driver.name)}`}
     >
         <ChatView
-          participant={dispatcherUser}
+          participant={driver as AppUser}
           messages={[]} // Messages are passed from parent now. This needs a bigger refactor to pass down, so we clear for now to avoid bugs.
           allDrivers={allDrivers}
           onSendMessage={onSendMessage}

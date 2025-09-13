@@ -34,6 +34,7 @@ import { sendBrowserNotification } from '@/lib/notifications';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ChatView } from './chat-view';
+import { Separator } from './ui/separator';
 
 
 function DispatchDashboardUI() {
@@ -129,10 +130,7 @@ function DispatchDashboardUI() {
     
     const messagesQuery = query(
       collection(db, "messages"),
-      or(
-        where("threadId", "array-contains", user.uid),
-        where("threadId", "array-contains", DISPATCHER_ID)
-      )
+      where("threadId", "array-contains", user.uid),
     );
 
     const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
@@ -197,7 +195,7 @@ function DispatchDashboardUI() {
     const contactsMap = new Map<string, { id: string; name: string; photoURL?: string | null; status?: Driver['status']; privateUnread: number; publicUnread: number; }>();
 
     allUsers.forEach(u => {
-      if (u.id === user.uid) return;
+      if (u.id === user.uid) return; // Exclude self
       const driverInfo = drivers.find(d => d.id === u.id);
       contactsMap.set(u.id, {
         id: u.id,
@@ -225,7 +223,8 @@ function DispatchDashboardUI() {
 
     p2pMessages.forEach(msg => {
       if (msg.recipientId === user.uid && !msg.isRead) {
-        const contact = contactsMap.get(msg.senderId);
+        const contactId = msg.senderId;
+        const contact = contactsMap.get(contactId);
         if (contact) {
           contact.privateUnread += 1;
         }
@@ -233,9 +232,11 @@ function DispatchDashboardUI() {
     });
 
     shiftChannelMessages.forEach(msg => {
-      const contactId = msg.senderId === DISPATCHER_ID ? msg.recipientId : msg.senderId;
+      const contactId = msg.senderId === user.uid ? msg.recipientId : msg.senderId;
+      if (contactId === DISPATCHER_ID) return; // Don't count messages from Dispatcher to self as unread.
+
       const contact = contactsMap.get(contactId);
-      if (contact && msg.recipientId === DISPATCHER_ID && !msg.isRead) {
+      if (contact && msg.recipientId === user.uid && !msg.isRead) {
         contact.publicUnread += 1;
       }
     });
@@ -243,7 +244,9 @@ function DispatchDashboardUI() {
     const contacts = Array.from(contactsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     
     const totalPrivateUnread = contacts.reduce((sum, c) => sum + c.privateUnread, 0);
-    const totalPublicUnread = contacts.reduce((sum, c) => sum + c.publicUnread, 0);
+    
+    // Total unread public messages is the count of unread messages where the current user is the recipient.
+    const totalPublicUnread = shiftChannelMessages.filter(m => m.recipientId === user.uid && !m.isRead).length;
 
     return { contacts, totalPrivateUnread, totalPublicUnread };
   }, [p2pMessages, shiftChannelMessages, user, allUsers, drivers]);
@@ -466,20 +469,19 @@ function DispatchDashboardUI() {
     if (!db || !user) return;
     
     const batch = writeBatch(db);
+    const messagesToMark = isPublic ? shiftChannelMessages : p2pMessages;
+    const recipientField = isPublic ? DISPATCHER_ID : user.uid;
+    const threadId = getThreadIds(participantId, recipientField);
+
+    const unread = messagesToMark.filter(m => 
+      m.threadId?.join() === threadId.join() && 
+      m.recipientId === user.uid && 
+      !m.isRead
+    );
     
-    if (isPublic) {
-        const publicThreadId = getThreadIds(participantId, DISPATCHER_ID);
-        const unreadPublic = shiftChannelMessages.filter(m => m.threadId?.join() === publicThreadId.join() && m.recipientId === DISPATCHER_ID && !m.isRead);
-        unreadPublic.forEach(message => {
-            batch.update(doc(db, 'messages', message.id), { isRead: true });
-        });
-    } else {
-        const privateThreadId = getThreadIds(user.uid, participantId);
-        const unreadP2P = p2pMessages.filter(m => m.threadId?.join() === privateThreadId.join() && m.recipientId === user.uid && !m.isRead);
-        unreadP2P.forEach(message => {
-            batch.update(doc(db, 'messages', message.id), { isRead: true });
-        });
-    }
+    unread.forEach(message => {
+      batch.update(doc(db, 'messages', message.id), { isRead: true });
+    });
 
     await batch.commit();
   };
@@ -676,8 +678,8 @@ function DispatchDashboardUI() {
 
           {/* Driver Columns */}
           {activeShifts.map(shift => {
-            const contact = chatDirectory.contacts.find(c => c.id === shift.driverId);
-            const unreadCount = contact ? contact.publicUnread : 0;
+            const unreadCount = shiftChannelMessages.filter(m => m.recipientId === user?.uid && m.senderId === shift.driverId && !m.isRead).length;
+
             return (
                 <DriverColumn
                   key={shift.id}
@@ -765,8 +767,8 @@ function DispatchDashboardUI() {
 
                 {/* Driver Tabs */}
                 {activeShifts.map(shift => {
-                  const contact = chatDirectory.contacts.find(c => c.id === shift.driverId);
-                  const unreadCount = contact ? contact.publicUnread : 0;
+                  const unreadCount = shiftChannelMessages.filter(m => m.recipientId === user?.uid && m.senderId === shift.driverId && !m.isRead).length;
+
                   return (
                     <CarouselItem key={shift.id} className="overflow-y-auto">
                         <div className="pr-1">
@@ -950,6 +952,27 @@ function DispatchDashboardUI() {
             title="My Messages (Private)"
         >
             <div className="p-4 space-y-2">
+                {user && (
+                    <>
+                        <Button
+                            variant="ghost"
+                            className="w-full justify-start h-14"
+                            onClick={() => openPrivateChatWith(dispatcherUser)}
+                        >
+                            <Avatar className="h-10 w-10 mr-4">
+                                <AvatarFallback><MessageSquare /></AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left">
+                                <p>Dispatch</p>
+                                <span className="text-xs text-muted-foreground">Internal Dispatch Log</span>
+                            </div>
+                            {p2pMessages.filter(m => m.recipientId === user.uid && m.senderId === DISPATCHER_ID && !m.isRead).length > 0 && 
+                                <Badge>{p2pMessages.filter(m => m.recipientId === user.uid && m.senderId === DISPATCHER_ID && !m.isRead).length}</Badge>
+                            }
+                        </Button>
+                        <Separator />
+                    </>
+                )}
                 {chatDirectory.contacts.map(contact => (
                     <Button 
                         key={contact.id} 
@@ -982,10 +1005,10 @@ function DispatchDashboardUI() {
             >
                 <ChatView
                     participant={currentPublicChatTarget}
-                    messages={shiftChannelMessages.filter(m => m.threadId?.includes(currentPublicChatTarget.id) && m.threadId?.includes(DISPATCHER_ID))}
+                    messages={shiftChannelMessages.filter(m => m.threadId?.includes(currentPublicChatTarget.id) && m.threadId?.includes(user.uid))}
                     allDrivers={drivers}
                     onSendMessage={handleSendMessage}
-                    threadId={getThreadIds(DISPATCHER_ID, currentPublicChatTarget.id)}
+                    threadId={getThreadIds(user.uid, currentPublicChatTarget.id)}
                 />
             </ResponsiveDialog>
         )}
@@ -994,7 +1017,7 @@ function DispatchDashboardUI() {
             <ResponsiveDialog
                 open={!!currentPrivateChatTarget}
                 onOpenChange={(isOpen) => !isOpen && setCurrentPrivateChatTarget(null)}
-                title={`Chat with ${formatUserName(currentPrivateChatTarget.name || '')}`}
+                title={currentPrivateChatTarget.id === DISPATCHER_ID ? 'Internal Dispatch Log' : `Chat with ${formatUserName(currentPrivateChatTarget.name || '')}`}
             >
                 <ChatView
                     participant={currentPrivateChatTarget}
@@ -1021,3 +1044,4 @@ export function DispatchDashboard() {
 }
 
     
+

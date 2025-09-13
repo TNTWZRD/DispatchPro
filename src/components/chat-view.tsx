@@ -214,9 +214,9 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, thr
                 <ContextMenuItem onSelect={() => setForwardingMessage(message)}>
                   <Forward className="mr-2 h-4 w-4" /> Forward
                 </ContextMenuItem>
-                 {canDelete && message.audioUrl && (
+                 {canDelete && message.id && (
                     <ContextMenuItem className="text-destructive" onSelect={() => handleDeleteMessage(message.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Voice Message
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Message
                     </ContextMenuItem>
                  )}
               </ContextMenuContent>
