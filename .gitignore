@@ -1,46 +1,23 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Firebase service account key
+firebaseAuthKey.key
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Local ENV files
+.env.local
+.env.*.local
 
-# testing
-/coverage
-
-# next.js
+# Next.js
 /.next/
 /out/
 
-# production
+# Production
 /build
 
-# misc
+# Misc
 .DS_Store
 *.pem
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-.genkit/*
-.env
-
-
-# firebase
-firebase-debug.log
-firestore-debug.log
+# Dependecies
+/node_modules
+/pnpm-lock.yaml
+/yarn.lock
+/package-lock.json

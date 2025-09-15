@@ -101,6 +101,8 @@ export type MaintenanceTicket = {
     activity?: TicketActivity[];
 }
 
+export type RideTag = 'UNPAID';
+
 export type Ride = {
   id: string;
   pickup: Location;
@@ -115,6 +117,7 @@ export type Ride = {
   passengerCount?: number;
   movingFee: boolean;
   notes?: string;
+  tags?: RideTag[];
   paymentDetails?: {
     cash?: number;
     card?: number;
@@ -146,3 +149,13 @@ export type Message = {
   isReadBy: string[]; // Array of user IDs who have read the message
   isStarred?: boolean;
 };
+
+export type Ban = {
+    id: string;
+    name?: string;
+    phone?: string;
+    address?: string;
+    reason: string;
+    bannedById: string;
+    createdAt: Date;
+}

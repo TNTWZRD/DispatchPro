@@ -8,8 +8,8 @@ import { randomBytes } from 'crypto';
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
 import { adminAuth } from '@/lib/firebase-admin';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import type { Driver, MaintenanceTicket, Vehicle, Shift, AppUser } from '@/lib/types';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc, query, where, getDocs, Timestamp, arrayRemove } from 'firebase/firestore';
+import type { Driver, MaintenanceTicket, Vehicle, Shift, AppUser, Ride, RideTag } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 
@@ -643,10 +643,34 @@ export async function updateVehicleNotes(prevState: any, formData: FormData) {
 
 export async function resetPassword(email: string) {
     if (!adminAuth) {
-        return { type: "error", message: "Auth service not available." };
+        return { type: "error", message: "Auth service not available. Please check server configuration." };
     }
     try {
-        await adminAuth.generatePasswordResetLink(email);
+        const userRecord = await adminAuth.getUserByEmail(email);
+        const hasPasswordProvider = userRecord.providerData.some(
+            (provider) => provider.providerId === 'password'
+        );
+
+        if (!hasPasswordProvider) {
+            return { type: "error", message: "This user signed up with an external provider (e.g., Google) and does not have a password to reset." };
+        }
+
+        const link = await adminAuth.generatePasswordResetLink(email);
+        
+        await sendMail({
+            to: email,
+            subject: 'Reset your password for DispatchPro',
+            html: `
+                <h1>Reset Your Password</h1>
+                <p>We received a request to reset your password for your DispatchPro account.</p>
+                <p>Click the link below to set a new password:</p>
+                <a href="${link}" target="_blank">Reset Password</a>
+                <p>If you did not request a password reset, please ignore this email.</p>
+                <p>Thanks,</p>
+                <p>The DispatchPro Team</p>
+            `,
+        });
+
         return { type: "success", message: `Password reset email sent to ${email}.` };
     } catch (error: any) {
         console.error("Failed to send password reset email:", error);
@@ -656,7 +680,7 @@ export async function resetPassword(email: string) {
 
 export async function disableUser(userId: string) {
     if (!adminAuth) {
-        return { type: "error", message: "Auth service not available." };
+        return { type: "error", message: "Auth service not available. Please check server configuration." };
     }
     const batch = writeBatch(db);
     try {
@@ -677,5 +701,130 @@ export async function disableUser(userId: string) {
     } catch (error: any) {
         console.error("Failed to disable user:", error);
         return { type: "error", message: `Failed to disable user: ${error.message}` };
+    }
+}
+
+const banBaseSchema = z.object({
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  reason: z.string().min(3, "Reason must be at least 3 characters."),
+});
+
+const banRefinedSchema = banBaseSchema.refine(data => data.name || data.phone || data.address, {
+  message: "At least one of name, phone, or address must be provided.",
+  path: ["name"], // Assign error to a field for display
+});
+
+
+const addBanSchema = banBaseSchema.extend({
+  bannedById: z.string(),
+}).refine(data => data.name || data.phone || data.address, {
+  message: "At least one of name, phone, or address must be provided.",
+  path: ["name"],
+});
+
+export async function addBan(prevState: any, formData: FormData) {
+  const validatedFields = addBanSchema.safeParse(Object.fromEntries(formData));
+  if (!validatedFields.success) {
+    return {
+      type: 'error',
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: validatedFields.error.flatten().formErrors[0] || 'Invalid data provided.',
+    };
+  }
+
+  try {
+    await addDoc(collection(db, 'bans'), {
+      ...validatedFields.data,
+      createdAt: serverTimestamp(),
+    });
+    revalidatePath('/admin/auditing');
+    return { type: 'success', message: 'Ban added successfully.' };
+  } catch (error: any) {
+    return { type: 'error', message: `Failed to add ban: ${error.message}` };
+  }
+}
+
+const updateBanSchema = banBaseSchema.extend({
+  banId: z.string(),
+}).refine(data => data.name || data.phone || data.address, {
+  message: "At least one of name, phone, or address must be provided.",
+  path: ["name"],
+});
+
+export async function updateBan(prevState: any, formData: FormData) {
+    const validatedFields = updateBanSchema.safeParse(Object.fromEntries(formData));
+    if (!validatedFields.success) {
+        return {
+            type: 'error',
+            errors: validatedFields.error.flatten().fieldErrors,
+            message: validatedFields.error.flatten().formErrors[0] || 'Invalid data provided.',
+        };
+    }
+
+    try {
+        const { banId, ...updateData } = validatedFields.data;
+        await updateDoc(doc(db, 'bans', banId), {
+            ...updateData,
+            updatedAt: serverTimestamp(),
+        });
+        revalidatePath('/admin/auditing');
+        return { type: 'success', message: 'Ban updated successfully.' };
+    } catch (error: any) {
+        return { type: 'error', message: `Failed to update ban: ${error.message}` };
+    }
+}
+
+export async function deleteBan(banId: string) {
+  try {
+    await deleteDoc(doc(db, 'bans', banId));
+    revalidatePath('/admin/auditing');
+    return { type: 'success', message: 'Ban removed successfully.' };
+  } catch (error: any) {
+    return { type: 'error', message: `Failed to remove ban: ${error.message}` };
+  }
+}
+
+export async function updateRideTags(rideId: string, tag: RideTag, add: boolean) {
+    try {
+        const rideRef = doc(db, 'rides', rideId);
+        await updateDoc(rideRef, {
+            tags: add ? arrayUnion(tag) : arrayRemove(tag)
+        });
+        revalidatePath('/');
+        return { type: "success", message: `Tag "${tag}" ${add ? 'added' : 'removed'}.` };
+    } catch (error: any) {
+        console.error("Failed to update tags:", error);
+        return { type: "error", message: `Failed to update tags: ${error.message}` };
+    }
+}
+
+export async function updateRide(rideId: string, updateData: Partial<Ride>) {
+    try {
+        const rideRef = doc(db, 'rides', rideId);
+        const dataToUpdate = { ...updateData };
+
+        // Ensure paymentDetails doesn't contain undefined
+        if (dataToUpdate.paymentDetails) {
+            for (const key in dataToUpdate.paymentDetails) {
+                if (dataToUpdate.paymentDetails[key as keyof typeof dataToUpdate.paymentDetails] === undefined) {
+                    dataToUpdate.paymentDetails[key as keyof typeof dataToUpdate.paymentDetails] = null;
+                }
+            }
+        }
+
+        await updateDoc(rideRef, {
+            ...dataToUpdate,
+            updatedAt: serverTimestamp(),
+        });
+        
+        revalidatePath('/admin/auditing');
+        revalidatePath('/');
+        return { type: "success", message: "Ride updated successfully." };
+
+    } catch (error: any) {
+        console.error("Failed to update ride:", error);
+        return { type: "error", message: `Failed to update ride: ${error.message}` };
     }
 }

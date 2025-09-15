@@ -1,16 +1,15 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Ride, RideStatus, Shift } from '@/lib/types';
+import type { Ride, RideStatus, Shift, RideTag } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSubContent, DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2, Star } from 'lucide-react';
+import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2, Star, Tag } from 'lucide-react';
 import { cn, formatPhoneNumber } from '@/lib/utils';
 import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -18,6 +17,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { useCondensedMode } from '@/context/condensed-mode-context';
 import { ResponsiveDialog } from './responsive-dialog';
 import { type toggleStarMessage } from '@/app/actions';
+import { updateRideTags } from '@/app/admin/actions';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 
 type RideCardProps = {
@@ -25,7 +27,7 @@ type RideCardProps = {
   shifts: (Shift & { driver?: any; vehicle?: any })[];
   onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number | null; card?: number | null; check?: number | null; tip?: number | null; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEdit: (ride: Ride) => void;
   onUnschedule: (rideId: string) => void;
@@ -42,12 +44,14 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
 
 export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule, onToggleStar }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
+  const [isPaymentConfirmationOpen, setIsPaymentConfirmationOpen] = useState(false);
   const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
   const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
   const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check);
   const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip);
   
   const { isCondensed } = useCondensedMode();
+  const { toast } = useToast();
 
   const cardPaymentAmount = useMemo(() => {
     return (fareCard || 0) + (fareTip || 0);
@@ -64,11 +68,14 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
 
 
   useEffect(() => {
-    setFareCash(ride.paymentDetails?.cash);
-    setFareCard(ride.paymentDetails?.card);
-    setFareCheck(ride.paymentDetails?.check);
-    setFareTip(ride.paymentDetails?.tip);
-  }, [ride.paymentDetails]);
+    if (isFareModalOpen) {
+      const hasPaymentDetails = ride.paymentDetails && (ride.paymentDetails.cash || ride.paymentDetails.card || ride.paymentDetails.check);
+      setFareCash(ride.paymentDetails?.cash ?? (!hasPaymentDetails ? ride.totalFare : undefined));
+      setFareCard(ride.paymentDetails?.card);
+      setFareCheck(ride.paymentDetails?.check);
+      setFareTip(ride.paymentDetails?.tip);
+    }
+  }, [ride.paymentDetails, ride.totalFare, isFareModalOpen]);
 
 
   const getStatusBadge = (status: RideStatus) => {
@@ -86,13 +93,38 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
     onSetFare(ride.id, {
       totalFare: newTotalFare,
       paymentDetails: {
-        cash: fareCash || undefined,
-        card: fareCard || undefined,
-        check: fareCheck || undefined,
-        tip: fareTip || undefined,
+        cash: fareCash || null,
+        card: fareCard || null,
+        check: fareCheck || null,
+        tip: fareTip || null,
       }
     });
     setIsFareModalOpen(false);
+  };
+  
+  const handleMarkCompleted = () => {
+    const paymentTotal = (ride.paymentDetails?.cash || 0) + (ride.paymentDetails?.card || 0) + (ride.paymentDetails?.check || 0);
+    const isPaid = paymentTotal >= ride.totalFare;
+
+    if (isPaid) {
+      onChangeStatus(ride.id, 'completed');
+    } else {
+      setIsPaymentConfirmationOpen(true);
+    }
+  };
+
+  const handleConfirmCashPayment = () => {
+    onSetFare(ride.id, {
+      totalFare: ride.totalFare,
+      paymentDetails: { cash: ride.totalFare, card: null, check: null, tip: null }
+    });
+    onChangeStatus(ride.id, 'completed');
+    setIsPaymentConfirmationOpen(false);
+  };
+
+  const handleEnterPaymentDetails = () => {
+    setIsPaymentConfirmationOpen(false);
+    setIsFareModalOpen(true);
   };
   
   const formatCurrency = (amount?: number) => {
@@ -156,11 +188,37 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
     return `${eventText} ${formatDistanceToNow(eventDate, { addSuffix: true })}`;
   }
   
+  const handleToggleTag = async (tag: RideTag) => {
+    const hasTag = ride.tags?.includes(tag) ?? false;
+    const result = await updateRideTags(ride.id, tag, !hasTag);
+    if (result.type === 'success') {
+      toast({ title: 'Tag Updated', description: result.message });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+  }
+
   const menuContent = (
     <DropdownMenuContent>
         <DropdownMenuItem onClick={() => onEdit(ride)}>
             <Edit className="mr-2 h-4 w-4" /> Edit Ride
         </DropdownMenuItem>
+        <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+                <Tag className="mr-2 h-4 w-4" /> Tags
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                    <DropdownMenuLabel>Manage Tags</DropdownMenuLabel>
+                    <DropdownMenuCheckboxItem
+                        checked={ride.tags?.includes('UNPAID')}
+                        onCheckedChange={() => handleToggleTag('UNPAID')}
+                    >
+                        Unpaid
+                    </DropdownMenuCheckboxItem>
+                </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+        </DropdownMenuSub>
         <DropdownMenuSeparator />
         {ride.status === 'pending' && ride.scheduledTime && (
             <DropdownMenuItem onClick={() => onUnschedule(ride.id)}>
@@ -203,7 +261,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
             </DropdownMenuSub>
         )}
         {ride.status === 'assigned' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'in-progress')}>Mark In Progress</DropdownMenuItem>}
-        {ride.status === 'in-progress' && <DropdownMenuItem onClick={() => onChangeStatus(ride.id, 'completed')}>Mark Completed</DropdownMenuItem>}
+        {ride.status === 'in-progress' && <DropdownMenuItem onClick={handleMarkCompleted}>Mark Completed</DropdownMenuItem>}
         {['pending', 'assigned', 'in-progress'].includes(ride.status) && (
             <>
             <DropdownMenuSeparator />
@@ -233,6 +291,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
           <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2 flex-wrap">
               {getStatusBadge(ride.status)}
+              {ride.tags?.includes('UNPAID') && <Badge variant="destructive">UNPAID</Badge>}
               {isCondensed && ride.scheduledTime && (
                   <Tooltip>
                   <TooltipTrigger>
@@ -435,6 +494,26 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
             </Button>
           </div>
       </ResponsiveDialog>
+
+      <AlertDialog open={isPaymentConfirmationOpen} onOpenChange={setIsPaymentConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              This ride has not been marked as fully paid. Was the fare ({formatCurrency(ride.totalFare)}) paid in full with cash?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleEnterPaymentDetails}>
+              Enter Payment Details
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmCashPayment}>
+              Yes, Paid in Cash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }

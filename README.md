@@ -42,6 +42,9 @@ A comprehensive, protected section for high-level management of the entire syste
 - **Maintenance Ticketing System:**
     - Create and manage maintenance tickets for any vehicle in the fleet.
     - Track ticket status (`open`, `in-progress`, `closed`), priority, and a full activity log with comments and status changes.
+- **Auditing & Security (`/admin/auditing`)**
+    - **Unpaid Rides Tracking:** Review a filterable list of all completed rides with an outstanding balance. Admins can edit ride details, add notes, and settle the final payment.
+    - **Ban List Management:** Maintain a platform-wide ban list. Add, edit, or remove entries based on name, phone number, or address, with a required reason for each ban.
 
 ## Tech Stack
 

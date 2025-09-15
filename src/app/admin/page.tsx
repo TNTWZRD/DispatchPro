@@ -1,11 +1,12 @@
 
+
 "use client";
 
 import { UserManagementTable } from '@/components/user-management-table';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, Shield, Truck, User, Users, Briefcase } from 'lucide-react';
+import { Loader2, Shield, Truck, User, Users, Briefcase, FileWarning } from 'lucide-react';
 import { Role } from '@/lib/types';
 import { InviteUserForm } from '@/components/invite-user-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -83,6 +84,12 @@ export default function AdminPage() {
                                     <Button variant="outline">
                                         <Briefcase className="mr-2" />
                                         Manage Shifts
+                                    </Button>
+                                </Link>
+                                <Link href="/admin/auditing" passHref>
+                                    <Button variant="outline">
+                                        <FileWarning className="mr-2" />
+                                        Auditing
                                     </Button>
                                 </Link>
                             </div>

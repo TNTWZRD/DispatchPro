@@ -1,41 +1,48 @@
 
-// src/lib/firebase-admin.ts
+import { initializeApp, cert, getApps, type App } from 'firebase-admin/app';
+import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import * as fs from 'fs';
+import * as path from 'path';
 
-import * as admin from 'firebase-admin';
-import type { ServiceAccount } from "firebase-admin";
+let adminApp: App;
+let adminAuth: Auth;
+let adminDb: Firestore;
 
-const firebaseConfig = {
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-};
+if (!getApps().length) {
+  const serviceAccountPath = path.join(process.cwd(), 'firebaseAuthKey.key');
 
-let adminAuth: admin.auth.Auth | null = null;
-let adminDb: admin.firestore.Firestore | null = null;
-
-// Initialize Firebase Admin SDK for the server
-if (!admin.apps.length) {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        try {
-            const serviceAccount: ServiceAccount = JSON.parse(
-                process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-            );
-
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-            });
-
-            adminAuth = admin.auth();
-            adminDb = admin.firestore();
-
-        } catch (e: any) {
-            console.error('Firebase Admin initialization error: Failed to parse service account key.', e.stack);
-        }
-    } else {
-        console.warn("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Firebase Admin SDK could not be initialized. Server-side auth features will not be available.");
+  try {
+    if (!fs.existsSync(serviceAccountPath)) {
+      throw new Error("Service account key file `firebaseAuthKey.key` not found in project root.");
     }
-} else {
-    adminAuth = admin.auth();
-    adminDb = admin.firestore();
+    
+    const serviceAccountBuffer = fs.readFileSync(serviceAccountPath);
+    const serviceAccount = JSON.parse(serviceAccountBuffer.toString());
+
+    adminApp = initializeApp({
+      credential: cert(serviceAccount),
+    });
+    
+    console.log("Firebase Admin SDK initialized successfully.");
+
+  } catch (error: any) {
+    console.error("---------------------------------------------------------------------------------");
+    console.error("CRITICAL: Firebase Admin SDK initialization failed.");
+    if (error.message.includes("not found")) {
+        console.error(error.message);
+    } else {
+      console.error("Error: Failed to parse or use the service account key. The file may be malformed or empty.");
+      console.error("Underlying error:", error.message);
+    }
+    console.error("Server-side authentication features will be UNAVAILABLE.");
+    console.error("---------------------------------------------------------------------------------");
+  }
 }
+
+// @ts-ignore
+adminAuth = getAuth(adminApp);
+// @ts-ignore
+adminDb = getFirestore(adminApp);
 
 export { adminAuth, adminDb };

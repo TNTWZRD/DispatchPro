@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from 'next/link';
@@ -16,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown, Wrench, Sprout } from 'lucide-react';
+import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown, Wrench, Sprout, FileWarning } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -98,6 +99,11 @@ export function MainHeader() {
                          <DropdownMenuItem asChild>
                             <Link href="/admin/maintenance">
                                 <Wrench className="mr-2" /> Manage Maintenance
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href="/admin/auditing">
+                                <FileWarning className="mr-2" /> Auditing
                             </Link>
                         </DropdownMenuItem>
                         {canAccessSuperAdmin && (

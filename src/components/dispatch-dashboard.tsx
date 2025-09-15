@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser } from '@/lib/types';
+import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser, Ban } from '@/lib/types';
 import { Role, DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { DragDropContext, type DropResult, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -40,6 +40,7 @@ import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ShiftNotesForm } from './shift-notes-form';
 import { VehicleNotesForm } from './vehicle-notes-form';
 import { EditShiftForm } from './edit-shift-form';
+import { BanCheckDialog } from './ban-check-dialog';
 
 
 function DispatchDashboardUI() {
@@ -49,8 +50,10 @@ function DispatchDashboardUI() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [bans, setBans] = useState<Ban[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
+  const [isBanCheckOpen, setIsBanCheckOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isChatDirectoryOpen, setIsChatDirectoryOpen] = useState(false);
@@ -88,50 +91,55 @@ function DispatchDashboardUI() {
     
     const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
 
-    const ridesUnsub = onSnapshot(collection(db, "rides"), (snapshot) => {
-        const ridesData = snapshot.docs.map(doc => ({
+    const unsubscribers = [
+      onSnapshot(collection(db, "rides"), (snapshot) => {
+          const ridesData = snapshot.docs.map(doc => ({
+              ...doc.data(),
+              id: doc.id,
+              createdAt: toDate(doc.data().createdAt),
+              updatedAt: toDate(doc.data().updatedAt),
+              scheduledTime: doc.data().scheduledTime ? toDate(doc.data().scheduledTime) : undefined,
+              assignedAt: doc.data().assignedAt ? toDate(doc.data().assignedAt) : undefined,
+              pickedUpAt: doc.data().pickedUpAt ? toDate(doc.data().pickedUpAt) : undefined,
+              droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
+              cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
+          } as Ride));
+          setRides(ridesData);
+      }),
+      onSnapshot(collection(db, "drivers"), (snapshot) => {
+          setDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
+      }),
+      onSnapshot(collection(db, 'users'), (snapshot) => {
+        setAllUsers(snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            ...data,
+            id: doc.id,
+            uid: doc.id,
+            name: data.displayName,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+          } as AppUser;
+        }));
+      }),
+      onSnapshot(collection(db, "vehicles"), (snapshot) => {
+          setVehicles(snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Vehicle)));
+      }),
+      onSnapshot(collection(db, "shifts"), (snapshot) => {
+          setShifts(snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
-            createdAt: toDate(doc.data().createdAt),
-            updatedAt: toDate(doc.data().updatedAt),
-            scheduledTime: doc.data().scheduledTime ? toDate(doc.data().scheduledTime) : undefined,
-            assignedAt: doc.data().assignedAt ? toDate(doc.data().assignedAt) : undefined,
-            pickedUpAt: doc.data().pickedUpAt ? toDate(doc.data().pickedUpAt) : undefined,
-            droppedOffAt: doc.data().droppedOffAt ? toDate(doc.data().droppedOffAt) : undefined,
-            cancelledAt: doc.data().cancelledAt ? toDate(doc.data().cancelledAt) : undefined,
-        } as Ride));
-        setRides(ridesData);
-    });
-
-    const driversUnsub = onSnapshot(collection(db, "drivers"), (snapshot) => {
-        setDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
-    });
-
-    const usersUnsub = onSnapshot(collection(db, 'users'), (snapshot) => {
-      setAllUsers(snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          uid: doc.id,
-          name: data.displayName,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-        } as AppUser;
-      }));
-    });
-    
-    const vehiclesUnsub = onSnapshot(collection(db, "vehicles"), (snapshot) => {
-        setVehicles(snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as Vehicle)));
-    });
-
-    const shiftsUnsub = onSnapshot(collection(db, "shifts"), (snapshot) => {
-        setShifts(snapshot.docs.map(doc => ({
+            startTime: toDate(doc.data().startTime),
+            endTime: doc.data().endTime ? toDate(doc.data().endTime) : undefined,
+          } as Shift)));
+      }),
+       onSnapshot(collection(db, "bans"), (snapshot) => {
+        setBans(snapshot.docs.map(doc => ({
           ...doc.data(),
           id: doc.id,
-          startTime: toDate(doc.data().startTime),
-          endTime: doc.data().endTime ? toDate(doc.data().endTime) : undefined,
-        } as Shift)));
-    });
+          createdAt: toDate(doc.data().createdAt),
+        } as Ban)));
+      }),
+    ];
     
     const messagesQuery = query(
       collection(db, "messages"),
@@ -165,13 +173,10 @@ function DispatchDashboardUI() {
         setMessages(sortedMessages);
     });
 
+    unsubscribers.push(unsubMessages);
+
     return () => {
-        ridesUnsub();
-        driversUnsub();
-        usersUnsub();
-        vehiclesUnsub();
-        shiftsUnsub();
-        unsubMessages();
+        unsubscribers.forEach(unsub => unsub());
     };
   }, [user, hasRole]);
   
@@ -950,6 +955,10 @@ function DispatchDashboardUI() {
                 <Briefcase />
                 Start Shift
             </Button>
+            <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={() => setIsBanCheckOpen(true)}>
+                <ShieldCheck />
+                Check Ban List
+            </Button>
              <ResponsiveDialog 
                 open={isShiftFormOpen} 
                 onOpenChange={setIsShiftFormOpen}
@@ -1192,6 +1201,12 @@ function DispatchDashboardUI() {
             onOpenChange={(isOpen) => {
                 if (!isOpen) setEditingShift(null);
             }}
+        />
+
+        <BanCheckDialog
+            bans={bans}
+            isOpen={isBanCheckOpen}
+            onOpenChange={setIsBanCheckOpen}
         />
 
     </div>
