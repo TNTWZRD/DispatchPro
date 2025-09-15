@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,47 +25,52 @@ import {
 } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
 import { Loader2, Truck } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-
-const VALID_INVITE_CODE = process.env.NEXT_PUBLIC_INVITE_CODE || 'KBT04330';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  inviteCode: z.string().min(1, { message: 'Invite code is required.' }),
+  inviteCode: z.string().min(1, { message: 'A valid invite code is required.' }),
 });
 
-export function RegisterForm() {
+function RegisterFormContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { createUserWithEmailAndPassword, registerWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCodeFromUrl = searchParams.get('code');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: '',
-      inviteCode: '',
+      inviteCode: inviteCodeFromUrl || '',
     },
   });
 
+  useEffect(() => {
+    if (inviteCodeFromUrl) {
+      form.setValue('inviteCode', inviteCodeFromUrl);
+    }
+  }, [inviteCodeFromUrl, form]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setError(null);
-    if (values.inviteCode !== VALID_INVITE_CODE) {
-        form.setError('inviteCode', { type: 'manual', message: 'Invalid invite code.' });
-        return;
-    }
-
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(values.email, values.password);
+      await createUserWithEmailAndPassword(values.email, values.password, values.inviteCode);
       router.push('/');
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         setError('This email address is already in use.');
-      } else {
+      } else if (err.message.includes('Invalid invite code')) {
+         setError(err.message);
+         form.setError('inviteCode', { type: 'manual', message: err.message });
+      }
+      else {
         setError('Could not create account. Please try again.');
       }
     } finally {
@@ -77,11 +82,7 @@ export function RegisterForm() {
     setError(null);
     const inviteCode = form.getValues('inviteCode');
     if (!inviteCode) {
-        form.setError('inviteCode', { type: 'manual', message: 'Please enter an invite code before using Google Sign-In.' });
-        return;
-    }
-    if (inviteCode !== VALID_INVITE_CODE) {
-        form.setError('inviteCode', { type: 'manual', message: 'Invalid invite code.' });
+        form.setError('inviteCode', { type: 'manual', message: 'An invite code is required to register.' });
         return;
     }
       
@@ -89,8 +90,13 @@ export function RegisterForm() {
     try {
         await registerWithGoogle(inviteCode);
         router.push('/');
-    } catch(err) {
+    } catch(err: any) {
+       if (err.message.includes('Invalid invite code')) {
+         setError(err.message);
+         form.setError('inviteCode', { type: 'manual', message: err.message });
+       } else {
         setError('Could not sign in with Google. Please try again.');
+       }
     } finally {
         setIsLoading(false);
     }
@@ -184,3 +190,13 @@ export function RegisterForm() {
     </Card>
   );
 }
+
+
+export function RegisterForm() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <RegisterFormContent />
+        </Suspense>
+    );
+}
+

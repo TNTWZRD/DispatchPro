@@ -6,7 +6,7 @@ import type { User as FirebaseAuthUser } from 'firebase/auth';
 import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword, getAdditionalUserInfo } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot, query, where, Timestamp, getDocs, updateDoc } from 'firebase/firestore';
 import type { AppUser, Driver } from '@/lib/types';
 import { Role } from '@/lib/types';
 
@@ -18,7 +18,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   registerWithGoogle: (inviteCode: string) => Promise<void>;
   signInWithEmailAndPassword: (email: string, pass: string) => Promise<void>;
-  createUserWithEmailAndPassword: (email: string, pass: string) => Promise<any>;
+  createUserWithEmailAndPassword: (email: string, pass: string, inviteCode: string) => Promise<any>;
   logout: () => Promise<void>;
   hasRole: (role: Role) => boolean;
 }
@@ -33,6 +33,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const validateInviteCode = async (code: string) => {
+    const invitesQuery = query(
+      collection(db, 'invites'),
+      where('code', '==', code),
+      where('status', '==', 'pending'),
+      where('expiresAt', '>', Timestamp.now())
+    );
+    const inviteSnapshot = await getDocs(invitesQuery);
+    if (inviteSnapshot.empty) {
+      throw new Error("Invalid or expired invite code.");
+    }
+    return inviteSnapshot.docs[0];
+  };
 
   const fetchAppUser = useCallback(async (fbUser: FirebaseAuthUser): Promise<AppUser | null> => {
     const userDocRef = doc(db, 'users', fbUser.uid);
@@ -128,21 +142,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
-  const registerWithGoogle = async () => {
+  const registerWithGoogle = async (inviteCode: string) => {
+    const inviteDoc = await validateInviteCode(inviteCode);
     const provider = new GoogleAuthProvider();
+
     try {
       const result = await signInWithPopup(auth, provider);
        const fbUser = result.user;
        const additionalInfo = getAdditionalUserInfo(result);
 
        if (additionalInfo?.isNewUser) {
+         // Check if a driver with this email already exists
+         const driverQuery = query(collection(db, 'drivers'), where('email', '==', fbUser.email));
+         const driverSnapshot = await getDocs(driverQuery);
+
+         let role = Role.DISPATCHER; // Default role
+         if (!driverSnapshot.empty) {
+             role = Role.DRIVER; // Assign driver role if email matches
+         }
+
          const newAppUser: AppUser = {
            uid: fbUser.uid,
            id: fbUser.uid,
            email: fbUser.email,
            displayName: fbUser.displayName,
            name: fbUser.displayName,
-           role: Role.DISPATCHER, 
+           role: role, 
            photoURL: fbUser.photoURL,
          };
          await setDoc(doc(db, "users", fbUser.uid), {
@@ -150,6 +175,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
              createdAt: serverTimestamp()
          });
          setUser(newAppUser);
+         
+         // Mark invite as completed
+         await updateDoc(inviteDoc.ref, { status: 'completed', usedBy: fbUser.uid });
        }
       // Redirection is handled by the onAuthStateChanged effect
     } catch (error) {
@@ -168,22 +196,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
-  const createUserWithEmailAndPassword = async (email: string, pass: string) => {
+  const createUserWithEmailAndPassword = async (email: string, pass: string, inviteCode: string) => {
+    const inviteDoc = await validateInviteCode(inviteCode);
+    
     const result = await firebaseCreateUserWithEmailAndPassword(auth, email, pass);
     const fbUser = result.user;
+    
+    // Check if a driver with this email already exists
+    const driverQuery = query(collection(db, 'drivers'), where('email', '==', email));
+    const driverSnapshot = await getDocs(driverQuery);
+
+    let role = Role.DISPATCHER; // Default role
+    if (!driverSnapshot.empty) {
+        role = Role.DRIVER; // Assign driver role if email matches
+    }
+    
     const newAppUser: AppUser = {
         uid: fbUser.uid,
         id: fbUser.uid,
         email: fbUser.email,
         displayName: fbUser.displayName, 
         name: fbUser.displayName,
-        role: Role.DISPATCHER, 
+        role: role, 
     };
     await setDoc(doc(db, 'users', fbUser.uid), {
         ...newAppUser,
         createdAt: serverTimestamp(),
     });
     setUser(newAppUser);
+
+    // Mark invite as completed
+    await updateDoc(inviteDoc.ref, { status: 'completed', usedBy: fbUser.uid });
+
     return result;
   };
 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useActionState, useTransition } from 'react';
+import React, { useEffect, useActionState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Mail, Loader2, Send } from 'lucide-react';
+import { Loader2, Send } from 'lucide-react';
 import type { Driver } from '@/lib/types';
 import { formatUserName } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 const initialState = {
   message: '',
@@ -43,29 +44,30 @@ type InviteDriverFormProps = {
 }
 
 export function InviteDriverForm({ isOpen, setIsOpen, driver }: InviteDriverFormProps) {
+  const { user } = useAuth();
   const [state, formAction] = useActionState(inviteDriver, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (state.type === 'success') {
+    if (state.type === 'success' && !isPending) {
       toast({
         title: 'Success',
         description: state.message,
       });
       formRef.current?.reset();
       setIsOpen(false);
-    } else if (state.type === 'error' && state.message) {
+    } else if (state.type === 'error' && state.message && !isPending) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast, setIsOpen]);
+  }, [state, toast, setIsOpen, isPending]);
 
-  if (!driver) return null;
+  if (!driver || !user) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -82,6 +84,7 @@ export function InviteDriverForm({ isOpen, setIsOpen, driver }: InviteDriverForm
             className="grid gap-4 py-4"
         >
           <input type="hidden" name="driverName" value={driver.name} />
+          <input type="hidden" name="invitedById" value={user.uid} />
           <div className="space-y-2">
             <Label htmlFor="email" className="text-right">
               Email

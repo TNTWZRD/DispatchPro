@@ -1,8 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useActionState } from 'react';
+import React, { useEffect, useState, useActionState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,10 +18,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Mail, Loader2, Send } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 const initialState = {
   message: '',
-  errors: {},
+  errors: { email: [] },
   type: '',
 };
 
@@ -38,9 +38,11 @@ function SubmitButton() {
 
 export function InviteUserForm() {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(sendInviteEmail, initialState);
+  const { user } = useAuth();
+  const [state, formAction] = useActionState(sendInviteEmail, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (state.type === 'success' && !isPending) {
@@ -59,6 +61,8 @@ export function InviteUserForm() {
     }
   }, [state, isPending, toast]);
 
+  if (!user) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -73,7 +77,8 @@ export function InviteUserForm() {
             Enter the email address to send an invitation to. They will receive a link to register.
           </DialogDescription>
         </DialogHeader>
-        <form ref={formRef} action={formAction} className="grid gap-4 py-4">
+        <form ref={formRef} action={(formData) => startTransition(() => formAction(formData))} className="grid gap-4 py-4">
+          <input type="hidden" name="invitedById" value={user.uid} />
           <div className="space-y-2">
             <Label htmlFor="email" className="text-right">
               Email

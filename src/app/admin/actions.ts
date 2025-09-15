@@ -4,35 +4,51 @@
 
 import 'dotenv/config';
 import { z } from "zod";
+import { randomBytes } from 'crypto';
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { Driver, MaintenanceTicket, Vehicle, Shift, AppUser } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
-const INVITE_CODE = process.env.INVITE_CODE || 'KBT04330';
+
+// Helper to generate a random code
+function generateInviteCode(length = 6) {
+    return randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length).toUpperCase();
+}
+
 
 const sendInviteSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
+  invitedById: z.string(),
 });
 
 export async function sendInviteEmail(prevState: any, formData: FormData) {
-  const validatedFields = sendInviteSchema.safeParse({
-    email: formData.get("email"),
-  });
+  const validatedFields = sendInviteSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
     return {
       type: "error",
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Invalid email address provided.",
+      message: "Invalid data provided.",
     };
   }
   
-  const { email } = validatedFields.data;
-  const registrationUrl = `http://localhost:9002/register`;
+  const { email, invitedById } = validatedFields.data;
+  const inviteCode = generateInviteCode();
+  const registrationUrl = `http://localhost:9002/register?code=${inviteCode}`;
 
   try {
+    // Store invite in Firestore
+    await addDoc(collection(db, 'invites'), {
+      code: inviteCode,
+      email: email,
+      invitedById: invitedById,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(Date.now() + 48 * 60 * 60 * 1000), // Expires in 48 hours
+    });
+
     await sendMail({
         to: email,
         subject: "You're invited to join DispatchPro",
@@ -41,8 +57,9 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
             <p>You have been invited to join the DispatchPro platform.</p>
             <p>Please register by clicking the link below:</p>
             <a href="${registrationUrl}" target="_blank">${registrationUrl}</a>
-            <p>During registration, please use the following invite code:</p>
-            <h2>${INVITE_CODE}</h2>
+            <p>If the link doesn't work, go to the registration page and enter this code:</p>
+            <h2>${inviteCode}</h2>
+            <p>This code will expire in 48 hours.</p>
             <p>Thanks,</p>
             <p>The DispatchPro Team</p>
         `,
@@ -57,6 +74,7 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
 const inviteDriverSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
   driverName: z.string(),
+  invitedById: z.string(),
 });
 
 export async function inviteDriver(prevState: any, formData: FormData) {
@@ -66,14 +84,25 @@ export async function inviteDriver(prevState: any, formData: FormData) {
     return {
       type: "error",
       errors: validatedFields.error.flatten().fieldErrors,
-      message: "Invalid email address provided.",
+      message: "Invalid data provided.",
     };
   }
   
-  const { email, driverName } = validatedFields.data;
-  const registrationUrl = `http://localhost:9002/register`;
+  const { email, driverName, invitedById } = validatedFields.data;
+  const inviteCode = generateInviteCode();
+  const registrationUrl = `http://localhost:9002/register?code=${inviteCode}`;
 
   try {
+     // Store invite in Firestore
+    await addDoc(collection(db, 'invites'), {
+      code: inviteCode,
+      email: email,
+      invitedById: invitedById,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(Date.now() + 48 * 60 * 60 * 1000), // Expires in 48 hours
+    });
+
     await sendMail({
         to: email,
         subject: `You're invited to join DispatchPro, ${driverName}!`,
@@ -83,9 +112,10 @@ export async function inviteDriver(prevState: any, formData: FormData) {
             <p>You have been invited to join the DispatchPro platform as a driver.</p>
             <p>Please register by clicking the link below:</p>
             <a href="${registrationUrl}" target="_blank">${registrationUrl}</a>
-            <p>During registration, please use the following invite code:</p>
-            <h2>${INVITE_CODE}</h2>
+            <p>If the link doesn't work, go to the registration page and enter this code:</p>
+            <h2>${inviteCode}</h2>
             <p>Once you register with this email address, your account will be linked to your existing driver profile.</p>
+            <p>This code will expire in 48 hours.</p>
             <p>Thanks,</p>
             <p>The DispatchPro Team</p>
         `,
