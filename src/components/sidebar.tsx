@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from 'react';
-import { MapView } from './map-view';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import type { Ride, Driver } from '@/lib/types';
