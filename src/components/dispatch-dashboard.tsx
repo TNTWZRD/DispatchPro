@@ -41,6 +41,9 @@ import { ShiftNotesForm } from './shift-notes-form';
 import { VehicleNotesForm } from './vehicle-notes-form';
 import { EditShiftForm } from './edit-shift-form';
 import { BanCheckDialog } from './ban-check-dialog';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
+import { updateUserProfile } from '@/app/settings/actions';
 
 
 function DispatchDashboardUI() {
@@ -423,25 +426,27 @@ function DispatchDashboardUI() {
         assignedAt: serverTimestamp()
     });
 
-    let messageText = `New Ride Assignment\n\n`;
-    messageText += `Pickup: ${rideToAssign.pickup.name}\n`;
-    if (rideToAssign.dropoff) {
-      messageText += `Dropoff: ${rideToAssign.dropoff.name}\n`;
-    }
-    if (rideToAssign.stops && rideToAssign.stops.length > 0) {
-        messageText += `Stops: ${rideToAssign.stops.map(s => s.name).join(', ')}\n`;
-    }
-    messageText += `Passengers: ${rideToAssign.passengerCount || 1}\n`;
-    if (rideToAssign.notes) {
-      messageText += `Notes: ${rideToAssign.notes}\n`;
-    }
+    if (user.settings?.sendAssignmentNotifications !== false) {
+      let messageText = `New Ride Assignment\n\n`;
+      messageText += `Pickup: ${rideToAssign.pickup.name}\n`;
+      if (rideToAssign.dropoff) {
+        messageText += `Dropoff: ${rideToAssign.dropoff.name}\n`;
+      }
+      if (rideToAssign.stops && rideToAssign.stops.length > 0) {
+          messageText += `Stops: ${rideToAssign.stops.map(s => s.name).join(', ')}\n`;
+      }
+      messageText += `Passengers: ${rideToAssign.passengerCount || 1}\n`;
+      if (rideToAssign.notes) {
+        messageText += `Notes: ${rideToAssign.notes}\n`;
+      }
 
-    await handleSendMessage({
-        threadId: getThreadIds(DISPATCHER_ID, shift.driverId),
-        senderId: DISPATCHER_ID,
-        recipientId: shift.driverId,
-        text: messageText,
-    });
+      await handleSendMessage({
+          threadId: getThreadIds(DISPATCHER_ID, shift.driverId),
+          senderId: DISPATCHER_ID,
+          recipientId: shift.driverId,
+          text: messageText,
+      });
+    }
   };
   
   const handleUnassignDriver = async (rideId: string) => {
@@ -634,6 +639,16 @@ function DispatchDashboardUI() {
             default: return null;
         }
     }
+
+  const handleNotificationToggle = async (checked: boolean) => {
+    if (!user) return;
+    const formData = new FormData();
+    formData.append('userId', user.uid);
+    formData.append('sendAssignmentNotifications', checked ? 'on' : 'off');
+    await updateUserProfile(null, formData);
+    // The user object in auth context will be updated via its own onSnapshot listener
+    // so we don't need to manually update state here.
+  };
 
 
   const renderDesktopView = () => {
@@ -967,7 +982,7 @@ function DispatchDashboardUI() {
                 <StartShiftForm onFormSubmit={() => setIsShiftFormOpen(false)} />
             </ResponsiveDialog>
         </div>
-        <div className="ml-auto items-center gap-2 hidden md:flex">
+        <div className="ml-auto items-center gap-4 hidden md:flex">
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -987,6 +1002,21 @@ function DispatchDashboardUI() {
                     </TooltipTrigger>
                     <TooltipContent>
                         <p>Toggle Condensed View (Alt+S)</p>
+                    </TooltipContent>
+                </Tooltip>
+                 <Tooltip>
+                    <TooltipTrigger>
+                        <div className="flex items-center space-x-2">
+                            <Switch
+                                id="assignment-notifications"
+                                checked={user?.settings?.sendAssignmentNotifications ?? true}
+                                onCheckedChange={handleNotificationToggle}
+                            />
+                            <Label htmlFor="assignment-notifications" className="text-sm">Auto-Msg</Label>
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Toggle automatic ride assignment messages</p>
                     </TooltipContent>
                 </Tooltip>
              </TooltipProvider>
