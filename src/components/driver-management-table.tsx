@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { formatPhoneNumber } from '@/lib/utils';
+import { formatPhoneNumber, formatUserName } from '@/lib/utils';
 
 
 const getStatusVariant = (status: Driver['status']) => {
@@ -126,7 +126,7 @@ export function DriverManagementTable() {
         <TableBody>
           {drivers.map((driver) => (
             <TableRow key={driver.id}>
-              <TableCell className="font-medium">{driver.name}</TableCell>
+              <TableCell className="font-medium">{formatUserName(driver.name)}</TableCell>
               <TableCell>{formatPhoneNumber(driver.phoneNumber)}</TableCell>
               <TableCell>
                  <DropdownMenu>
