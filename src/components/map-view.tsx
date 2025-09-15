@@ -1,16 +1,52 @@
 "use client";
 
-import Image from 'next/image';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, Tooltip as LeafletTooltip } from 'react-leaflet';
+import L from 'leaflet';
 import type { Ride, Driver } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Truck, MapPin, User, Circle } from 'lucide-react';
+import { Tooltip as ShadTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Truck, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+const createIcon = (icon: React.ReactElement) => {
+  return L.divIcon({
+    html: renderToStaticMarkup(icon),
+    className: 'bg-transparent border-none',
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+  });
+};
+
+const driverIcon = (status: Driver['status']) => createIcon(
+    <Truck
+        className={cn(
+            'h-6 w-6 transition-colors',
+            status === 'available' && 'text-green-500',
+            status === 'on-shift' && 'text-blue-500',
+            status === 'offline' && 'text-muted-foreground opacity-50'
+        )}
+        strokeWidth={status === 'offline' ? 1.5 : 2.5}
+    />
+);
+const passengerIcon = createIcon(<User className="h-5 w-5 text-yellow-500" />);
 
 type MapViewProps = {
   rides: Ride[];
   drivers: Driver[];
 };
+
+const mapCenter: L.LatLngExpression = [44.3106, -69.7795]; // Augusta, ME
+
+const locationToCoords = (loc: {x: number, y: number}): L.LatLngExpression => {
+    // This is a mock conversion. In a real app, you'd use a geocoding service
+    // or have real coordinates. For now, we'll map the 0-100 space to a small
+    // area around the map center.
+    const latOffset = (loc.y - 50) / 500; // ~0.2 degrees latitude range
+    const lngOffset = (loc.x - 50) / 400; // ~0.25 degrees longitude at this latitude
+    return [mapCenter[0] + latOffset, mapCenter[1] + lngOffset];
+}
 
 export function MapView({ rides, drivers }: MapViewProps) {
   const activeRidePickups = rides.filter(r => ['pending', 'assigned'].includes(r.status));
@@ -18,64 +54,35 @@ export function MapView({ rides, drivers }: MapViewProps) {
   return (
     <Card>
       <CardContent className="p-2">
-        <TooltipProvider>
-          <div className="relative w-full aspect-[2/1] overflow-hidden rounded-lg bg-secondary">
-            <Image
-              src="https://picsum.photos/1200/600"
-              alt="City Map"
-              data-ai-hint="city map"
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover opacity-30"
+        <div className="relative w-full aspect-[2/1] overflow-hidden rounded-lg bg-secondary">
+           <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             
             {/* Render Drivers */}
             {drivers.map(driver => (
-              <Tooltip key={driver.id}>
-                <TooltipTrigger asChild>
-                  <div
-                    className="absolute transition-all duration-1000 ease-linear"
-                    style={{ left: `${driver.location.x}%`, top: `${driver.location.y}%`, transform: 'translate(-50%, -50%)' }}
-                  >
-                    <Truck
-                      className={cn(
-                        'h-6 w-6 transition-colors',
-                        driver.status === 'available' && 'text-green-500',
-                        driver.status === 'on-ride' && 'text-blue-500',
-                        driver.status === 'offline' && 'text-muted-foreground opacity-50'
-                      )}
-                      strokeWidth={driver.status === 'offline' ? 1.5 : 2.5}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className='font-bold'>{driver.name}</p>
-                  <p>Status: <span className='capitalize'>{driver.status.replace('-', ' ')}</span></p>
-                  <p>Rating: {driver.rating}★</p>
-                </TooltipContent>
-              </Tooltip>
+              <Marker key={driver.id} position={locationToCoords(driver.location)} icon={driverIcon(driver.status)}>
+                  <LeafletTooltip>
+                      <p className='font-bold'>{driver.name}</p>
+                      <p>Status: <span className='capitalize'>{driver.status.replace('-', ' ')}</span></p>
+                      <p>Rating: {driver.rating}★</p>
+                  </LeafletTooltip>
+              </Marker>
             ))}
 
             {/* Render Ride Pickups */}
             {activeRidePickups.map(ride => (
-               <Tooltip key={`pickup-${ride.id}`}>
-                <TooltipTrigger asChild>
-                   <div
-                    className="absolute"
-                    style={{ left: `${ride.pickup.coords.x}%`, top: `${ride.pickup.coords.y}%`, transform: 'translate(-50%, -50%)' }}
-                  >
-                    <User className="h-5 w-5 text-yellow-500" />
-                  </div>
-                </TooltipTrigger>
-                 <TooltipContent>
-                  <p className='font-bold'>Pickup for {ride.passengerPhone}</p>
-                  <p>{ride.pickup.name}</p>
-                </TooltipContent>
-              </Tooltip>
+              <Marker key={`pickup-${ride.id}`} position={locationToCoords(ride.pickup.coords)} icon={passengerIcon}>
+                  <LeafletTooltip>
+                      <p className='font-bold'>Pickup for {ride.passengerPhone || 'Unknown'}</p>
+                      <p>{ride.pickup.name}</p>
+                  </LeafletTooltip>
+              </Marker>
             ))}
-
-          </div>
-        </TooltipProvider>
+          </MapContainer>
+        </div>
       </CardContent>
     </Card>
   );
