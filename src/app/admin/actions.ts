@@ -124,7 +124,7 @@ export async function inviteDriver(prevState: any, formData: FormData) {
     });
     revalidatePath('/admin');
     return { type: "success", message: `Invitation sent successfully to ${email}.` };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to send driver invitation email:", error);
     return { type: "error", message: "Failed to send the invitation email. Please try again later." };
   }
