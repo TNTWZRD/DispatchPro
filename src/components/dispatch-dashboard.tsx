@@ -645,9 +645,13 @@ function DispatchDashboardUI() {
     const formData = new FormData();
     formData.append('userId', user.uid);
     formData.append('sendAssignmentNotifications', checked ? 'on' : 'off');
-    await updateUserProfile(null, formData);
-    // The user object in auth context will be updated via its own onSnapshot listener
-    // so we don't need to manually update state here.
+    const result = await updateUserProfile(null, formData);
+    if (result.type === 'success') {
+      toast({
+        title: 'Setting Updated',
+        description: `Automatic messages ${checked ? 'enabled' : 'disabled'}.`
+      })
+    }
   };
 
 
