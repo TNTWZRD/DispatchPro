@@ -239,7 +239,7 @@ export function ChatView({ participant, messages, allDrivers, onSendMessage, onT
                             {message.isStarred && (
                             <Star className="h-3 w-3 absolute -top-1 -left-1 fill-yellow-400 text-yellow-500" />
                             )}
-                            {message.text && <p className="text-sm break-words">{message.text}</p>}
+                            {message.text && <p className="text-sm break-words whitespace-pre-wrap">{message.text}</p>}
                             {message.imageUrl && (
                             <Image src={message.imageUrl} alt="Uploaded content" width={200} height={200} className="rounded-md mt-2" />
                             )}

@@ -12,11 +12,15 @@ const updateUserProfileSchema = z.object({
   userId: z.string(),
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }),
   phoneNumber: z.string().optional(),
+  sendAssignmentNotifications: z.enum(['on', 'off']).optional(),
 });
 
 export async function updateUserProfile(prevState: any, formData: FormData) {
     const formValues = Object.fromEntries(formData.entries());
-    const validatedFields = updateUserProfileSchema.safeParse(formValues);
+    const validatedFields = updateUserProfileSchema.safeParse({
+        ...formValues,
+        sendAssignmentNotifications: formValues.sendAssignmentNotifications === 'on' ? 'on' : 'off'
+    });
 
     if (!validatedFields.success) {
         return {
@@ -26,19 +30,24 @@ export async function updateUserProfile(prevState: any, formData: FormData) {
         };
     }
     
-    const { userId, displayName, phoneNumber } = validatedFields.data;
+    const { userId, displayName, phoneNumber, sendAssignmentNotifications } = validatedFields.data;
     const batch = writeBatch(db);
 
     try {
         // 1. Update the user document in 'users' collection
         const userRef = doc(db, 'users', userId);
-        const userData: { displayName: string; phoneNumber?: string; updatedAt: any; } = {
+        const userData: { displayName: string; phoneNumber?: string; updatedAt: any; settings?: any } = {
             displayName,
             updatedAt: serverTimestamp(),
         };
         if (phoneNumber) {
             userData.phoneNumber = phoneNumber;
         }
+
+        userData.settings = {
+            sendAssignmentNotifications: sendAssignmentNotifications === 'on',
+        }
+
         batch.update(userRef, userData);
 
         // 2. Check if the user is a driver and update their 'drivers' document if they are.
