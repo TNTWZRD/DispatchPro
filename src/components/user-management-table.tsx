@@ -25,11 +25,13 @@ import {
   DropdownMenuItem
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronDown, Check, MoreHorizontal, Edit, Sprout } from 'lucide-react';
+import { Loader2, ChevronDown, Check, MoreHorizontal, Edit, Sprout, ShieldOff, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { formatUserName } from '@/lib/utils';
 import { EditUserForm } from './edit-user-form';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { disableUser, resetPassword } from '@/app/admin/actions';
 
 const roleMap: { [key in keyof typeof Role]?: Role } = {
     DRIVER: Role.DRIVER,
@@ -131,6 +133,24 @@ export function UserManagementTable({ isSuperAdminView = false }: UserManagement
     }
   };
 
+  const handleResetPassword = async (email: string) => {
+      const result = await resetPassword(email);
+      if (result.type === 'success') {
+          toast({ title: 'Success', description: result.message });
+      } else {
+          toast({ variant: 'destructive', title: 'Error', description: result.message });
+      }
+  };
+
+  const handleDisableUser = async (userId: string, displayName: string | null) => {
+      const result = await disableUser(userId);
+       if (result.type === 'success') {
+          toast({ title: 'Success', description: `User ${displayName} has been disabled.` });
+      } else {
+          toast({ variant: 'destructive', title: 'Error', description: result.message });
+      }
+  }
+
   const RoleSelector = ({ user }: { user: AppUser }) => {
     const toggleRole = (roleToToggle: Role) => {
         const currentRoles = user.role;
@@ -187,7 +207,7 @@ export function UserManagementTable({ isSuperAdminView = false }: UserManagement
           </TableHeader>
           <TableBody>
             {users.map((user) => (
-              <TableRow key={user.uid}>
+              <TableRow key={user.uid} className={cn(user.disabled && "opacity-50 bg-destructive/10")}>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar>
@@ -212,17 +232,41 @@ export function UserManagementTable({ isSuperAdminView = false }: UserManagement
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {isSuperAdminView ? (
-                        <DropdownMenuItem onSelect={() => setEditingUser(user)}>
-                            <Sprout className="mr-2" /> Super Edit
+                       <DropdownMenuItem onSelect={() => setEditingUser(user)}>
+                            {isSuperAdminView ? <Sprout className="mr-2" /> : <Edit className="mr-2" />}
+                            {isSuperAdminView ? "Super Edit" : "Edit User"}
                         </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onSelect={() => setEditingUser(user)}>
-                            <Edit className="mr-2" /> Edit User
-                        </DropdownMenuItem>
-                      )}
+                        {isSuperAdminView && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => user.email && handleResetPassword(user.email)}>
+                                    <KeyRound className="mr-2" /> Reset Password
+                                </DropdownMenuItem>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                        <ShieldOff className="mr-2" /> Disable User
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </>
+                        )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  <AlertDialog>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will disable the account for {formatUserName(user.displayName, user.email)}, preventing them from logging in. This action can be reversed.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDisableUser(user.uid, user.displayName)}>
+                                    Confirm Disable
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}

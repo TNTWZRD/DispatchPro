@@ -64,13 +64,13 @@ export default function SuperAdminPage() {
                                 <UserManagementTable isSuperAdminView={true} />
                             </TabsContent>
                             <TabsContent value="drivers" className="mt-4">
-                                <DriverManagementTable />
+                                <DriverManagementTable isSuperAdminView={true} />
                             </TabsContent>
                              <TabsContent value="vehicles" className="mt-4">
-                                <VehicleManagementTable />
+                                <VehicleManagementTable isSuperAdminView={true} />
                             </TabsContent>
                              <TabsContent value="maintenance" className="mt-4">
-                                <AllMaintenanceTicketsTable />
+                                <AllMaintenanceTicketsTable isSuperAdminView={true} />
                             </TabsContent>
                         </Tabs>
                      </CardContent>

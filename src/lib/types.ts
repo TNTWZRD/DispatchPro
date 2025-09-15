@@ -42,6 +42,7 @@ export type AppUser = {
     role: Role;
     photoURL?: string | null;
     createdAt?: Date;
+    disabled?: boolean;
 }
 
 export type Driver = {

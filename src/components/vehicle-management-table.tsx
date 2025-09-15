@@ -38,8 +38,11 @@ const getStatusVariant = (status: Vehicle['status']) => {
     }
 }
 
+type VehicleManagementTableProps = {
+  isSuperAdminView?: boolean;
+};
 
-export function VehicleManagementTable() {
+export function VehicleManagementTable({ isSuperAdminView = false }: VehicleManagementTableProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);

@@ -24,7 +24,7 @@ import {
   DropdownMenuRadioItem
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, MoreHorizontal, User, Trash2, Edit, ChevronDown, Mail } from 'lucide-react';
+import { Loader2, MoreHorizontal, User, Trash2, Edit, ChevronDown, Mail, Sprout } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDriver } from '@/app/admin/actions';
 import { EditDriverForm } from './edit-driver-form';
@@ -53,7 +53,12 @@ const getStatusVariant = (status: Driver['status']) => {
     }
 }
 
-export function DriverManagementTable() {
+type DriverManagementTableProps = {
+  isSuperAdminView?: boolean;
+};
+
+
+export function DriverManagementTable({ isSuperAdminView = false }: DriverManagementTableProps) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -166,7 +171,8 @@ export function DriverManagementTable() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={() => handleEdit(driver)}>
-                            <Edit className="mr-2" /> Edit
+                                {isSuperAdminView ? <Sprout className="mr-2" /> : <Edit className="mr-2" />}
+                                {isSuperAdminView ? "Super Edit" : "Edit"}
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleInvite(driver)} disabled={isUser}>
                                 <Mail className="mr-2" /> Invite as User
@@ -206,6 +212,7 @@ export function DriverManagementTable() {
         isOpen={isEditModalOpen}
         setIsOpen={setIsEditModalOpen}
         driver={selectedDriver}
+        isSuperAdminView={isSuperAdminView}
     />
 
     <InviteDriverForm

@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { z } from "zod";
 import { randomBytes } from 'crypto';
 import { sendMail } from "@/lib/email";
-import { db } from '@/lib/firebase';
+import { db, adminAuth } from '@/lib/firebase';
 import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { Driver, MaintenanceTicket, Vehicle, Shift, AppUser } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
@@ -64,6 +64,7 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
             <p>The DispatchPro Team</p>
         `,
     });
+    revalidatePath('/admin');
     return { type: "success", message: `Invitation sent to successfully to ${email}.` };
   } catch (error) {
     console.error("Failed to send email:", error);
@@ -120,6 +121,7 @@ export async function inviteDriver(prevState: any, formData: FormData) {
             <p>The DispatchPro Team</p>
         `,
     });
+    revalidatePath('/admin');
     return { type: "success", message: `Invitation sent successfully to ${email}.` };
   } catch (error) {
     console.error("Failed to send driver invitation email:", error);
@@ -636,4 +638,43 @@ export async function updateVehicleNotes(prevState: any, formData: FormData) {
     console.error("Failed to update vehicle notes:", error);
     return { type: "error", message: `Failed to update vehicle notes: ${error.message}` };
   }
+}
+
+export async function resetPassword(email: string) {
+    if (!adminAuth) {
+        return { type: "error", message: "Auth service not available." };
+    }
+    try {
+        await adminAuth.generatePasswordResetLink(email);
+        return { type: "success", message: `Password reset email sent to ${email}.` };
+    } catch (error: any) {
+        console.error("Failed to send password reset email:", error);
+        return { type: "error", message: `Failed to send password reset: ${error.message}` };
+    }
+}
+
+export async function disableUser(userId: string) {
+    if (!adminAuth) {
+        return { type: "error", message: "Auth service not available." };
+    }
+    const batch = writeBatch(db);
+    try {
+        await adminAuth.updateUser(userId, { disabled: true });
+        
+        const userRef = doc(db, 'users', userId);
+        batch.update(userRef, { disabled: true });
+
+        const driverRef = doc(db, 'drivers', userId);
+        const driverDoc = await getDoc(driverRef);
+        if (driverDoc.exists()) {
+            batch.update(driverRef, { status: 'offline' });
+        }
+        
+        await batch.commit();
+        revalidatePath('/admin');
+        return { type: "success", message: "User has been disabled." };
+    } catch (error: any) {
+        console.error("Failed to disable user:", error);
+        return { type: "error", message: `Failed to disable user: ${error.message}` };
+    }
 }

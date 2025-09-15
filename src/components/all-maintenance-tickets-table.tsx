@@ -41,7 +41,11 @@ const getPriorityVariant = (priority: MaintenanceTicket['priority']) => {
     }
 }
 
-export function AllMaintenanceTicketsTable() {
+type AllMaintenanceTicketsTableProps = {
+  isSuperAdminView?: boolean;
+};
+
+export function AllMaintenanceTicketsTable({ isSuperAdminView = false }: AllMaintenanceTicketsTableProps) {
   const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);

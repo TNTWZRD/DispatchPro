@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { UserPlus, Loader2, Save } from 'lucide-react';
+import { UserPlus, Loader2, Save, Sprout } from 'lucide-react';
 import type { Driver } from '@/lib/types';
 
 const initialState = {
@@ -29,11 +29,15 @@ const initialState = {
   type: '',
 };
 
-function SubmitButton() {
+function SubmitButton({ isSuperAdminView }: { isSuperAdminView: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+      {pending 
+        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+        : isSuperAdminView 
+          ? <Sprout className="mr-2 h-4 w-4" />
+          : <Save className="mr-2 h-4 w-4" />}
       Save Changes
     </Button>
   );
@@ -43,10 +47,11 @@ type EditDriverFormProps = {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
     driver: Driver | null;
+    isSuperAdminView?: boolean;
 }
 
-export function EditDriverForm({ isOpen, setIsOpen, driver }: EditDriverFormProps) {
-  const [state, formAction, isPending] = useActionState(updateDriver, initialState);
+export function EditDriverForm({ isOpen, setIsOpen, driver, isSuperAdminView = false }: EditDriverFormProps) {
+  const [state, formAction] = useActionState(updateDriver, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -56,20 +61,20 @@ export function EditDriverForm({ isOpen, setIsOpen, driver }: EditDriverFormProp
   }), [driver]);
 
   useEffect(() => {
-    if (state.type === 'success' && !isPending) {
+    if (state.type === 'success') {
       toast({
         title: 'Success',
         description: state.message,
       });
       setIsOpen(false);
-    } else if (state.type === 'error' && state.message && !isPending) {
+    } else if (state.type === 'error' && state.message) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast, setIsOpen, isPending]);
+  }, [state, toast, setIsOpen]);
 
   if (!driver) return null;
 
@@ -113,7 +118,7 @@ export function EditDriverForm({ isOpen, setIsOpen, driver }: EditDriverFormProp
             )}
           </div>
           <DialogFooter>
-            <SubmitButton />
+            <SubmitButton isSuperAdminView={isSuperAdminView} />
           </DialogFooter>
         </form>
       </DialogContent>
