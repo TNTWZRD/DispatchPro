@@ -10,7 +10,7 @@ import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc,
 import type { Driver, MaintenanceTicket, Vehicle, Shift } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
-const INVITE_CODE = 'KBT04330';
+const INVITE_CODE = process.env.INVITE_CODE || 'KBT04330';
 
 const sendInviteSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),

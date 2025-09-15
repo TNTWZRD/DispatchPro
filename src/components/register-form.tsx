@@ -28,7 +28,7 @@ import { Loader2, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-const VALID_INVITE_CODE = 'KBT04330';
+const VALID_INVITE_CODE = process.env.NEXT_PUBLIC_INVITE_CODE || 'KBT04330';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
