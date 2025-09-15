@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { Collapsible, CollapsibleTrigger } from './ui/collapsible';
 import type { Ride, Driver } from '@/lib/types';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,33 +32,28 @@ export function Sidebar({ rides, drivers }: SidebarProps) {
   if (isMobile) return null;
   
   return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="hidden lg:flex flex-col gap-4 transition-all"
-    >
-      <CollapsibleTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn(!isOpen && 'hidden')}>
-            <PanelLeftClose />
-            <span className="sr-only">Toggle Sidebar</span>
-        </Button>
-      </CollapsibleTrigger>
+    <div className="hidden lg:flex flex-col gap-4 transition-all">
+       {isOpen ? (
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                <PanelLeftClose />
+                <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+        ) : (
+             <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
+                <PanelLeftOpen />
+                <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+        )}
+      
       {/* 
-        The data-[state=closed]:hidden class is crucial here. It keeps the component mounted 
-        but hidden with display:none, preventing the Leaflet map from being re-initialized 
-        on every open/close, which would cause a crash.
+        This div's visibility is controlled by the isOpen state.
+        Using a simple conditional class prevents the map component from being
+        unmounted by a parent component like Collapsible, which fixes the
+        "Map container is already initialized" error.
       */}
-      <CollapsibleContent asChild className={cn("data-[state=open]:animate-none data-[state=closed]:hidden")}>
-        <div className="w-[350px] xl:w-[450px] flex flex-col gap-4">
-            <DynamicMapView rides={rides} drivers={drivers} />
-        </div>
-      </CollapsibleContent>
-       {!isOpen && (
-         <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
-            <PanelLeftOpen />
-            <span className="sr-only">Toggle Sidebar</span>
-        </Button>
-      )}
-    </Collapsible>
+      <div className={cn("w-[350px] xl:w-[450px] flex flex-col gap-4", !isOpen && 'hidden')}>
+        <DynamicMapView rides={rides} drivers={drivers} />
+      </div>
+    </div>
   );
 }
