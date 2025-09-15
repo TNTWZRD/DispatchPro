@@ -44,7 +44,7 @@ type VehicleManagementTableProps = {
 
 export function VehicleManagementTable({ isSuperAdminView = false }: VehicleManagementTableProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -65,9 +65,9 @@ export function VehicleManagementTable({ isSuperAdminView = false }: VehicleMana
       setLoading(false);
     });
 
-    const usersQuery = query(collection(db, 'users'));
-    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
-        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser)));
+    const driversQuery = query(collection(db, 'drivers'));
+    const unsubDrivers = onSnapshot(driversQuery, (snapshot) => {
+        setDrivers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Driver)));
     });
 
     const shiftsQuery = query(collection(db, 'shifts'));
@@ -77,7 +77,7 @@ export function VehicleManagementTable({ isSuperAdminView = false }: VehicleMana
 
     return () => {
         unsubVehicles();
-        unsubUsers();
+        unsubDrivers();
         unsubShifts();
     };
   }, []);
@@ -86,8 +86,8 @@ export function VehicleManagementTable({ isSuperAdminView = false }: VehicleMana
     if (!vehicle.currentShiftId) return 'Unassigned';
     const activeShift = shifts.find(s => s.id === vehicle.currentShiftId);
     if (!activeShift) return 'Unassigned';
-    const driver = users.find(d => d.id === activeShift.driverId);
-    return driver ? formatUserName(driver.name, driver.email) : 'Unknown Driver';
+    const driver = drivers.find(d => d.id === activeShift.driverId);
+    return driver ? formatUserName(driver.name) : 'Unknown Driver';
   }
 
   const handleStatusChange = async (vehicleId: string, status: Vehicle['status']) => {
