@@ -225,48 +225,48 @@ export function UserManagementTable({ isSuperAdminView = false }: UserManagement
                   {user.createdAt ? format(user.createdAt, 'PPpp') : 'N/A'}
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                       <DropdownMenuItem onSelect={() => setEditingUser(user)}>
-                            {isSuperAdminView ? <Sprout className="mr-2" /> : <Edit className="mr-2" />}
-                            {isSuperAdminView ? "Super Edit" : "Edit User"}
-                        </DropdownMenuItem>
-                        {isSuperAdminView && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => user.email && handleResetPassword(user.email)}>
-                                    <KeyRound className="mr-2" /> Reset Password
-                                </DropdownMenuItem>
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
-                                        <ShieldOff className="mr-2" /> Disable User
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                   <AlertDialog>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will disable the account for {formatUserName(user.displayName, user.email)}, preventing them from logging in. This action can be reversed.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDisableUser(user.uid, user.displayName)}>
-                                    Confirm Disable
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                         <DropdownMenuItem onSelect={() => setEditingUser(user)}>
+                              {isSuperAdminView ? <Sprout className="mr-2" /> : <Edit className="mr-2" />}
+                              {isSuperAdminView ? "Super Edit" : "Edit User"}
+                          </DropdownMenuItem>
+                          {isSuperAdminView && (
+                              <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onSelect={() => user.email && handleResetPassword(user.email)}>
+                                      <KeyRound className="mr-2" /> Reset Password
+                                  </DropdownMenuItem>
+                                  <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                          <ShieldOff className="mr-2" /> Disable User
+                                      </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                              </>
+                          )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This will disable the account for {formatUserName(user.displayName, user.email)}, preventing them from logging in. This action can be reversed.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDisableUser(user.uid, user.displayName)}>
+                              Confirm Disable
+                          </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}
