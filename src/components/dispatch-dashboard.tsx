@@ -67,6 +67,7 @@ function DispatchDashboardUI() {
   const [showCancelled, setShowCancelled] = useState(false);
   
   const { user, hasRole } = useAuth();
+  const [isNotificationToggleChecked, setIsNotificationToggleChecked] = useState(user?.settings?.sendAssignmentNotifications ?? true);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   
@@ -76,6 +77,10 @@ function DispatchDashboardUI() {
   const prevMessagesRef = React.useRef<Message[]>([]);
 
   useHotkey('s', toggleCondensedMode, { alt: true });
+
+  useEffect(() => {
+    setIsNotificationToggleChecked(user?.settings?.sendAssignmentNotifications ?? true);
+  }, [user]);
   
   useEffect(() => {
     prevMessagesRef.current = messages;
@@ -426,7 +431,7 @@ function DispatchDashboardUI() {
         assignedAt: serverTimestamp()
     });
 
-    if (user.settings?.sendAssignmentNotifications !== false) {
+    if (isNotificationToggleChecked) {
       let messageText = `New Ride Assignment\n\n`;
       messageText += `Pickup: ${rideToAssign.pickup.name}\n`;
       if (rideToAssign.dropoff) {
@@ -642,6 +647,7 @@ function DispatchDashboardUI() {
 
   const handleNotificationToggle = async (checked: boolean) => {
     if (!user) return;
+    setIsNotificationToggleChecked(checked); // Optimistic update
     const formData = new FormData();
     formData.append('userId', user.uid);
     formData.append('sendAssignmentNotifications', checked ? 'on' : 'off');
@@ -650,6 +656,14 @@ function DispatchDashboardUI() {
       toast({
         title: 'Setting Updated',
         description: `Automatic messages ${checked ? 'enabled' : 'disabled'}.`
+      })
+    } else {
+      // Revert UI on failure
+      setIsNotificationToggleChecked(!checked);
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: result.message,
       })
     }
   };
@@ -1013,7 +1027,7 @@ function DispatchDashboardUI() {
             <div className="flex items-center space-x-2">
                 <Switch
                     id="assignment-notifications"
-                    checked={user?.settings?.sendAssignmentNotifications ?? true}
+                    checked={isNotificationToggleChecked}
                     onCheckedChange={handleNotificationToggle}
                 />
                 <Label htmlFor="assignment-notifications" className="text-sm">Auto-Msg</Label>
