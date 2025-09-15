@@ -1004,23 +1004,17 @@ function DispatchDashboardUI() {
                         <p>Toggle Condensed View (Alt+S)</p>
                     </TooltipContent>
                 </Tooltip>
-                 <Tooltip>
-                    <TooltipTrigger>
-                        <div className="flex items-center space-x-2">
-                            <Switch
-                                id="assignment-notifications"
-                                checked={user?.settings?.sendAssignmentNotifications ?? true}
-                                onCheckedChange={handleNotificationToggle}
-                            />
-                            <Label htmlFor="assignment-notifications" className="text-sm">Auto-Msg</Label>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Toggle automatic ride assignment messages</p>
-                    </TooltipContent>
-                </Tooltip>
              </TooltipProvider>
 
+            <div className="flex items-center space-x-2">
+                <Switch
+                    id="assignment-notifications"
+                    checked={user?.settings?.sendAssignmentNotifications ?? true}
+                    onCheckedChange={handleNotificationToggle}
+                />
+                <Label htmlFor="assignment-notifications" className="text-sm">Auto-Msg</Label>
+            </div>
+             
              <Button variant="outline" size="icon" onClick={zoomOut}>
               <ZoomOut />
             </Button>
