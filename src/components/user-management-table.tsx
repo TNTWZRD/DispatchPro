@@ -36,15 +36,17 @@ const roleMap: { [key in keyof typeof Role]?: Role } = {
     DISPATCHER: Role.DISPATCHER,
     OWNER: Role.OWNER,
     ADMIN: Role.ADMIN,
+    SUPER_ADMIN: Role.SUPER_ADMIN,
 };
 
 const getRoleName = (roleValue: Role) => {
   if (roleValue === Role.ALL) return 'None';
   const roles = [];
-  if (roleValue & Role.DRIVER) roles.push('Driver');
-  if (roleValue & Role.DISPATCHER) roles.push('Dispatcher');
-  if (roleValue & Role.OWNER) roles.push('Owner');
+  if (roleValue & Role.SUPER_ADMIN) roles.push('Super Admin');
   if (roleValue & Role.ADMIN) roles.push('Admin');
+  if (roleValue & Role.OWNER) roles.push('Owner');
+  if (roleValue & Role.DISPATCHER) roles.push('Dispatcher');
+  if (roleValue & Role.DRIVER) roles.push('Driver');
   return roles.join(', ') || 'No Role';
 };
 
@@ -150,7 +152,7 @@ export function UserManagementTable() {
               checked={(user.role & roleValue!) > 0}
               onCheckedChange={() => toggleRole(roleValue!)}
             >
-              {roleName.charAt(0) + roleName.slice(1).toLowerCase()}
+              {roleName.charAt(0) + roleName.slice(1).toLowerCase().replace('_', ' ')}
             </DropdownMenuCheckboxItem>
           ))}
         </DropdownMenuContent>

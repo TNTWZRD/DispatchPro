@@ -12,6 +12,7 @@ export enum Role {
     DISPATCHER = 2,
     OWNER = 4,
     ADMIN = 8,
+    SUPER_ADMIN = 16,
 }
 
 export const DISPATCHER_ID = 'dispatcher-main';

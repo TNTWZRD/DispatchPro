@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown, Wrench } from 'lucide-react';
+import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown, Wrench, Sprout } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -53,7 +53,8 @@ export function MainHeader() {
 
   const canAccessDispatch = hasRole(Role.DISPATCHER);
   const canAccessDriver = hasRole(Role.DRIVER);
-  const canAccessAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER);
+  const canAccessAdmin = hasRole(Role.ADMIN) || hasRole(Role.OWNER) || hasRole(Role.SUPER_ADMIN);
+  const canAccessSuperAdmin = hasRole(Role.SUPER_ADMIN);
   
   const isAdminPath = pathname.startsWith('/admin');
 
@@ -99,6 +100,16 @@ export function MainHeader() {
                                 <Wrench className="mr-2" /> Manage Maintenance
                             </Link>
                         </DropdownMenuItem>
+                        {canAccessSuperAdmin && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin/superadmin">
+                                        <Sprout className="mr-2" /> Super Admin
+                                    </Link>
+                                </DropdownMenuItem>
+                            </>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             )}
