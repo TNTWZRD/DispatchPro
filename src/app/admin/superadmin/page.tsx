@@ -61,7 +61,7 @@ export default function SuperAdminPage() {
                                 <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
                             </TabsList>
                             <TabsContent value="users" className="mt-4">
-                                <UserManagementTable />
+                                <UserManagementTable isSuperAdminView={true} />
                             </TabsContent>
                             <TabsContent value="drivers" className="mt-4">
                                 <DriverManagementTable />

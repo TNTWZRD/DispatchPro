@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Sprout } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
 import { formatUserName } from '@/lib/utils';
 
@@ -30,11 +30,15 @@ const initialState = {
   type: '',
 };
 
-function SubmitButton() {
+function SubmitButton({ isSuperAdminView }: { isSuperAdminView: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+      {pending 
+        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+        : isSuperAdminView 
+          ? <Sprout className="mr-2 h-4 w-4" />
+          : <Save className="mr-2 h-4 w-4" />}
       Save Changes
     </Button>
   );
@@ -44,10 +48,11 @@ type EditUserFormProps = {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
     user: AppUser | null;
+    isSuperAdminView?: boolean;
 }
 
-export function EditUserForm({ isOpen, setIsOpen, user }: EditUserFormProps) {
-  const [state, formAction, isPending] = useActionState(updateUserProfile, initialState);
+export function EditUserForm({ isOpen, setIsOpen, user, isSuperAdminView = false }: EditUserFormProps) {
+  const [state, formAction] = useActionState(updateUserProfile, initialState);
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -57,20 +62,20 @@ export function EditUserForm({ isOpen, setIsOpen, user }: EditUserFormProps) {
   }), [user]);
 
   useEffect(() => {
-    if (state.type === 'success' && !isPending) {
+    if (state.type === 'success') {
       toast({
         title: 'Success',
         description: state.message,
       });
       setIsOpen(false);
-    } else if (state.type === 'error' && state.message && !isPending) {
+    } else if (state.type === 'error' && state.message) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: state.message,
       });
     }
-  }, [state, toast, setIsOpen, isPending]);
+  }, [state, toast, setIsOpen]);
 
   if (!user) return null;
 
@@ -113,7 +118,7 @@ export function EditUserForm({ isOpen, setIsOpen, user }: EditUserFormProps) {
             )}
           </div>
           <DialogFooter>
-            <SubmitButton />
+            <SubmitButton isSuperAdminView={isSuperAdminView} />
           </DialogFooter>
         </form>
       </DialogContent>

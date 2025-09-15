@@ -25,7 +25,7 @@ import {
   DropdownMenuItem
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronDown, Check, MoreHorizontal, Edit } from 'lucide-react';
+import { Loader2, ChevronDown, Check, MoreHorizontal, Edit, Sprout } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { formatUserName } from '@/lib/utils';
@@ -50,8 +50,11 @@ const getRoleName = (roleValue: Role) => {
   return roles.join(', ') || 'No Role';
 };
 
+type UserManagementTableProps = {
+  isSuperAdminView?: boolean;
+};
 
-export function UserManagementTable() {
+export function UserManagementTable({ isSuperAdminView = false }: UserManagementTableProps) {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
@@ -138,7 +141,7 @@ export function UserManagementTable() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="w-full justify-between">
+          <Button variant="outline" className="w-full justify-between min-w-[140px]">
             {getRoleName(user.role)}
             <ChevronDown className="ml-2 h-4 w-4" />
           </Button>
@@ -209,9 +212,15 @@ export function UserManagementTable() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setEditingUser(user)}>
-                        <Edit className="mr-2" /> Edit User
-                      </DropdownMenuItem>
+                      {isSuperAdminView ? (
+                        <DropdownMenuItem onSelect={() => setEditingUser(user)}>
+                            <Sprout className="mr-2" /> Super Edit
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onSelect={() => setEditingUser(user)}>
+                            <Edit className="mr-2" /> Edit User
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -229,6 +238,7 @@ export function UserManagementTable() {
             setEditingUser(null);
           }
         }}
+        isSuperAdminView={isSuperAdminView}
       />
     </>
   );
