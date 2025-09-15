@@ -51,3 +51,47 @@ A comprehensive, protected section for high-level management of the entire syste
 - **Generative AI:** Google's Gemini models via Genkit
 - **Real-time UI:** React State and `onSnapshot` listeners from Firestore.
 - **Deployment:** Firebase App Hosting
+
+## Getting Started
+
+To run this project locally, you'll need Node.js and a package manager like npm. Follow these steps:
+
+### 1. Installation
+
+First, install the project dependencies:
+
+```bash
+npm install
+```
+
+### 2. Environment Variables
+
+Next, you need to set up your environment variables. Copy the example file to a new `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Now, open the `.env` file and fill in the required values for your Firebase project, Google AI (Genkit) API key, and SMTP server for sending email invitations.
+
+### 3. Running the Application
+
+This project consists of two main parts: the Next.js web application and the Genkit AI service. You need to run both concurrently in separate terminal windows.
+
+**Terminal 1: Run the Next.js App**
+
+This command starts the main web application on `http://localhost:9002`.
+
+```bash
+npm run dev
+```
+
+**Terminal 2: Run the Genkit Service**
+
+This command starts the Genkit development server, which watches for changes in your AI flows. The Next.js app communicates with this service for all generative AI features.
+
+```bash
+npm run genkit:watch
+```
+
+Once both services are running, you can open your browser to `http://localhost:9002` to see the application.
