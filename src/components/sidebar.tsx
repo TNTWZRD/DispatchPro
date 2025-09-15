@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { Collapsible, CollapsibleTrigger } from './ui/collapsible';
 import type { Ride, Driver } from '@/lib/types';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,23 +32,15 @@ export function Sidebar({ rides, drivers }: SidebarProps) {
   
   return (
     <div className="hidden lg:flex flex-col gap-4 transition-all">
-       {isOpen ? (
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-                <PanelLeftClose />
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-        ) : (
-             <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
-                <PanelLeftOpen />
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-        )}
+       <Button variant="ghost" size="icon" onClick={() => setIsOpen(prev => !prev)}>
+          {isOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+          <span className="sr-only">Toggle Sidebar</span>
+      </Button>
       
       {/* 
-        This div's visibility is controlled by the isOpen state.
-        Using a simple conditional class prevents the map component from being
-        unmounted by a parent component like Collapsible, which fixes the
-        "Map container is already initialized" error.
+        This div's visibility is controlled by the isOpen state via CSS.
+        Crucially, we are NOT conditionally rendering the DynamicMapView component itself (e.g. `isOpen && <... />`).
+        This ensures the component stays mounted and avoids the re-initialization error.
       */}
       <div className={cn("w-[350px] xl:w-[450px] flex flex-col gap-4", !isOpen && 'hidden')}>
         <DynamicMapView rides={rides} drivers={drivers} />
