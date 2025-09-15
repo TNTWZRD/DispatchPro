@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { MapView } from './map-view';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
@@ -12,10 +12,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import dynamic from 'next/dynamic';
 
 
-const DynamicMapView = dynamic(() => import('./map-view').then(mod => mod.MapView), {
+const DynamicMapView = dynamic(
+  () => import('./map-view').then(mod => mod.MapView),
+  {
     ssr: false,
     loading: () => <div className="w-[350px] xl:w-[450px] aspect-[2/1] bg-muted rounded-lg animate-pulse" />
-});
+  }
+);
 
 
 type SidebarProps = {

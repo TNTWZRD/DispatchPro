@@ -1,11 +1,12 @@
+
 "use client";
 
 import 'leaflet/dist/leaflet.css';
+import React from 'react';
 import { MapContainer, TileLayer, Marker, Tooltip as LeafletTooltip } from 'react-leaflet';
 import L from 'leaflet';
 import type { Ride, Driver } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tooltip as ShadTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Truck, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -48,7 +49,7 @@ const locationToCoords = (loc: {x: number, y: number}): L.LatLngExpression => {
     return [mapCenter[0] + latOffset, mapCenter[1] + lngOffset];
 }
 
-export function MapView({ rides, drivers }: MapViewProps) {
+const MemoizedMapView = React.memo(function MapView({ rides, drivers }: MapViewProps) {
   const activeRidePickups = rides.filter(r => ['pending', 'assigned'].includes(r.status));
 
   return (
@@ -86,4 +87,6 @@ export function MapView({ rides, drivers }: MapViewProps) {
       </CardContent>
     </Card>
   );
-}
+});
+
+export { MemoizedMapView as MapView };
