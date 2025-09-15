@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, Phone, MapPin, Clock, MoreVertical, Truck, CheckCircle2, Loader2, XCircle, DollarSign, Users, Package, Calendar, Undo2, MessageSquare, Repeat, Milestone, Edit, CreditCard, Gift, History, CalendarX2, Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatPhoneNumber } from '@/lib/utils';
 import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -298,7 +298,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
               {ride.passengerPhone && (
                   <div className="flex items-center">
                       <Phone className="mr-1.5" />
-                      <span>{ride.passengerPhone}</span>
+                      <span>{formatPhoneNumber(ride.passengerPhone)}</span>
                   </div>
               )}
               {ride.scheduledTime && !isCondensed && (

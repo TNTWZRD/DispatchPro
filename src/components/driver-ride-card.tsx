@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { MapPin, Users, Phone, Package, Edit, Milestone, MessageSquare } from 'lucide-react';
 import { Separator } from './ui/separator';
-import { cn } from '@/lib/utils';
+import { cn, formatPhoneNumber } from '@/lib/utils';
 
 
 type DriverRideCardProps = {
@@ -61,7 +61,7 @@ export function DriverRideCard({ ride, onEdit, isQueued = false }: DriverRideCar
                     {ride.passengerPhone && (
                         <div className="flex items-center gap-2">
                             <Phone className="text-muted-foreground" />
-                            <a href={`tel:${ride.passengerPhone}`} className="text-primary hover:underline">{ride.passengerPhone}</a>
+                            <a href={`tel:${ride.passengerPhone}`} className="text-primary hover:underline">{formatPhoneNumber(ride.passengerPhone)}</a>
                         </div>
                     )}
                     {ride.movingFee && (
