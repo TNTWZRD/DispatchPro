@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, query, orderBy, Timestamp, updateDoc } from 'firebase/firestore';
-import type { Driver } from '@/lib/types';
+import type { AppUser, Driver } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -24,7 +24,7 @@ import {
   DropdownMenuRadioItem
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, MoreHorizontal, User, Trash2, Edit, ChevronDown } from 'lucide-react';
+import { Loader2, MoreHorizontal, User, Trash2, Edit, ChevronDown, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDriver } from '@/app/admin/actions';
 import { EditDriverForm } from './edit-driver-form';
@@ -40,6 +40,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { formatPhoneNumber, formatUserName } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
+import { InviteDriverForm } from './invite-driver-form';
 
 
 const getStatusVariant = (status: Driver['status']) => {
@@ -57,6 +59,9 @@ export function DriverManagementTable() {
   const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [invitingDriver, setInvitingDriver] = useState<Driver | null>(null);
+  const { allUsers } = useAuth();
+
 
   useEffect(() => {
     const q = query(collection(db, 'drivers'), orderBy('name', 'asc'));
@@ -82,6 +87,10 @@ export function DriverManagementTable() {
     setIsEditModalOpen(true);
   };
   
+  const handleInvite = (driver: Driver) => {
+    setInvitingDriver(driver);
+  }
+
   const handleDelete = async (driverId: string) => {
     const result = await deleteDriver(driverId);
      if (result.type === 'success') {
@@ -124,65 +133,71 @@ export function DriverManagementTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {drivers.map((driver) => (
-            <TableRow key={driver.id}>
-              <TableCell className="font-medium">{formatUserName(driver.name)}</TableCell>
-              <TableCell>{formatPhoneNumber(driver.phoneNumber)}</TableCell>
-              <TableCell>
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full min-w-[150px] justify-between capitalize" disabled={driver.status === 'on-shift'}>
-                            <Badge className={getStatusVariant(driver.status)}>{driver.status.replace('-', ' ')}</Badge>
-                            <ChevronDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuRadioGroup value={driver.status} onValueChange={(value) => handleStatusChange(driver.id, value as Driver['status'])}>
-                            <DropdownMenuRadioItem value="available">Available</DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="offline">Offline</DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-              <TableCell>{driver.rating.toFixed(1)} ★</TableCell>
-              <TableCell className="text-right">
-                <AlertDialog>
+          {drivers.map((driver) => {
+            const isUser = allUsers.some(u => u.id === driver.id);
+            return (
+                <TableRow key={driver.id}>
+                <TableCell className="font-medium">{formatUserName(driver.name)}</TableCell>
+                <TableCell>{formatPhoneNumber(driver.phoneNumber)}</TableCell>
+                <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => handleEdit(driver)}>
-                          <Edit className="mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
-                              <Trash2 className="mr-2" /> Delete
-                            </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                      </DropdownMenuContent>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full min-w-[150px] justify-between capitalize" disabled={driver.status === 'on-shift'}>
+                                <Badge className={getStatusVariant(driver.status)}>{driver.status.replace('-', ' ')}</Badge>
+                                <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuRadioGroup value={driver.status} onValueChange={(value) => handleStatusChange(driver.id, value as Driver['status'])}>
+                                <DropdownMenuRadioItem value="available">Available</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="offline">Offline</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
                     </DropdownMenu>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the driver profile for "{driver.name}".
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(driver.id)}>
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell>{driver.rating.toFixed(1)} ★</TableCell>
+                <TableCell className="text-right">
+                    <AlertDialog>
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                            <MoreHorizontal />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => handleEdit(driver)}>
+                            <Edit className="mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleInvite(driver)} disabled={isUser}>
+                                <Mail className="mr-2" /> Invite as User
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                <Trash2 className="mr-2" /> Delete
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the driver profile for "{driver.name}".
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(driver.id)}>
+                                Continue
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </TableCell>
+                </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>
@@ -191,6 +206,12 @@ export function DriverManagementTable() {
         isOpen={isEditModalOpen}
         setIsOpen={setIsEditModalOpen}
         driver={selectedDriver}
+    />
+
+    <InviteDriverForm
+        isOpen={!!invitingDriver}
+        setIsOpen={(isOpen) => !isOpen && setInvitingDriver(null)}
+        driver={invitingDriver}
     />
     </>
   );

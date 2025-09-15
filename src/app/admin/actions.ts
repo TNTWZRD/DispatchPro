@@ -6,8 +6,8 @@ import 'dotenv/config';
 import { z } from "zod";
 import { sendMail } from "@/lib/email";
 import { db } from '@/lib/firebase';
-import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc } from 'firebase/firestore';
-import type { Driver, MaintenanceTicket, Vehicle, Shift } from '@/lib/types';
+import { collection, serverTimestamp, doc, setDoc, updateDoc, deleteDoc, addDoc, writeBatch, arrayUnion, getDoc, query, where, getDocs } from 'firebase/firestore';
+import type { Driver, MaintenanceTicket, Vehicle, Shift, AppUser } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 const INVITE_CODE = process.env.INVITE_CODE || 'KBT04330';
@@ -54,6 +54,50 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
   }
 }
 
+const inviteDriverSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email." }),
+  driverName: z.string(),
+});
+
+export async function inviteDriver(prevState: any, formData: FormData) {
+  const validatedFields = inviteDriverSchema.safeParse(Object.fromEntries(formData.entries()));
+
+  if (!validatedFields.success) {
+    return {
+      type: "error",
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Invalid email address provided.",
+    };
+  }
+  
+  const { email, driverName } = validatedFields.data;
+  const registrationUrl = `http://localhost:9002/register`;
+
+  try {
+    await sendMail({
+        to: email,
+        subject: `You're invited to join DispatchPro, ${driverName}!`,
+        html: `
+            <h1>Invitation to DispatchPro</h1>
+            <p>Hi ${driverName},</p>
+            <p>You have been invited to join the DispatchPro platform as a driver.</p>
+            <p>Please register by clicking the link below:</p>
+            <a href="${registrationUrl}" target="_blank">${registrationUrl}</a>
+            <p>During registration, please use the following invite code:</p>
+            <h2>${INVITE_CODE}</h2>
+            <p>Once you register with this email address, your account will be linked to your existing driver profile.</p>
+            <p>Thanks,</p>
+            <p>The DispatchPro Team</p>
+        `,
+    });
+    return { type: "success", message: `Invitation sent successfully to ${email}.` };
+  } catch (error) {
+    console.error("Failed to send driver invitation email:", error);
+    return { type: "error", message: "Failed to send the invitation email. Please try again later." };
+  }
+}
+
+
 const createDriverSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   phoneNumber: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
@@ -73,9 +117,22 @@ export async function createDriver(prevState: any, formData: FormData) {
 
     try {
         const { name, phoneNumber } = validatedFields.data;
+        
+        // Check if an AppUser with this phone number already exists
+        const userQuery = query(collection(db, 'users'), where('phoneNumber', '==', phoneNumber));
+        const userSnapshot = await getDocs(userQuery);
+        if (!userSnapshot.empty) {
+            const existingUser = userSnapshot.docs[0].data() as AppUser;
+            return {
+                type: 'error',
+                message: `An existing user (${existingUser.email}) is already associated with this phone number. Please use a different number or invite the existing user as a driver.`
+            };
+        }
+
         const newDriverRef = doc(collection(db, 'drivers'));
 
-        const newDriver: Omit<Driver, 'id'> = {
+        const newDriver: Driver = {
+            id: newDriverRef.id,
             name,
             phoneNumber,
             rating: 5,
@@ -116,17 +173,32 @@ export async function updateDriver(prevState: any, formData: FormData) {
         };
     }
     
+    const batch = writeBatch(db);
+    
     try {
         const { driverId, name, phoneNumber } = validatedFields.data;
         const driverRef = doc(db, 'drivers', driverId);
 
-        await updateDoc(driverRef, {
+        batch.update(driverRef, {
             name,
             phoneNumber,
             updatedAt: serverTimestamp(),
         });
+
+        // Also update the user's main profile if they are a user
+        const userRef = doc(db, 'users', driverId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+            batch.update(userRef, {
+                displayName: name,
+                phoneNumber: phoneNumber,
+                updatedAt: serverTimestamp()
+            });
+        }
         
+        await batch.commit();
         revalidatePath('/admin');
+        revalidatePath('/settings'); // In case the user themselves is being edited
 
         return { type: "success", message: "Driver updated successfully." };
 
