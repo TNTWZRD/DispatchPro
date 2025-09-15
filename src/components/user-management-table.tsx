@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ChevronDown, Check, MoreHorizontal, Edit, Sprout, ShieldOff, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { formatUserName } from '@/lib/utils';
+import { formatUserName, cn } from '@/lib/utils';
 import { EditUserForm } from './edit-user-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { disableUser, resetPassword } from '@/app/admin/actions';
