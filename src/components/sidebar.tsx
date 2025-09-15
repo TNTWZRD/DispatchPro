@@ -9,13 +9,13 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import dynamic from 'next/dynamic';
-
+import { Skeleton } from './ui/skeleton';
 
 const DynamicMapView = dynamic(
   () => import('./map-view').then(mod => mod.MapView),
   {
     ssr: false,
-    loading: () => <div className="w-[350px] xl:w-[450px] aspect-[2/1] bg-muted rounded-lg animate-pulse" />
+    loading: () => <Skeleton className="w-[350px] xl:w-[450px] aspect-[2/1] bg-muted rounded-lg" />
   }
 );
 
@@ -43,7 +43,12 @@ export function Sidebar({ rides, drivers }: SidebarProps) {
             <span className="sr-only">Toggle Sidebar</span>
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent asChild className="data-[state=closed]:hidden">
+      {/* 
+        The data-[state=closed]:hidden class is crucial here. It keeps the component mounted 
+        but hidden with display:none, preventing the Leaflet map from being re-initialized 
+        on every open/close, which would cause a crash.
+      */}
+      <CollapsibleContent asChild className={cn("data-[state=open]:animate-none data-[state=closed]:hidden")}>
         <div className="w-[350px] xl:w-[450px] flex flex-col gap-4">
             <DynamicMapView rides={rides} drivers={drivers} />
         </div>
