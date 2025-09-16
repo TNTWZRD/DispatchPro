@@ -1053,9 +1053,9 @@ function DispatchDashboardUI() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-row gap-4 overflow-hidden p-2">
+      <div className="flex flex-1 flex-row overflow-hidden p-2">
         {!isMobile && (
-          <div className={cn("flex flex-col gap-4 transition-all duration-300", isSidebarOpen ? "w-[450px]" : "w-12")}>
+          <div className={cn("flex flex-col gap-4 transition-all duration-300 ease-in-out", isSidebarOpen ? "w-[450px]" : "w-12")}>
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(prev => !prev)}>
                 {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
                 <span className="sr-only">Toggle Sidebar</span>
