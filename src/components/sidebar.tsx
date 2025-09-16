@@ -14,7 +14,7 @@ const DynamicMapView = dynamic(
   () => import('./map-view').then(mod => mod.MapView),
   {
     ssr: false,
-    loading: () => <Skeleton className="w-[350px] xl:w-[450px] aspect-[2/1] bg-muted rounded-lg" />
+    loading: () => <Skeleton className="w-full aspect-[2/1] bg-muted rounded-lg" />
   }
 );
 
@@ -37,11 +37,6 @@ export function Sidebar({ rides, drivers }: SidebarProps) {
           <span className="sr-only">Toggle Sidebar</span>
       </Button>
       
-      {/* 
-        This div's visibility is controlled by the isOpen state via CSS.
-        Crucially, we are NOT conditionally rendering the DynamicMapView component itself (e.g. `isOpen && <... />`).
-        This ensures the component stays mounted and avoids the re-initialization error.
-      */}
       <div className={cn("w-[350px] xl:w-[450px] flex flex-col gap-4", !isOpen && 'hidden')}>
         <DynamicMapView rides={rides} drivers={drivers} />
       </div>
