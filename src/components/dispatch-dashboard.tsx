@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -44,6 +44,17 @@ import { BanCheckDialog } from './ban-check-dialog';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
+import { MapView } from './map-view';
+import dynamic from 'next/dynamic';
+import { Skeleton } from './ui/skeleton';
+
+const DynamicMapView = dynamic(
+  () => import('./map-view').then(mod => mod.MapView),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="w-full aspect-[2/1] bg-muted rounded-lg" />
+  }
+);
 
 
 function DispatchDashboardUI() {
@@ -65,6 +76,7 @@ function DispatchDashboardUI() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const { user, hasRole } = useAuth();
   const [isNotificationToggleChecked, setIsNotificationToggleChecked] = useState(user?.settings?.sendAssignmentNotifications ?? true);
@@ -1044,10 +1056,17 @@ function DispatchDashboardUI() {
       </div>
 
       <div className="flex flex-1 flex-row gap-4 overflow-hidden p-2">
-        <Sidebar 
-            rides={rides} 
-            drivers={drivers}
-        />
+        {!isMobile && (
+          <div className={cn("hidden lg:flex flex-col gap-4 transition-all duration-300", isSidebarOpen ? "w-[450px]" : "w-12")}>
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(prev => !prev)}>
+                {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+                <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+            <div className={cn("flex-1", !isSidebarOpen && 'hidden')}>
+              <DynamicMapView rides={rides} drivers={drivers} />
+            </div>
+          </div>
+        )}
         
         <div className='flex-1 flex flex-col min-w-0'>
           {isMobile ? renderMobileView() : renderDesktopView()}

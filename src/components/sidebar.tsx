@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from 'react';
@@ -30,16 +31,5 @@ export function Sidebar({ rides, drivers }: SidebarProps) {
   
   if (isMobile) return null;
   
-  return (
-    <div className="hidden lg:flex flex-col gap-4 transition-all">
-       <Button variant="ghost" size="icon" onClick={() => setIsOpen(prev => !prev)}>
-          {isOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-          <span className="sr-only">Toggle Sidebar</span>
-      </Button>
-      
-      <div className={cn("w-[350px] xl:w-[450px] flex flex-col gap-4", !isOpen && 'hidden')}>
-        <DynamicMapView rides={rides} drivers={drivers} />
-      </div>
-    </div>
-  );
+  return null;
 }
