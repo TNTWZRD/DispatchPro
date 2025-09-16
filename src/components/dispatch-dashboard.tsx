@@ -17,7 +17,6 @@ import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StrictModeDroppable } from './strict-mode-droppable';
-import { Sidebar } from './sidebar';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel';
 import { ZoomProvider, ZoomContext } from '@/context/zoom-context';
 import { CondensedModeProvider, useCondensedMode } from '@/context/condensed-mode-context';
@@ -44,7 +43,6 @@ import { BanCheckDialog } from './ban-check-dialog';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
-import { MapView } from './map-view';
 import dynamic from 'next/dynamic';
 import { Skeleton } from './ui/skeleton';
 
@@ -1057,7 +1055,7 @@ function DispatchDashboardUI() {
 
       <div className="flex flex-1 flex-row gap-4 overflow-hidden p-2">
         {!isMobile && (
-          <div className={cn("hidden lg:flex flex-col gap-4 transition-all duration-300", isSidebarOpen ? "w-[450px]" : "w-12")}>
+          <div className={cn("flex flex-col gap-4 transition-all duration-300", isSidebarOpen ? "w-[450px]" : "w-12")}>
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(prev => !prev)}>
                 {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
                 <span className="sr-only">Toggle Sidebar</span>
