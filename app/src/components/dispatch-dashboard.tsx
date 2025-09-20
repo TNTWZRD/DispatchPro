@@ -50,7 +50,7 @@ const DynamicMapView = dynamic(
   () => import('./map-view').then((mod) => mod.MapView),
   {
     ssr: false,
-    loading: () => <Skeleton className="w-full aspect-[2/1] bg-muted rounded-lg" />,
+    loading: () => <Skeleton className="w-full h-full bg-muted rounded-lg" />,
   }
 );
 
@@ -74,7 +74,6 @@ function DispatchDashboardUI() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const { user, hasRole } = useAuth();
   const [isNotificationToggleChecked, setIsNotificationToggleChecked] = useState(user?.settings?.sendAssignmentNotifications ?? true);
@@ -1032,16 +1031,6 @@ function DispatchDashboardUI() {
                         <p>Toggle Condensed View (Alt+S)</p>
                     </TooltipContent>
                 </Tooltip>
-                 <Tooltip>
-                    <TooltipTrigger asChild>
-                       <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                          {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isSidebarOpen ? 'Hide' : 'Show'} Sidebar</p>
-                    </TooltipContent>
-                </Tooltip>
              </TooltipProvider>
 
             <div className="flex items-center space-x-2">
@@ -1065,15 +1054,11 @@ function DispatchDashboardUI() {
 
       <div className="flex flex-1 flex-row overflow-hidden">
         {/* Sidebar */}
-        <div className={cn(
-            'flex flex-col gap-4 p-2 transition-all duration-300 ease-in-out',
-            isSidebarOpen ? 'w-[450px]' : 'w-12'
-        )}>
-          <DynamicMapView 
-            drivers={drivers} 
-            rides={pendingRides} 
-            className={cn('flex-1 transition-opacity', !isSidebarOpen && 'opacity-0')}
-          />
+        <div className="w-[350px] shrink-0 flex flex-col gap-2 p-2">
+           <DynamicMapView 
+                drivers={drivers} 
+                rides={pendingRides} 
+           />
         </div>
 
         <div className='flex-1 flex flex-col min-w-0 p-2'>
