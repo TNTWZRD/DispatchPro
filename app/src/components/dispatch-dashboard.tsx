@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -43,16 +43,6 @@ import { BanCheckDialog } from './ban-check-dialog';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
-import { Skeleton } from './ui/skeleton';
-import dynamic from 'next/dynamic';
-
-const DynamicMapView = dynamic(
-  () => import('./map-view').then((mod) => mod.MapView),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="w-full h-full bg-muted rounded-lg" />,
-  }
-);
 
 
 function DispatchDashboardUI() {
@@ -1052,18 +1042,8 @@ function DispatchDashboardUI() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-row overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-[350px] shrink-0 flex flex-col gap-2 p-2">
-           <DynamicMapView 
-                drivers={drivers} 
-                rides={pendingRides} 
-           />
-        </div>
-
-        <div className='flex-1 flex flex-col min-w-0 p-2'>
-          {isMobile ? renderMobileView() : renderDesktopView()}
-        </div>
+      <div className="flex flex-1 flex-row overflow-hidden p-2">
+        {isMobile ? renderMobileView() : renderDesktopView()}
       </div>
 
       <div className="fixed bottom-6 right-24 z-50 flex flex-col items-center gap-3">
