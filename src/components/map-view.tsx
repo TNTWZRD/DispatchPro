@@ -32,7 +32,7 @@ export function MapView({ rides, drivers }: MapViewProps) {
               zoom: 11,
             }}
             style={{ width: '100%', height: '100%' }}
-            mapStyle="https://demotiles.maplibre.org/style.json"
+            mapStyle="https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL"
           >
             {drivers
               .filter(d => d.status === 'on-shift' || d.status === 'available')
