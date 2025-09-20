@@ -45,6 +45,7 @@ import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
 import dynamic from 'next/dynamic';
 import { Skeleton } from './ui/skeleton';
+import { APIProvider } from '@vis.gl/react-google-maps';
 
 const DynamicMapView = dynamic(
   () => import('./map-view').then(mod => mod.MapView),
@@ -1060,9 +1061,11 @@ function DispatchDashboardUI() {
                 {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
                 <span className="sr-only">Toggle Sidebar</span>
             </Button>
-            <div className={cn("flex-1", !isSidebarOpen && 'hidden')}>
-              <DynamicMapView rides={rides} drivers={drivers} />
-            </div>
+            {isSidebarOpen && (
+              <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+                  <DynamicMapView rides={rides} drivers={drivers} />
+              </APIProvider>
+            )}
           </div>
         )}
         
