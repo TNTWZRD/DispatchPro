@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, Map as MapIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Role, type Ride, type Driver } from '@/lib/types';
@@ -46,8 +46,6 @@ export default function MapPage() {
 
       const toDate = (ts: any) => ts instanceof Timestamp ? ts.toDate() : ts;
       
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
       const ridesQuery = query(collection(db, "rides"), where("status", "in", ["pending", "assigned", "in-progress"]));
       const driversQuery = query(collection(db, "drivers"));
 
@@ -68,10 +66,18 @@ export default function MapPage() {
           } as Ride)));
           ridesLoaded = true;
           checkDataLoaded();
+      }, (error) => {
+          console.error("Error fetching rides: ", error);
+          ridesLoaded = true;
+          checkDataLoaded();
       });
 
       const unsubDrivers = onSnapshot(driversQuery, (snapshot) => {
           setDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
+          driversLoaded = true;
+          checkDataLoaded();
+      }, (error) => {
+          console.error("Error fetching drivers: ", error);
           driversLoaded = true;
           checkDataLoaded();
       });
@@ -91,9 +97,9 @@ export default function MapPage() {
     }
     
     return (
-        <div className="h-full flex flex-col p-4 md:p-6 gap-6 bg-secondary/50">
+        <div className="flex h-full flex-col gap-6 bg-secondary/50 p-4 md:p-6">
             <AdminBreadcrumb segments={[{ name: 'Admin', href: '/admin' }, { name: 'Live Map' }]} />
-            <div className="flex-1 min-h-0">
+            <div className="min-h-0 flex-1">
                 <DynamicMapView rides={rides} drivers={drivers} />
             </div>
         </div>
