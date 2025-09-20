@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useMemo } from 'react';
@@ -32,6 +33,17 @@ type CallLoggerFormProps = {
   rideToEdit?: Ride | null;
   onAddRide: (rideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'createdAt' | 'updatedAt' | 'isNew'>) => void;
   onEditRide: (rideData: Ride) => void;
+};
+
+// Helper function to generate a random location around Augusta, ME
+const getRandomLocation = () => {
+    const augustaLat = 44.3106;
+    const augustaLng = -69.7795;
+    const radius = 0.1; // Approx 11km radius
+    return {
+        x: augustaLat + (Math.random() - 0.5) * radius * 2,
+        y: augustaLng + (Math.random() - 0.5) * radius * 2,
+    };
 };
 
 
@@ -88,21 +100,21 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
         ...rideToEdit,
         ...baseRideData,
         pickup: { ...rideToEdit.pickup, name: values.pickupLocation },
-        dropoff: values.dropoffLocation ? { ...(rideToEdit.dropoff || { coords: { x: Math.random() * 100, y: Math.random() * 100 } }), name: values.dropoffLocation } : undefined,
+        dropoff: values.dropoffLocation ? { ...(rideToEdit.dropoff || { coords: getRandomLocation() }), name: values.dropoffLocation } : undefined,
         stops: values.stops?.map((stop, i) => {
           const originalStop = rideToEdit.stops?.[i];
           return {
             name: stop.name,
-            coords: originalStop?.coords || { x: Math.random() * 100, y: Math.random() * 100 }
+            coords: originalStop?.coords || getRandomLocation()
           }
         }),
       });
     } else {
       onAddRide({
         ...baseRideData,
-        pickup: { name: values.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
-        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } } : undefined,
-        stops: values.stops?.map(stop => ({ name: stop.name, coords: { x: Math.random() * 100, y: Math.random() * 100 } })),
+        pickup: { name: values.pickupLocation, coords: getRandomLocation() },
+        dropoff: values.dropoffLocation ? { name: values.dropoffLocation, coords: getRandomLocation() } : undefined,
+        stops: values.stops?.map(stop => ({ name: stop.name, coords: getRandomLocation() })),
       });
     }
     form.reset();

@@ -1,5 +1,6 @@
 
 
+
 "use server";
 
 import 'dotenv/config';
@@ -136,6 +137,17 @@ const createDriverSchema = z.object({
   phoneNumber: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
 });
 
+// Helper function to generate a random location around Augusta, ME
+const getRandomLocation = () => {
+    const augustaLat = 44.3106;
+    const augustaLng = -69.7795;
+    const radius = 0.1; // Approx 11km radius
+    return {
+        x: augustaLat + (Math.random() - 0.5) * radius * 2,
+        y: augustaLng + (Math.random() - 0.5) * radius * 2,
+    };
+};
+
 export async function createDriver(prevState: any, formData: FormData) {
     const formValues = Object.fromEntries(formData.entries());
     const validatedFields = createDriverSchema.safeParse(formValues);
@@ -170,7 +182,7 @@ export async function createDriver(prevState: any, formData: FormData) {
             phoneNumber,
             rating: 5,
             status: 'offline',
-            location: { x: Math.random() * 100, y: Math.random() * 100 },
+            location: getRandomLocation(),
         };
 
         await setDoc(newDriverRef, {

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -15,9 +16,20 @@ import { ResponsiveDialog } from './responsive-dialog';
 type VoiceControlProps = {
   rides: Ride[];
   drivers: Driver[];
-  onAddRide: (rideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'requestTime' | 'isNew'>) => void;
+  onAddRide: (rideData: Omit<Ride, 'id' | 'status' | 'driverId' | 'isNew'>) => void;
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
+};
+
+// Helper function to generate a random location around Augusta, ME
+const getRandomLocation = () => {
+    const augustaLat = 44.3106;
+    const augustaLng = -69.7795;
+    const radius = 0.1; // Approx 11km radius
+    return {
+        x: augustaLat + (Math.random() - 0.5) * radius * 2,
+        y: augustaLng + (Math.random() - 0.5) * radius * 2,
+    };
 };
 
 export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChangeStatus }: VoiceControlProps) {
@@ -171,8 +183,8 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
     if (result.intent === 'create') {
         onAddRide({
           passengerPhone: result.passengerPhone,
-          pickup: { name: result.pickupLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
-          dropoff: { name: result.dropoffLocation, coords: { x: Math.random() * 100, y: Math.random() * 100 } },
+          pickup: { name: result.pickupLocation, coords: getRandomLocation() },
+          dropoff: { name: result.dropoffLocation, coords: getRandomLocation() },
           passengerCount: result.passengerCount,
           movingFee: result.movingFee,
           scheduledTime: result.scheduledTime ? new Date(result.scheduledTime) : undefined,

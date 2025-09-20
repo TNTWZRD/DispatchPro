@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
@@ -14,14 +15,9 @@ type MapViewProps = {
 
 export function MapView({ rides, drivers }: MapViewProps) {
   const mapCenter = useMemo(() => {
-    if (drivers.length > 0) {
-      const avgX = drivers.reduce((sum, d) => sum + d.location.x, 0) / drivers.length;
-      const avgY = drivers.reduce((sum, d) => sum + d.location.y, 0) / drivers.length;
-      return { longitude: avgY, latitude: avgX };
-    }
-    // Default center if no drivers
-    return { longitude: -74.006, latitude: 40.7128 };
-  }, [drivers]);
+    // Default center to Augusta, Maine
+    return { longitude: -69.7795, latitude: 44.3106 };
+  }, []);
 
   return (
     <Card className="h-full w-full">
