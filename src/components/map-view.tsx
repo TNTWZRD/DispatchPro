@@ -1,24 +1,47 @@
-
 "use client";
 
 import React from 'react';
-import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
+import { MapContainer, TileLayer, Marker, Tooltip as LeafletTooltip } from 'react-leaflet';
+import L from 'leaflet';
 import type { Ride, Driver } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Truck, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCondensedMode } from '../context/condensed-mode-context';
+import ReactDOMServer from 'react-dom/server';
 
-const mapCenter = { lat: 44.3106, lng: -69.7795 }; // Augusta, ME
+const mapCenter: L.LatLngTuple = [44.3106, -69.7795]; // Augusta, ME
 
-const locationToCoords = (loc: {x: number, y: number}): { lat: number; lng: number } => {
-    // This is a mock conversion. In a real app, you'd use a geocoding service
-    // or have real coordinates. For now, we'll map the 0-100 space to a small
-    // area around the map center.
-    const latOffset = (loc.y - 50) / 500; // ~0.2 degrees latitude range
-    const lngOffset = (loc.x - 50) / 400; // ~0.25 degrees longitude at this latitude
-    return { lat: mapCenter.lat + latOffset, lng: mapCenter.lng + lngOffset };
+const locationToCoords = (loc: {x: number, y: number}): L.LatLngTuple => {
+    const latOffset = (loc.y - 50) / 500;
+    const lngOffset = (loc.x - 50) / 400;
+    return [mapCenter[0] + latOffset, mapCenter[1] + lngOffset];
 }
+
+const createIcon = (icon: React.ReactElement) => {
+    return L.divIcon({
+        html: ReactDOMServer.renderToString(icon),
+        className: 'bg-transparent border-0',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+    });
+};
+
+const driverIcon = (driver: Driver) => createIcon(
+    <Truck
+        className={cn(
+            'h-8 w-8 p-1.5 rounded-full bg-background border-2 shadow-lg',
+            driver.status === 'available' && 'text-green-500 border-green-500',
+            driver.status === 'on-shift' && 'text-blue-500 border-blue-500',
+            driver.status === 'offline' && 'text-muted-foreground border-muted-foreground opacity-60'
+        )}
+        strokeWidth={2.5}
+    />
+);
+
+const userIcon = createIcon(
+    <User className="h-8 w-8 p-1.5 rounded-full bg-background border-2 border-yellow-500 text-yellow-500 shadow-lg" />
+);
 
 type MapViewProps = {
   rides: Ride[];
@@ -33,52 +56,28 @@ export function MapView({ rides, drivers }: MapViewProps) {
     <Card>
       <CardContent className="p-2">
         <div className="relative w-full aspect-[2/1] overflow-hidden rounded-lg bg-secondary">
-          <Map
-            defaultCenter={mapCenter}
-            defaultZoom={13}
-            gestureHandling={'greedy'}
-            disableDefaultUI={true}
-            mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DISPATCHPRO_MAP'}
-          >
+           <MapContainer center={mapCenter} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
             {drivers.map(driver => (
-              <AdvancedMarker key={driver.id} position={locationToCoords(driver.location)}>
-                  <Tooltip text={`${driver.name} (${driver.status.replace('-', ' ')})`}>
-                    <Truck
-                        className={cn(
-                            'h-7 w-7 p-1 rounded-full bg-background border-2 shadow-lg',
-                            driver.status === 'available' && 'text-green-500 border-green-500',
-                            driver.status === 'on-shift' && 'text-blue-500 border-blue-500',
-                            driver.status === 'offline' && 'text-muted-foreground border-muted-foreground opacity-60'
-                        )}
-                        strokeWidth={2.5}
-                    />
-                  </Tooltip>
-              </AdvancedMarker>
+              <Marker key={driver.id} position={locationToCoords(driver.location)} icon={driverIcon(driver)}>
+                <LeafletTooltip>
+                    {driver.name} ({driver.status.replace('-', ' ')})
+                </LeafletTooltip>
+              </Marker>
             ))}
             {activeRidePickups.map(ride => (
-              <AdvancedMarker key={`pickup-${ride.id}`} position={locationToCoords(ride.pickup.coords)}>
-                  <Tooltip text={`Pickup: ${ride.pickup.name}`}>
-                    <User className="h-7 w-7 p-1 rounded-full bg-background border-2 border-yellow-500 text-yellow-500 shadow-lg" />
-                  </Tooltip>
-              </AdvancedMarker>
+              <Marker key={`pickup-${ride.id}`} position={locationToCoords(ride.pickup.coords)} icon={userIcon}>
+                 <LeafletTooltip>
+                    Pickup: {ride.pickup.name}
+                 </LeafletTooltip>
+              </Marker>
             ))}
-          </Map>
+          </MapContainer>
         </div>
       </CardContent>
     </Card>
   );
 };
-
-const Tooltip = ({ children, text }: { children: React.ReactNode, text: string }) => {
-    const [show, setShow] = React.useState(false);
-    return (
-        <div className="relative flex flex-col items-center" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-            {children}
-            {show && (
-                <div className="absolute bottom-full mb-2 w-max px-2 py-1 text-sm text-white bg-black/70 rounded-md shadow-lg">
-                    {text}
-                </div>
-            )}
-        </div>
-    )
-}

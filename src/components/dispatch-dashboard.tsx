@@ -45,7 +45,6 @@ import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
 import dynamic from 'next/dynamic';
 import { Skeleton } from './ui/skeleton';
-import { APIProvider } from '@vis.gl/react-google-maps';
 
 const DynamicMapView = dynamic(
   () => import('./map-view').then(mod => mod.MapView),
@@ -1054,22 +1053,20 @@ function DispatchDashboardUI() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-row overflow-hidden p-2">
+      <div className="flex flex-1 flex-row overflow-hidden">
         {!isMobile && (
-          <div className={cn("flex flex-col gap-4 transition-all duration-300 ease-in-out", isSidebarOpen ? "w-[450px]" : "w-12")}>
+          <div className={cn("flex flex-col gap-4 p-2 transition-all duration-300 ease-in-out", isSidebarOpen ? "w-[450px]" : "w-12")}>
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(prev => !prev)}>
                 {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
                 <span className="sr-only">Toggle Sidebar</span>
             </Button>
-            {isSidebarOpen && (
-              <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
-                  <DynamicMapView rides={rides} drivers={drivers} />
-              </APIProvider>
-            )}
+            <div className={cn("flex-1", !isSidebarOpen && 'hidden')}>
+                <DynamicMapView rides={rides} drivers={drivers} />
+            </div>
           </div>
         )}
         
-        <div className='flex-1 flex flex-col min-w-0'>
+        <div className='flex-1 flex flex-col min-w-0 p-2'>
           {isMobile ? renderMobileView() : renderDesktopView()}
         </div>
       </div>

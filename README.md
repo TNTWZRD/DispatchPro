@@ -69,7 +69,7 @@ npm install
 
 ### 2. Environment Variables
 
-Next, you need to set up your environment variables. This project uses Firebase, Google AI (Genkit), and Google Maps.
+Next, you need to set up your environment variables. This project uses Firebase and Google AI (Genkit).
 
 Copy the `.env.example` file to a new `.env` file:
 
@@ -81,13 +81,6 @@ Now, open the `.env` file and fill in the required values:
 
 - **Firebase**: Get your project configuration from the Firebase Console (`Project Settings > General > Your apps > Web app`).
 - **Genkit/Gemini**: Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-- **Google Maps**:
-    1.  Go to the [Google Cloud Console](https://console.cloud.google.com/).
-    2.  Create a new project or select an existing one.
-    3.  Go to **APIs & Services > Credentials**.
-    4.  Click **Create Credentials > API key**.
-    5.  **Important**: Restrict your API key to prevent unauthorized use. For development, you can add an "HTTP referrers" restriction for `localhost`. For production, restrict it to your app's domain.
-    6.  Enable the **Maps JavaScript API** and **Maps Embed API** for your project in the [API Library](https://console.cloud.google.com/apis/library).
 - **Email (Nodemailer)**: If you plan to use the email invitation feature, you'll need to provide SMTP server details.
 
 ### 3. Running the Application
