@@ -44,6 +44,15 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
 import { Skeleton } from './ui/skeleton';
+import dynamic from 'next/dynamic';
+
+const DynamicMapView = dynamic(
+  () => import('./map-view').then((mod) => mod.MapView),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="w-full aspect-[2/1] bg-muted rounded-lg" />,
+  }
+);
 
 
 function DispatchDashboardUI() {
@@ -65,6 +74,7 @@ function DispatchDashboardUI() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const { user, hasRole } = useAuth();
   const [isNotificationToggleChecked, setIsNotificationToggleChecked] = useState(user?.settings?.sendAssignmentNotifications ?? true);
@@ -1022,6 +1032,16 @@ function DispatchDashboardUI() {
                         <p>Toggle Condensed View (Alt+S)</p>
                     </TooltipContent>
                 </Tooltip>
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                       <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                          {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isSidebarOpen ? 'Hide' : 'Show'} Sidebar</p>
+                    </TooltipContent>
+                </Tooltip>
              </TooltipProvider>
 
             <div className="flex items-center space-x-2">
@@ -1044,6 +1064,14 @@ function DispatchDashboardUI() {
       </div>
 
       <div className="flex flex-1 flex-row overflow-hidden">
+        {/* Sidebar */}
+        <div className={cn(
+            'flex flex-col gap-4 p-2 transition-all duration-300 ease-in-out',
+            isSidebarOpen ? 'w-[450px]' : 'w-0 p-0 opacity-0 overflow-hidden'
+        )}>
+          <DynamicMapView drivers={drivers} rides={pendingRides} />
+        </div>
+
         <div className='flex-1 flex flex-col min-w-0 p-2'>
           {isMobile ? renderMobileView() : renderDesktopView()}
         </div>
