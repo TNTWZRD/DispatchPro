@@ -43,16 +43,7 @@ import { BanCheckDialog } from './ban-check-dialog';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
-import dynamic from 'next/dynamic';
 import { Skeleton } from './ui/skeleton';
-
-const DynamicMapView = dynamic(
-  () => import('./map-view').then(mod => mod.MapView),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="w-full aspect-[2/1] bg-muted rounded-lg" />
-  }
-);
 
 
 function DispatchDashboardUI() {
@@ -74,7 +65,6 @@ function DispatchDashboardUI() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const { user, hasRole } = useAuth();
   const [isNotificationToggleChecked, setIsNotificationToggleChecked] = useState(user?.settings?.sendAssignmentNotifications ?? true);
@@ -1054,18 +1044,6 @@ function DispatchDashboardUI() {
       </div>
 
       <div className="flex flex-1 flex-row overflow-hidden">
-        {!isMobile && (
-          <div className={cn("flex flex-col gap-4 p-2 transition-all duration-300 ease-in-out", isSidebarOpen ? "w-[450px]" : "w-12")}>
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(prev => !prev)}>
-                {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-            <div className={cn("flex-1", !isSidebarOpen && 'hidden')}>
-                <DynamicMapView rides={rides} drivers={drivers} />
-            </div>
-          </div>
-        )}
-        
         <div className='flex-1 flex flex-col min-w-0 p-2'>
           {isMobile ? renderMobileView() : renderDesktopView()}
         </div>
