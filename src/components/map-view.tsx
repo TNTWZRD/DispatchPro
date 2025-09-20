@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import Map, { Marker } from 'react-map-gl';
+import Map, { Marker } from 'react-map-gl/maplibre';
 import type { Ride, Driver } from '@/lib/types';
 import { Truck, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
