@@ -39,14 +39,16 @@ export function MapView({ rides, drivers, className }: MapViewProps) {
                 />
               </Marker>
           ))}
-          {rides.map(ride => (
-            <Marker key={`ride-${ride.id}`} longitude={ride.pickup.coords.y} latitude={ride.pickup.coords.x}>
-                <MapPin
-                  className="text-yellow-500"
-                  size={32}
-                  fill="currentColor"
-                />
-            </Marker>
+          {rides
+            .filter(ride => ride.pickup?.coords?.y && ride.pickup?.coords?.x)
+            .map(ride => (
+              <Marker key={`ride-${ride.id}`} longitude={ride.pickup.coords.y} latitude={ride.pickup.coords.x}>
+                  <MapPin
+                    className="text-yellow-500"
+                    size={32}
+                    fill="currentColor"
+                  />
+              </Marker>
           ))}
         </Map>
       </div>

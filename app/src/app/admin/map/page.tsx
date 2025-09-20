@@ -66,10 +66,10 @@ export default function MapPage() {
               id: doc.id,
               createdAt: toDate(data.createdAt),
               pickup: {
-                  name: data.pickup.name,
+                  name: data.pickup?.name || 'Unknown Pickup',
                   coords: {
-                      x: data.pickup.coords?.x ?? 44.3106,
-                      y: data.pickup.coords?.y ?? -69.7795
+                      x: data.pickup?.coords?.x ?? 44.3106,
+                      y: data.pickup?.coords?.y ?? -69.7795
                   }
               }
             } as Ride;
