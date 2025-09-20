@@ -13,7 +13,7 @@ import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const DynamicMapView = dynamic(
-  () => import('../../../components/map-view'),
+  () => import('../../../components/map-view').then((mod) => mod.MapView),
   {
     ssr: false,
     loading: () => <Skeleton className="w-full h-full bg-muted" />,
@@ -59,18 +59,21 @@ export default function MapPage() {
       };
 
       const unsubRides = onSnapshot(ridesQuery, (snapshot) => {
-          setRides(snapshot.docs.map(doc => ({
-              ...doc.data(),
+          setRides(snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              ...data,
               id: doc.id,
-              createdAt: toDate(doc.data().createdAt),
+              createdAt: toDate(data.createdAt),
               pickup: {
-                  name: doc.data().pickup.name,
+                  name: data.pickup.name,
                   coords: {
-                      x: doc.data().pickup.coords.x ?? 44.3106,
-                      y: doc.data().pickup.coords.y ?? -69.7795
+                      x: data.pickup.coords?.x ?? 44.3106,
+                      y: data.pickup.coords?.y ?? -69.7795
                   }
               }
-          } as Ride)));
+            } as Ride;
+          }));
           ridesLoaded = true;
           checkDataLoaded();
       }, (error) => {
@@ -80,14 +83,17 @@ export default function MapPage() {
       });
 
       const unsubDrivers = onSnapshot(driversQuery, (snapshot) => {
-          setDrivers(snapshot.docs.map(doc => ({ 
-              ...doc.data(), 
+          setDrivers(snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              ...data,
               id: doc.id,
               location: {
-                x: doc.data().location?.x ?? 44.3106,
-                y: doc.data().location?.y ?? -69.7795,
+                x: data.location?.x ?? 44.3106,
+                y: data.location?.y ?? -69.7795,
               }
-            } as Driver)));
+            } as Driver;
+          }));
           driversLoaded = true;
           checkDataLoaded();
       }, (error) => {
