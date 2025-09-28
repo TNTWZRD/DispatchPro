@@ -16,11 +16,10 @@ export default function Home() {
         if (!loading) {
             if (!user) {
                 router.push('/login');
-            } else if (!hasRole(Role.DISPATCHER)) {
-                // If user is not a dispatcher, they can't access this page.
-                // You might want to redirect them to a different page or show an error.
-                // For now, redirecting to login.
-                router.push('/login');
+            } else if (hasRole(Role.DRIVER) && !hasRole(Role.DISPATCHER)) {
+                // If user is ONLY a driver, redirect to driver page.
+                // If they are dispatcher AND driver, they can see the dispatch board.
+                router.push('/driver');
             }
         }
     }, [user, loading, router, hasRole]);

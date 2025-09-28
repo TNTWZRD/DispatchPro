@@ -97,6 +97,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 router.push('/');
             } else if (appUser.role & Role.DRIVER) { // Fallback for driver if no role param
                 router.push('/driver');
+            } else {
+                router.push('/'); // Fallback for users with no specific role
             }
         }
       } else {
@@ -156,7 +158,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
          const driverQuery = query(collection(db, 'drivers'), where('email', '==', fbUser.email));
          const driverSnapshot = await getDocs(driverQuery);
 
-         let role = Role.DISPATCHER; // Default role
+         let role = Role.ALL; // Default role
          if (!driverSnapshot.empty) {
              role = Role.DRIVER; // Assign driver role if email matches
          }
@@ -206,7 +208,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const driverQuery = query(collection(db, 'drivers'), where('email', '==', email));
     const driverSnapshot = await getDocs(driverQuery);
 
-    let role = Role.DISPATCHER; // Default role
+    let role = Role.ALL; // Default role
     if (!driverSnapshot.empty) {
         role = Role.DRIVER; // Assign driver role if email matches
     }
@@ -244,6 +246,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   const hasRole = useCallback((role: Role) => {
     if (!user) return false;
+    // Super Admins have all roles
+    if ((user.role & Role.SUPER_ADMIN) > 0) return true;
     return (user.role & role) > 0;
   }, [user]);
 
