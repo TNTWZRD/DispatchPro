@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown, Wrench, Sprout, FileWarning, Map } from 'lucide-react';
+import { LogOut, Shield, Truck, LayoutDashboard, User, Briefcase, ChevronDown, Wrench, Sprout, FileWarning } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -84,11 +84,6 @@ export function MainHeader() {
                         <DropdownMenuItem asChild>
                             <Link href="/admin">
                                 <LayoutDashboard className="mr-2" /> User Management
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href="/admin/map">
-                                <Map className="mr-2" /> Live Map
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
