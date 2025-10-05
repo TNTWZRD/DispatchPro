@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -11,6 +12,7 @@ import { updateUserProfile } from '@/app/settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import type { AppUser } from '@/lib/types';
+import { Switch } from './ui/switch';
 
 const initialState = {
   message: '',
@@ -84,6 +86,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 <p className="text-sm font-medium text-destructive">{state.errors.phoneNumber[0]}</p>
             )}
           </div>
+
           <div className="flex justify-end">
             <SubmitButton />
           </div>

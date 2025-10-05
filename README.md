@@ -69,13 +69,19 @@ npm install
 
 ### 2. Environment Variables
 
-Next, you need to set up your environment variables. Copy the example file to a new `.env` file:
+Next, you need to set up your environment variables. This project uses Firebase and Google AI (Genkit).
+
+Copy the `.env.example` file to a new `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
-Now, open the `.env` file and fill in the required values for your Firebase project, Google AI (Genkit) API key, and SMTP server for sending email invitations.
+Now, open the `.env` file and fill in the required values:
+
+- **Firebase**: Get your project configuration from the Firebase Console (`Project Settings > General > Your apps > Web app`).
+- **Genkit/Gemini**: Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+- **Email (Nodemailer)**: If you plan to use the email invitation feature, you'll need to provide SMTP server details.
 
 ### 3. Running the Application
 

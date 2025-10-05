@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useMemo } from 'react';
@@ -21,7 +20,7 @@ export function MapView({ rides, drivers, className }: MapViewProps) {
   }, []);
 
   return (
-      <div className={cn("relative h-full w-full overflow-hidden rounded-lg bg-secondary", className)}>
+      <div className={cn("relative w-full h-full overflow-hidden rounded-lg bg-secondary", className)}>
         <Map
           initialViewState={{
             ...mapCenter,
@@ -31,23 +30,25 @@ export function MapView({ rides, drivers, className }: MapViewProps) {
           mapStyle="https://demotiles.maplibre.org/style.json"
         >
           {drivers
-            .filter(d => d.status === 'on-shift' || d.status === 'available')
+            .filter(d => (d.status === 'on-shift' || d.status === 'available') && d.location?.y && d.location?.x)
             .map(driver => (
-              <Marker key={driver.id} longitude={driver.location.y} latitude={driver.location.x}>
+              <Marker key={`driver-${driver.id}`} longitude={driver.location.y} latitude={driver.location.x}>
                 <Truck
-                  className="rounded-full bg-white p-1 text-blue-600"
+                  className="text-blue-600 bg-white rounded-full p-1"
                   size={32}
                 />
               </Marker>
           ))}
-          {rides.map(ride => (
-            <Marker key={ride.id} longitude={ride.pickup.coords.y} latitude={ride.pickup.coords.x}>
-                <MapPin
-                  className="text-yellow-500"
-                  size={32}
-                  fill="currentColor"
-                />
-            </Marker>
+          {rides
+            .filter(ride => ride.pickup?.coords?.y && ride.pickup?.coords?.x)
+            .map(ride => (
+              <Marker key={`ride-${ride.id}`} longitude={ride.pickup.coords.y} latitude={ride.pickup.coords.x}>
+                  <MapPin
+                    className="text-yellow-500"
+                    size={32}
+                    fill="currentColor"
+                  />
+              </Marker>
           ))}
         </Map>
       </div>

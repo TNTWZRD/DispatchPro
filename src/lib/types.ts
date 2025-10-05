@@ -42,6 +42,10 @@ export type Location = {
   coords: { x: number; y: number };
 };
 
+export type UserSettings = {
+  sendAssignmentNotifications?: boolean;
+}
+
 export type AppUser = {
     uid: string;
     id: string; 
@@ -53,6 +57,7 @@ export type AppUser = {
     photoURL?: string | null;
     createdAt?: Date;
     disabled?: boolean;
+    settings?: UserSettings;
 }
 
 export type Driver = {
@@ -129,10 +134,10 @@ export type Ride = {
   notes?: string;
   tags?: RideTag[];
   paymentDetails?: {
-    cash?: number;
-    card?: number;
-    check?: number;
-    tip?: number;
+    cash?: number | null;
+    card?: number | null;
+    check?: number | null;
+    tip?: number | null;
     cashTip?: number;
   };
   

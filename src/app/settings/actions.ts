@@ -10,8 +10,9 @@ import { Role } from '@/lib/types';
 
 const updateUserProfileSchema = z.object({
   userId: z.string(),
-  displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }),
+  displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).optional(),
   phoneNumber: z.string().optional(),
+  sendAssignmentNotifications: z.preprocess((val) => val === 'on' || val === true, z.boolean()).optional(),
 });
 
 export async function updateUserProfile(prevState: any, formData: FormData) {
@@ -26,38 +27,49 @@ export async function updateUserProfile(prevState: any, formData: FormData) {
         };
     }
     
-    const { userId, displayName, phoneNumber } = validatedFields.data;
+    const { userId, ...updateData } = validatedFields.data;
+
+    if (Object.keys(updateData).length === 0) {
+        return { type: "success", message: "No changes detected." };
+    }
+
     const batch = writeBatch(db);
 
     try {
-        // 1. Update the user document in 'users' collection
         const userRef = doc(db, 'users', userId);
-        const userData: { displayName: string; phoneNumber?: string; updatedAt: any; } = {
-            displayName,
-            updatedAt: serverTimestamp(),
-        };
-        if (phoneNumber) {
-            userData.phoneNumber = phoneNumber;
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) throw new Error("User not found");
+        
+        const existingSettings = userDoc.data().settings || {};
+        
+        const userDataToUpdate: any = { updatedAt: serverTimestamp() };
+        if (updateData.displayName) userDataToUpdate.displayName = updateData.displayName;
+        if (updateData.phoneNumber) userDataToUpdate.phoneNumber = updateData.phoneNumber;
+
+        if (updateData.sendAssignmentNotifications !== undefined) {
+             userDataToUpdate['settings.sendAssignmentNotifications'] = updateData.sendAssignmentNotifications;
         }
-        batch.update(userRef, userData);
 
-        // 2. Check if the user is a driver and update their 'drivers' document if they are.
-        const driverRef = doc(db, 'drivers', userId);
-        const driverDoc = await getDoc(driverRef);
+        batch.update(userRef, userDataToUpdate);
+        
+        // If it's a driver being updated, update their name/phone in the drivers collection too
+        if (updateData.displayName || updateData.phoneNumber) {
+            const driverRef = doc(db, 'drivers', userId);
+            const driverDoc = await getDoc(driverRef);
 
-        if (driverDoc.exists()) {
-            const driverData: { name: string; phoneNumber?: string; } = { name: displayName };
-            if (phoneNumber) {
-                driverData.phoneNumber = phoneNumber;
+            if (driverDoc.exists()) {
+                const driverDataToUpdate: any = {};
+                if (updateData.displayName) driverDataToUpdate.name = updateData.displayName;
+                if (updateData.phoneNumber) driverDataToUpdate.phoneNumber = updateData.phoneNumber;
+                batch.update(driverRef, driverDataToUpdate);
             }
-            batch.update(driverRef, driverData);
         }
 
         await batch.commit();
         
         revalidatePath('/settings');
-        revalidatePath('/'); // Revalidate main dashboard to reflect name changes
-        revalidatePath('/admin'); // Revalidate admin page
+        revalidatePath('/');
+        revalidatePath('/admin');
         
         return { type: "success", message: "Profile updated successfully." };
 

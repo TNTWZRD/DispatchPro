@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -11,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { RideCard } from './ride-card';
 import { CallLoggerForm } from './call-logger-form';
 import { VoiceControl } from './voice-control';
-import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PlusCircle, ZoomIn, ZoomOut, Minimize2, Maximize2, Calendar, History, XCircle, Siren, Briefcase, Mail, MessageSquare, Star, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { cn, getThreadIds, formatUserName } from '@/lib/utils';
 import { DriverColumn } from './driver-column';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -43,16 +42,6 @@ import { BanCheckDialog } from './ban-check-dialog';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { updateUserProfile } from '@/app/settings/actions';
-import { Skeleton } from './ui/skeleton';
-import dynamic from 'next/dynamic';
-
-const DynamicMapView = dynamic(
-  () => import('./map-view').then((mod) => mod.MapView),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="w-full aspect-[2/1] bg-muted rounded-lg" />,
-  }
-);
 
 
 function DispatchDashboardUI() {
@@ -74,7 +63,6 @@ function DispatchDashboardUI() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [activeTab, setActiveTab] = useState('waiting');
   const [showCancelled, setShowCancelled] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const { user, hasRole } = useAuth();
   const [isNotificationToggleChecked, setIsNotificationToggleChecked] = useState(user?.settings?.sendAssignmentNotifications ?? true);
@@ -176,22 +164,9 @@ function DispatchDashboardUI() {
         if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isReadBy?.includes(user.uid)).length) {
             const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
             if (lastMessage) {
-                let sender;
-                let senderName;
-                
-                if (lastMessage.senderId === DISPATCHER_ID) {
-                    senderName = "Dispatcher";
-                } else if (lastMessage.senderId === SUPPORT_TICKETS_ID) {
-                    senderName = "Support";
-                } else {
-                    // Try to find in users first, then drivers
-                    sender = allUsers.find(u => u.id === lastMessage.senderId) || 
-                             drivers.find(d => d.id === lastMessage.senderId);
-                    senderName = formatUserName(sender?.name, (sender as AppUser)?.email);
-                }
-                
+                const sender = allUsers.find(u => u.id === lastMessage.senderId);
                 sendBrowserNotification(
-                    `New message from ${senderName}`,
+                    `New message from ${formatUserName(sender?.name, sender?.email)}`,
                     lastMessage.text || "Sent an image or audio"
                 );
             }
@@ -331,8 +306,6 @@ function DispatchDashboardUI() {
           }
       }
     });
-
-
     
     // Ensure the current user always appears in the P2P list for others to message them
     if (user && !p2pContactsMap.has(user.id)) {
@@ -432,16 +405,10 @@ function DispatchDashboardUI() {
   const handleEditRide = async (updatedRide: Ride) => {
     if (!db) return;
     const { id, ...rideData } = updatedRide;
-    
-    // Filter out undefined values to avoid Firestore errors
-    const filteredRideData = Object.fromEntries(
-      Object.entries({
+    await updateDoc(doc(db, 'rides', id), {
         ...rideData,
         updatedAt: serverTimestamp()
-      }).filter(([_, value]) => value !== undefined)
-    );
-    
-    await updateDoc(doc(db, 'rides', id), filteredRideData);
+    });
     setEditingRide(null);
     setIsFormOpen(false);
   }
@@ -562,12 +529,7 @@ function DispatchDashboardUI() {
       updateData.shiftId = null;
     }
 
-    // Filter out undefined values to avoid Firestore errors
-    const filteredUpdateData = Object.fromEntries(
-      Object.entries(updateData).filter(([_, value]) => value !== undefined)
-    );
-
-    await updateDoc(doc(db, 'rides', rideId), filteredUpdateData);
+    await updateDoc(doc(db, 'rides', rideId), updateData);
   };
 
   const handleSetFare = async (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => {
@@ -614,11 +576,7 @@ function DispatchDashboardUI() {
       otherUserId = participant.id;
     }
     
-    const threadId = getThreadIds(otherUserId, 
-      isDispatchLog 
-        ? DISPATCHER_ID 
-        : user.uid
-    );
+    const threadId = getThreadIds(otherUserId, isDispatchLog ? DISPATCHER_ID : user.uid);
     
     messagesToUpdateQuery = query(
         collection(db, 'messages'),
@@ -634,7 +592,7 @@ function DispatchDashboardUI() {
         
         let shouldMarkAsRead = false;
         if (isDispatchLog) {
-          // If it's a dispatch log, just add the current user's ID
+          // If it's a dispatch log, just add the current dispatcher's ID
           if (!readers.includes(user.uid)) {
             shouldMarkAsRead = true;
           }
@@ -658,13 +616,9 @@ function DispatchDashboardUI() {
 
   
   const openChatWith = (contact: AppUser | Driver, isDispatchLog: boolean = false) => {
-    let target;
-    
-    if (isDispatchLog) {
-        target = { ...dispatcherUser, context: contact, name: formatUserName((contact as AppUser).displayName, (contact as AppUser).email) };
-    } else {
-        target = contact;
-    }
+    const target = isDispatchLog 
+        ? { ...dispatcherUser, context: contact, name: formatUserName((contact as AppUser).displayName, (contact as AppUser).email) } 
+        : contact;
 
     setCurrentChatTarget(target as AppUser | Driver);
     handleMarkMessagesAsRead(target as AppUser | Driver);
@@ -1066,16 +1020,6 @@ function DispatchDashboardUI() {
                         <p>Toggle Condensed View (Alt+S)</p>
                     </TooltipContent>
                 </Tooltip>
-                 <Tooltip>
-                    <TooltipTrigger asChild>
-                       <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                          {isSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isSidebarOpen ? 'Hide' : 'Show'} Sidebar</p>
-                    </TooltipContent>
-                </Tooltip>
              </TooltipProvider>
 
             <div className="flex items-center space-x-2">
@@ -1097,18 +1041,8 @@ function DispatchDashboardUI() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-row overflow-hidden">
-        {/* Sidebar */}
-        <div className={cn(
-            'flex flex-col gap-4 p-2 transition-all duration-300 ease-in-out',
-            isSidebarOpen ? 'w-[450px]' : 'w-0 p-0 opacity-0 overflow-hidden'
-        )}>
-          <DynamicMapView drivers={drivers} rides={pendingRides} />
-        </div>
-
-        <div className='flex-1 flex flex-col min-w-0 p-2'>
-          {isMobile ? renderMobileView() : renderDesktopView()}
-        </div>
+      <div className="flex flex-1 flex-row overflow-hidden p-2">
+        {isMobile ? renderMobileView() : renderDesktopView()}
       </div>
 
       <div className="fixed bottom-6 right-24 z-50 flex flex-col items-center gap-3">
@@ -1195,9 +1129,7 @@ function DispatchDashboardUI() {
                      </>
                  )}
 
-
-
-                {(chatDirectory.p2pContacts.length > 0 && chatDirectory.dispatchLogContacts.length > 0) && <Separator className="my-4"/>}
+                {chatDirectory.p2pContacts.length > 0 && chatDirectory.dispatchLogContacts.length > 0 && <Separator className="my-4"/>}
 
                 {chatDirectory.p2pContacts.filter(c => c.user.id !== user?.id).length > 0 && (
                     <>
@@ -1233,8 +1165,6 @@ function DispatchDashboardUI() {
                         })}
                     </>
                 )}
-                
-
             </div>
         </ResponsiveDialog>
         
@@ -1248,16 +1178,12 @@ function DispatchDashboardUI() {
                             <ArrowLeft />
                         </Button>
                         <span>
-                            { 
-                                (currentChatTarget as any).context || currentChatTarget.name === 'My Dispatch Log'
-                                    ? 'Dispatcher Log:' 
-                                    : 'Chat with' 
-                            }
+                            { (currentChatTarget as any).context || currentChatTarget.name === 'My Dispatch Log' ? 'Dispatcher Log:' : 'Chat with' }
                             &nbsp;
                             {
                                 (currentChatTarget as any).context 
                                     ? formatUserName((currentChatTarget as any).context.name, (currentChatTarget as any).context.email)
-                                    : currentChatTarget.name === 'My Dispatch Log'
+                                    : currentChatTarget.name === 'My Dispatch Log' 
                                         ? '' 
                                         : formatUserName(currentChatTarget.name, (currentChatTarget as AppUser).email)
                             }
