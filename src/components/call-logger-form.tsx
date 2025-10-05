@@ -166,7 +166,7 @@ export function CallLoggerForm({ onAddRide, onEditRide, rideToEdit }: CallLogger
                 <FormItem>
                 <FormLabel>Base Fare</FormLabel>
                 <FormControl>
-                    <Input type="number" min="0" {...field} onFocus={handleSelectOnFocus} />
+                    <Input type="number" min="0" step="0.1" {...field} onFocus={handleSelectOnFocus} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>

@@ -16,7 +16,7 @@ import { ResponsiveDialog } from './responsive-dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { updateRide } from '@/app/admin/actions';
+import { updateRide, updateRideTags } from '@/app/admin/actions';
 import { EditRideForm } from './edit-ride-form';
 
 
@@ -137,6 +137,38 @@ export function UnpaidRidesTable() {
     setSettlingFareRide(null);
   };
 
+  const handleSaveAndSettle = async () => {
+    if (!settlingFareRide) return;
+    const newTotalFare = totalPayment > 0 ? totalPayment : settlingFareRide.totalFare
+    
+    const result = await updateRide(settlingFareRide.id, {
+      totalFare: newTotalFare,
+      paymentDetails: {
+        cash: fareCash || undefined,
+        card: fareCard || undefined,
+        check: fareCheck || undefined,
+        tip: fareTip || undefined,
+      }
+    });
+
+    if (result.type === 'success') {
+      // Always remove UNPAID tag when using "Save and Settle"
+      if (settlingFareRide.tags?.includes('UNPAID')) {
+        const tagResult = await updateRideTags(settlingFareRide.id, 'UNPAID', false);
+        if (tagResult.type === 'success') {
+          toast({ title: 'Success', description: 'Fare saved and ride settled (UNPAID tag removed).' });
+        } else {
+          toast({ title: 'Partial Success', description: 'Fare updated but failed to remove UNPAID tag.' });
+        }
+      } else {
+        toast({ title: 'Success', description: 'Fare saved and ride settled.' });
+      }
+    } else {
+       toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+    setSettlingFareRide(null);
+  };
+
 
   if (loading) {
     return (
@@ -232,6 +264,7 @@ export function UnpaidRidesTable() {
                     <Input
                         id="fare-cash"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 20.00"
                         value={fareCash || ''}
                         onChange={(e) => setFareCash(parseFloat(e.target.value) || undefined)}
@@ -242,6 +275,7 @@ export function UnpaidRidesTable() {
                     <Input
                         id="fare-card"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 25.50"
                         value={fareCard || ''}
                         onChange={(e) => setFareCard(parseFloat(e.target.value) || undefined)}
@@ -252,6 +286,7 @@ export function UnpaidRidesTable() {
                     <Input
                         id="fare-check"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 50.00"
                         value={fareCheck || ''}
                         onChange={(e) => setFareCheck(parseFloat(e.target.value) || undefined)}
@@ -261,6 +296,7 @@ export function UnpaidRidesTable() {
                     <Label htmlFor="fare-tip">Tip (Card)</Label>                    <Input
                         id="fare-tip"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 5.00"
                         value={fareTip || ''}
                         onChange={(e) => setFareTip(parseFloat(e.target.value) || undefined)}
@@ -274,7 +310,7 @@ export function UnpaidRidesTable() {
                     <span>Subtotal:</span>
                     <span>{formatCurrency(totalPayment)}</span>
                 </div>
-                 {fareTip > 0 && (
+                 {fareTip && fareTip > 0 && (
                     <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Tip:</span>
                         <span>+ {formatCurrency(fareTip)}</span>
@@ -299,9 +335,12 @@ export function UnpaidRidesTable() {
               </p>
             )}
              <div className="sm:h-80 md:h-0" />
-            <div className="flex justify-end p-4">
-                <Button onClick={handleSetFare}>
+            <div className="flex justify-end gap-2 p-4">
+                <Button variant="outline" onClick={handleSetFare}>
                 Save Fare
+                </Button>
+                <Button onClick={handleSaveAndSettle}>
+                Save and Settle
                 </Button>
             </div>
           </div>

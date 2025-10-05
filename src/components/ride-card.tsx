@@ -103,6 +103,12 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
   };
   
   const handleMarkCompleted = () => {
+    // If ride is marked as UNPAID, complete without asking for details
+    if (ride.tags?.includes('UNPAID')) {
+      onChangeStatus(ride.id, 'completed');
+      return;
+    }
+
     const paymentTotal = (ride.paymentDetails?.cash || 0) + (ride.paymentDetails?.card || 0) + (ride.paymentDetails?.check || 0);
     const isPaid = paymentTotal >= ride.totalFare;
 
@@ -113,18 +119,21 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
     }
   };
 
-  const handleConfirmCashPayment = () => {
-    onSetFare(ride.id, {
-      totalFare: ride.totalFare,
-      paymentDetails: { cash: ride.totalFare, card: null, check: null, tip: null }
-    });
-    onChangeStatus(ride.id, 'completed');
-    setIsPaymentConfirmationOpen(false);
-  };
-
   const handleEnterPaymentDetails = () => {
     setIsPaymentConfirmationOpen(false);
     setIsFareModalOpen(true);
+  };
+
+  const handleMarkUnpaid = async () => {
+    // Add UNPAID tag and complete the ride
+    const result = await updateRideTags(ride.id, 'UNPAID', true);
+    if (result.type === 'success') {
+      onChangeStatus(ride.id, 'completed');
+      toast({ title: 'Success', description: 'Ride marked as unpaid and completed.' });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+    setIsPaymentConfirmationOpen(false);
   };
   
   const formatCurrency = (amount?: number) => {
@@ -420,6 +429,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
                     <Input
                         id="fare-cash"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 20.00"
                         value={fareCash || ''}
                         onChange={(e) => setFareCash(parseFloat(e.target.value) || undefined)}
@@ -430,6 +440,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
                     <Input
                         id="fare-card"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 25.50"
                         value={fareCard || ''}
                         onChange={(e) => setFareCard(parseFloat(e.target.value) || undefined)}
@@ -440,6 +451,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
                     <Input
                         id="fare-check"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 50.00"
                         value={fareCheck || ''}
                         onChange={(e) => setFareCheck(parseFloat(e.target.value) || undefined)}
@@ -449,6 +461,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
                     <Label htmlFor="fare-tip">Tip (Card)</Label>                    <Input
                         id="fare-tip"
                         type="number"
+                        step="0.1"
                         placeholder="e.g., 5.00"
                         value={fareTip || ''}
                         onChange={(e) => setFareTip(parseFloat(e.target.value) || undefined)}
@@ -462,7 +475,7 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
                     <span>Subtotal:</span>
                     <span>{formatCurrency(totalPayment)}</span>
                 </div>
-                 {fareTip > 0 && (
+                 {fareTip && fareTip > 0 && (
                     <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Tip:</span>
                         <span>+ {formatCurrency(fareTip)}</span>
@@ -498,18 +511,21 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
       <AlertDialog open={isPaymentConfirmationOpen} onOpenChange={setIsPaymentConfirmationOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+            <AlertDialogTitle>Payment Status</AlertDialogTitle>
             <AlertDialogDescription>
-              This ride has not been marked as fully paid. Was the fare ({formatCurrency(ride.totalFare)}) paid in full with cash?
+              The fare ({formatCurrency(ride.totalFare)}) has not been fully paid. How would you like to proceed?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkUnpaid} className="bg-destructive hover:bg-destructive/80">
+              Mark as Unpaid
+            </AlertDialogAction>
             <AlertDialogAction onClick={handleEnterPaymentDetails}>
               Enter Payment Details
             </AlertDialogAction>
-            <AlertDialogAction onClick={handleConfirmCashPayment}>
-              Yes, Paid in Cash
+            <AlertDialogAction onClick={() => { setIsPaymentConfirmationOpen(false); onEdit(ride); }}>
+              Edit Ride
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

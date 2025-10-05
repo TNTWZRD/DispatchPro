@@ -16,6 +16,7 @@ export enum Role {
 }
 
 export const DISPATCHER_ID = 'dispatcher-main';
+export const SUPPORT_TICKETS_ID = 'support-tickets-main';
 
 export const dispatcherUser: AppUser = {
     id: DISPATCHER_ID,
@@ -24,6 +25,15 @@ export const dispatcherUser: AppUser = {
     displayName: 'Dispatch Log',
     email: '',
     role: Role.DISPATCHER,
+};
+
+export const supportTicketsUser: AppUser = {
+    id: SUPPORT_TICKETS_ID,
+    uid: SUPPORT_TICKETS_ID,
+    name: 'Support Tickets',
+    displayName: 'Support Tickets',
+    email: '',
+    role: Role.SUPER_ADMIN,
 };
 
 

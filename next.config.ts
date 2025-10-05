@@ -6,11 +6,6 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  experimental: {
-    allowedDevOrigins: [
-      "https://9000-firebase-studio-1757361882116.cluster-ux5mmlia3zhhask7riihruxydo.cloudworkstations.dev",
-    ],
-  },
   typescript: {
     ignoreBuildErrors: true,
   },

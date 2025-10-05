@@ -7,7 +7,7 @@ import type { Ride, Driver, Message, Shift, AppUser } from '@/lib/types';
 import { DISPATCHER_ID, dispatcherUser } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DriverRideCard } from './driver-ride-card';
-import { CheckCircle, MessageCircle, LogOut, Users, X } from 'lucide-react';
+import { CheckCircle, MessageCircle, LogOut, Users, X, ShieldCheck } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { ResponsiveDialog } from './responsive-dialog';
 import { DriverEditForm } from './driver-edit-form';
@@ -55,6 +55,7 @@ export function DriverDashboard() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [currentDriver, setCurrentDriver] = useState<Driver | null>(null);
   const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [editingRide, setEditingRide] = useState<Ride | null>(null);
   
@@ -89,6 +90,11 @@ export function DriverDashboard() {
         setAllDrivers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Driver)));
     });
 
+    const usersQuery = query(collection(db, "users"));
+    const usersUnsub = onSnapshot(usersQuery, (snapshot) => {
+        setAllUsers(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AppUser)));
+    });
+
     const driverRef = doc(db, "drivers", user.uid);
     const unsubDriver = onSnapshot(driverRef, (doc) => {
         if (doc.exists()) {
@@ -100,6 +106,7 @@ export function DriverDashboard() {
 
     return () => {
         driversUnsub();
+        usersUnsub();
         unsubDriver();
     };
   }, [user]);
@@ -157,13 +164,25 @@ export function DriverDashboard() {
 
       if (newIncomingMessages.length > 0) {
           const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
-          const senderIsDispatcher = lastMessage.senderId === DISPATCHER_ID;
-          const sender = senderIsDispatcher 
-              ? dispatcherUser 
-              : allDrivers.find(d => d.id === lastMessage.senderId);
+          let sender;
+          let senderName;
+          
+          if (lastMessage.senderId === DISPATCHER_ID) {
+              senderName = "Dispatcher";
+
+          } else {
+              // Try to find in drivers first, then users
+              sender = allDrivers.find(d => d.id === lastMessage.senderId) || 
+                       allUsers.find(u => u.id === lastMessage.senderId);
+              if (!sender) {
+                  senderName = "Unknown User";
+              } else {
+                  senderName = formatUserName(sender.name, (sender as AppUser)?.email);
+              }
+          }
 
           sendBrowserNotification(
-              `New message from ${formatUserName(sender?.name, (sender as AppUser)?.email)}`,
+              `New message from ${senderName}`,
               lastMessage.text || "Sent an image or audio"
           );
       }
@@ -238,6 +257,8 @@ export function DriverDashboard() {
     // A message in the dispatch log is unread if the driver has not read it.
     return dispatchLogMessages.filter(m => !m.isReadBy?.includes(currentDriver.id)).length;
   }, [dispatchLogMessages, currentDriver]);
+
+
   
   const handleEditRide = async (rideId: string, details: { cashTip?: number; notes?: string }) => {
     const rideToUpdate = rides.find(ride => ride.id === rideId);
@@ -412,6 +433,7 @@ export function DriverDashboard() {
             )}
             <span className="sr-only">Open Chat with Dispatch</span>
           </Button>
+
       </div>
 
       
@@ -446,11 +468,19 @@ export function DriverDashboard() {
         >
           <ChatView
             participant={chatParticipant}
-            messages={chatParticipant.id === DISPATCHER_ID ? dispatchLogMessages : p2pMessages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))}
+            messages={
+              chatParticipant.id === DISPATCHER_ID 
+                ? dispatchLogMessages 
+                : p2pMessages.filter(m => m.threadId?.includes(currentDriver.id) && m.threadId?.includes(chatParticipant.id))
+            }
             allDrivers={allDrivers}
             onSendMessage={handleSendMessage}
             onToggleStar={toggleStarMessage}
-            threadId={getThreadIds(currentDriver.id, chatParticipant.id)}
+            threadId={
+              chatParticipant.id === DISPATCHER_ID 
+                ? getThreadIds(currentDriver.id, DISPATCHER_ID)
+                : getThreadIds(currentDriver.id, chatParticipant.id)
+            }
           />
       </ResponsiveDialog>
       )}

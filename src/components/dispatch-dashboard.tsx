@@ -158,9 +158,22 @@ function DispatchDashboardUI() {
         if (prevMessagesRef.current.length > 0 && newIncomingMessages.length > prevMessagesRef.current.filter(m => m.recipientId === user.uid && !m.isReadBy?.includes(user.uid)).length) {
             const lastMessage = newIncomingMessages.sort((a,b) => (b.timestamp?.getTime() ?? 0) - (a.timestamp?.getTime() ?? 0))[0];
             if (lastMessage) {
-                const sender = allUsers.find(u => u.id === lastMessage.senderId);
+                let sender;
+                let senderName;
+                
+                if (lastMessage.senderId === DISPATCHER_ID) {
+                    senderName = "Dispatcher";
+                } else if (lastMessage.senderId === SUPPORT_TICKETS_ID) {
+                    senderName = "Support";
+                } else {
+                    // Try to find in users first, then drivers
+                    sender = allUsers.find(u => u.id === lastMessage.senderId) || 
+                             drivers.find(d => d.id === lastMessage.senderId);
+                    senderName = formatUserName(sender?.name, (sender as AppUser)?.email);
+                }
+                
                 sendBrowserNotification(
-                    `New message from ${formatUserName(sender?.name, sender?.email)}`,
+                    `New message from ${senderName}`,
                     lastMessage.text || "Sent an image or audio"
                 );
             }
@@ -300,6 +313,8 @@ function DispatchDashboardUI() {
           }
       }
     });
+
+
     
     // Ensure the current user always appears in the P2P list for others to message them
     if (user && !p2pContactsMap.has(user.id)) {
@@ -399,10 +414,16 @@ function DispatchDashboardUI() {
   const handleEditRide = async (updatedRide: Ride) => {
     if (!db) return;
     const { id, ...rideData } = updatedRide;
-    await updateDoc(doc(db, 'rides', id), {
+    
+    // Filter out undefined values to avoid Firestore errors
+    const filteredRideData = Object.fromEntries(
+      Object.entries({
         ...rideData,
         updatedAt: serverTimestamp()
-    });
+      }).filter(([_, value]) => value !== undefined)
+    );
+    
+    await updateDoc(doc(db, 'rides', id), filteredRideData);
     setEditingRide(null);
     setIsFormOpen(false);
   }
@@ -521,7 +542,12 @@ function DispatchDashboardUI() {
       updateData.shiftId = null;
     }
 
-    await updateDoc(doc(db, 'rides', rideId), updateData);
+    // Filter out undefined values to avoid Firestore errors
+    const filteredUpdateData = Object.fromEntries(
+      Object.entries(updateData).filter(([_, value]) => value !== undefined)
+    );
+
+    await updateDoc(doc(db, 'rides', rideId), filteredUpdateData);
   };
 
   const handleSetFare = async (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => {
@@ -568,7 +594,11 @@ function DispatchDashboardUI() {
       otherUserId = participant.id;
     }
     
-    const threadId = getThreadIds(otherUserId, isDispatchLog ? DISPATCHER_ID : user.uid);
+    const threadId = getThreadIds(otherUserId, 
+      isDispatchLog 
+        ? DISPATCHER_ID 
+        : user.uid
+    );
     
     messagesToUpdateQuery = query(
         collection(db, 'messages'),
@@ -584,7 +614,7 @@ function DispatchDashboardUI() {
         
         let shouldMarkAsRead = false;
         if (isDispatchLog) {
-          // If it's a dispatch log, just add the current dispatcher's ID
+          // If it's a dispatch log, just add the current user's ID
           if (!readers.includes(user.uid)) {
             shouldMarkAsRead = true;
           }
@@ -608,9 +638,13 @@ function DispatchDashboardUI() {
 
   
   const openChatWith = (contact: AppUser | Driver, isDispatchLog: boolean = false) => {
-    const target = isDispatchLog 
-        ? { ...dispatcherUser, context: contact, name: formatUserName((contact as AppUser).displayName, (contact as AppUser).email) } 
-        : contact;
+    let target;
+    
+    if (isDispatchLog) {
+        target = { ...dispatcherUser, context: contact, name: formatUserName((contact as AppUser).displayName, (contact as AppUser).email) };
+    } else {
+        target = contact;
+    }
 
     setCurrentChatTarget(target as AppUser | Driver);
     handleMarkMessagesAsRead(target as AppUser | Driver);
@@ -1096,7 +1130,9 @@ function DispatchDashboardUI() {
                      </>
                  )}
 
-                {chatDirectory.p2pContacts.length > 0 && chatDirectory.dispatchLogContacts.length > 0 && <Separator className="my-4"/>}
+
+
+                {(chatDirectory.p2pContacts.length > 0 && chatDirectory.dispatchLogContacts.length > 0) && <Separator className="my-4"/>}
 
                 {chatDirectory.p2pContacts.filter(c => c.user.id !== user?.id).length > 0 && (
                     <>
@@ -1132,6 +1168,8 @@ function DispatchDashboardUI() {
                         })}
                     </>
                 )}
+                
+
             </div>
         </ResponsiveDialog>
         
@@ -1145,12 +1183,16 @@ function DispatchDashboardUI() {
                             <ArrowLeft />
                         </Button>
                         <span>
-                            { (currentChatTarget as any).context || currentChatTarget.name === 'My Dispatch Log' ? 'Dispatcher Log:' : 'Chat with' }
+                            { 
+                                (currentChatTarget as any).context || currentChatTarget.name === 'My Dispatch Log'
+                                    ? 'Dispatcher Log:' 
+                                    : 'Chat with' 
+                            }
                             &nbsp;
                             {
                                 (currentChatTarget as any).context 
                                     ? formatUserName((currentChatTarget as any).context.name, (currentChatTarget as any).context.email)
-                                    : currentChatTarget.name === 'My Dispatch Log' 
+                                    : currentChatTarget.name === 'My Dispatch Log'
                                         ? '' 
                                         : formatUserName(currentChatTarget.name, (currentChatTarget as AppUser).email)
                             }

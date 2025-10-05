@@ -40,3 +40,9 @@ export function formatPhoneNumber(phoneNumberString?: string) {
   }
   return phoneNumberString;
 }
+
+export function isSuperAdmin(userRole?: number) {
+  if (!userRole) return false;
+  const { Role } = require('@/lib/types');
+  return (userRole & Role.SUPER_ADMIN) === Role.SUPER_ADMIN;
+}
