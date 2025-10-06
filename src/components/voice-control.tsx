@@ -188,6 +188,9 @@ export function VoiceControl({ rides, drivers, onAddRide, onAssignDriver, onChan
           passengerCount: result.passengerCount,
           movingFee: result.movingFee,
           scheduledTime: result.scheduledTime ? new Date(result.scheduledTime) : undefined,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          totalFare: 0,
         });
     } else if (result.intent === 'manage') {
         switch (result.action) {

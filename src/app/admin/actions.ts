@@ -821,7 +821,7 @@ export async function updateRide(rideId: string, updateData: Partial<Ride>) {
         if (dataToUpdate.paymentDetails) {
             for (const key in dataToUpdate.paymentDetails) {
                 if (dataToUpdate.paymentDetails[key as keyof typeof dataToUpdate.paymentDetails] === undefined) {
-                    dataToUpdate.paymentDetails[key as keyof typeof dataToUpdate.paymentDetails] = null;
+                    dataToUpdate.paymentDetails[key as keyof typeof dataToUpdate.paymentDetails] = undefined;
                 }
             }
         }

@@ -182,8 +182,9 @@ export const OfflineAuthProvider = ({ children }: { children: React.ReactNode })
     ]);
     
     const validInvite = invites.find(invite => {
-      if (invite.expiresAt) {
-        return invite.expiresAt > new Date();
+      const inviteData = invite as any;
+      if (inviteData.expiresAt) {
+        return inviteData.expiresAt > new Date();
       }
       return true;
     });
@@ -298,7 +299,7 @@ export const OfflineAuthProvider = ({ children }: { children: React.ReactNode })
       await OfflineDataLayer.updateDocument('invites', inviteDoc.id, {
         status: 'completed',
         usedBy: fbUser.uid
-      }, fbUser.uid);
+      } as any, fbUser.uid);
     }
 
     return result;

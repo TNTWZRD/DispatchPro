@@ -45,10 +45,10 @@ const statusConfig: Record<RideStatus, { color: string; icon: React.ReactNode }>
 export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFare, onUnassignDriver, onEdit, onUnschedule, onToggleStar }: RideCardProps) {
   const [isFareModalOpen, setIsFareModalOpen] = useState(false);
   const [isPaymentConfirmationOpen, setIsPaymentConfirmationOpen] = useState(false);
-  const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash);
-  const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card);
-  const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check);
-  const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip);
+  const [fareCash, setFareCash] = useState<number | undefined>(ride.paymentDetails?.cash ?? undefined);
+  const [fareCard, setFareCard] = useState<number | undefined>(ride.paymentDetails?.card ?? undefined);
+  const [fareCheck, setFareCheck] = useState<number | undefined>(ride.paymentDetails?.check ?? undefined);
+  const [fareTip, setFareTip] = useState<number | undefined>(ride.paymentDetails?.tip ?? undefined);
   
   const { isCondensed } = useCondensedMode();
   const { toast } = useToast();
@@ -71,9 +71,9 @@ export function RideCard({ ride, shifts, onAssignDriver, onChangeStatus, onSetFa
     if (isFareModalOpen) {
       const hasPaymentDetails = ride.paymentDetails && (ride.paymentDetails.cash || ride.paymentDetails.card || ride.paymentDetails.check);
       setFareCash(ride.paymentDetails?.cash ?? (!hasPaymentDetails ? ride.totalFare : undefined));
-      setFareCard(ride.paymentDetails?.card);
-      setFareCheck(ride.paymentDetails?.check);
-      setFareTip(ride.paymentDetails?.tip);
+      setFareCard(ride.paymentDetails?.card ?? undefined);
+      setFareCheck(ride.paymentDetails?.check ?? undefined);
+      setFareTip(ride.paymentDetails?.tip ?? undefined);
     }
   }, [ride.paymentDetails, ride.totalFare, isFareModalOpen]);
 

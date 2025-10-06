@@ -20,7 +20,7 @@ import {
 interface ResponsiveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
+  title: React.ReactNode;
   children: React.ReactNode;
 }
 

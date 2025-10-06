@@ -74,8 +74,13 @@ export function DriverManagementTable({ isSuperAdminView = false }: DriverManage
       const data = snapshot.docs.map(doc => {
         const docData = doc.data();
         return {
-          ...docData,
           id: doc.id,
+          name: docData.name || 'Unknown',
+          phoneNumber: docData.phoneNumber || '',
+          rating: docData.rating || 0,
+          status: docData.status || 'offline',
+          location: docData.location || { x: 0, y: 0 },
+          currentShiftId: docData.currentShiftId || null,
           createdAt: docData.createdAt instanceof Timestamp ? docData.createdAt.toDate() : new Date(),
           updatedAt: docData.updatedAt instanceof Timestamp ? docData.updatedAt.toDate() : new Date(),
         } as Driver;

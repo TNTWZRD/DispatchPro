@@ -76,10 +76,12 @@ export default function ShiftsPage() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
                                     <Calendar
-                                    mode="single"
-                                    selected={selectedDate}
-                                    onSelect={(date) => setSelectedDate(date || new Date())}
-                                    initialFocus
+                                    {...{
+                                        mode: "single",
+                                        selected: selectedDate,
+                                        onSelect: (date: Date | undefined) => setSelectedDate(date || new Date()),
+                                        initialFocus: true
+                                    } as any}
                                     />
                                 </PopoverContent>
                             </Popover>

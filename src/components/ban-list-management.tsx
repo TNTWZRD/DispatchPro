@@ -22,7 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EditBanForm } from './edit-ban-form';
 
 
-const addBanInitialState = { type: '', message: '', errors: null };
+const addBanInitialState = { type: '', message: '', errors: undefined };
 function AddBanSubmitButton() {
   const { pending } = useFormStatus();
   return (

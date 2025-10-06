@@ -215,7 +215,7 @@ export function ShiftManagementTable({ selectedDate }: ShiftManagementTableProps
 
     <EditShiftForm
         shift={editingShift}
-        driver={editingShift?.driver}
+        driver={editingShift ? drivers.find(d => d.id === editingShift.driverId) : undefined}
         isOpen={!!editingShift}
         onOpenChange={(isOpen) => {
             if (!isOpen) setEditingShift(null);

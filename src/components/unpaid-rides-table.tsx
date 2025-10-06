@@ -36,10 +36,10 @@ export function UnpaidRidesTable() {
 
   useEffect(() => {
     if (settlingFareRide) {
-        setFareCash(settlingFareRide.paymentDetails?.cash);
-        setFareCard(settlingFareRide.paymentDetails?.card);
-        setFareCheck(settlingFareRide.paymentDetails?.check);
-        setFareTip(settlingFareRide.paymentDetails?.tip);
+        setFareCash(settlingFareRide.paymentDetails?.cash ?? undefined);
+        setFareCard(settlingFareRide.paymentDetails?.card ?? undefined);
+        setFareCheck(settlingFareRide.paymentDetails?.check ?? undefined);
+        setFareTip(settlingFareRide.paymentDetails?.tip ?? undefined);
     } else {
         setFareCash(undefined);
         setFareCard(undefined);

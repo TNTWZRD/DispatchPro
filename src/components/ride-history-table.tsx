@@ -63,7 +63,7 @@ export function RideHistoryTable({ rides, drivers }: RideHistoryTableProps) {
             <TableCell>{ride.passengerPhone}</TableCell>
             <TableCell>{getDriverName(ride.driverId)}</TableCell>
             <TableCell>{ride.pickup.name}</TableCell>
-            <TableCell>{ride.dropoff.name}</TableCell>
+            <TableCell>{ride.dropoff?.name || 'Unknown'}</TableCell>
             <TableCell>{formatCurrency(ride.totalFare)}</TableCell>
             <TableCell>{getPaymentSummary(ride)}</TableCell>
             <TableCell>

@@ -12,7 +12,7 @@ type RideListProps = {
   drivers: Driver[];
   onAssignDriver: (rideId: string, driverId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; } }) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number | null; card?: number | null; check?: number | null; tip?: number | null; } }) => void;
   onUnassignDriver: (rideId: string) => void;
 };
 
@@ -30,11 +30,14 @@ export function RideList({ title, rides, drivers, onAssignDriver, onChangeStatus
                 <RideCard
                   key={ride.id}
                   ride={ride}
-                  drivers={drivers}
+                  shifts={[]}
                   onAssignDriver={onAssignDriver}
                   onChangeStatus={onChangeStatus}
                   onSetFare={onSetFare}
                   onUnassignDriver={onUnassignDriver}
+                  onEdit={() => {}}
+                  onUnschedule={() => {}}
+                  onToggleStar={async () => ({ type: 'success', message: 'Toggled' })}
                 />
               ))}
             </div>

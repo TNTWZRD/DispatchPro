@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Ride, Driver, RideStatus, Message, Shift, Vehicle, AppUser, Ban } from '@/lib/types';
-import { Role, DISPATCHER_ID, dispatcherUser } from '@/lib/types';
+import { Role, DISPATCHER_ID, dispatcherUser, SUPPORT_TICKETS_ID } from '@/lib/types';
 import { DragDropContext, type DropResult, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -408,7 +408,7 @@ function DispatchDashboardUI() {
     
     const rideToSave = {
         ...newRideData,
-        scheduledTime: newRideData.scheduledTime || null,
+        scheduledTime: newRideData.scheduledTime || undefined,
     };
 
     const newRide: Omit<Ride, 'id'> = {
@@ -567,10 +567,10 @@ function DispatchDashboardUI() {
       Object.entries(updateData).filter(([_, value]) => value !== undefined)
     );
 
-    await updateDoc(doc(db, 'rides', rideId), filteredUpdateData);
+    await updateDoc(doc(db, 'rides', rideId), filteredUpdateData as any);
   };
 
-  const handleSetFare = async (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => {
+  const handleSetFare = async (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number | null; card?: number | null; check?: number | null; tip?: number | null; } }) => {
     if (!db) return;
     await updateDoc(doc(db, 'rides', rideId), {
         totalFare: details.totalFare,
@@ -898,7 +898,7 @@ function DispatchDashboardUI() {
           <TabsTrigger value="waiting">Waiting ({pendingRides.length})</TabsTrigger>
           {hasScheduledRides && <TabsTrigger value="scheduled">Scheduled ({scheduledRides.length})</TabsTrigger>}
           {activeShifts.map(shift => (
-            <TabsTrigger key={shift.id} value={shift.id}>{shift.driver.name.split(' ')[0]}</TabsTrigger>
+            <TabsTrigger key={shift.id} value={shift.id}>{drivers.find(d => d.id === shift.driverId)?.name.split(' ')[0] || 'Unknown'}</TabsTrigger>
           ))}
         </TabsList>
         
@@ -1138,7 +1138,7 @@ function DispatchDashboardUI() {
                 toast({
                     variant: 'destructive',
                     title: 'Assignment Failed',
-                    description: `Could not assign to ${formatUserName(driver?.name, (driver as AppUser)?.email)}. The driver is not on an active shift.`
+                    description: `Could not assign to ${formatUserName(driver?.name, undefined)}. The driver is not on an active shift.`
                 });
             }
           }}
@@ -1148,11 +1148,7 @@ function DispatchDashboardUI() {
         <ResponsiveDialog
             open={isChatDirectoryOpen}
             onOpenChange={setIsChatDirectoryOpen}
-            title={
-                <div className="flex items-center gap-2">
-                    My Messages
-                </div>
-            }
+            title="My Messages"
         >
              <div className="p-4 space-y-1">
                  {chatDirectory.dispatchLogContacts.length > 0 && (

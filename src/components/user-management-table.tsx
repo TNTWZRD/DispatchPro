@@ -261,7 +261,7 @@ export function UserManagementTable({ isSuperAdminView = false }: UserManagement
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDisableUser(user.uid, user.displayName)}>
+                          <AlertDialogAction onClick={() => handleDisableUser(user.uid, user.displayName || null)}>
                               Confirm Disable
                           </AlertDialogAction>
                       </AlertDialogFooter>

@@ -15,7 +15,7 @@ import type { Ban } from '@/lib/types';
 
 const initialState = {
   message: '',
-  errors: null,
+  errors: undefined,
   type: '',
 };
 

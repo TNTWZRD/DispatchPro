@@ -25,7 +25,7 @@ type DriverColumnProps = {
   allDrivers: Driver[];
   onAssignDriver: (rideId: string, shiftId: string) => void;
   onChangeStatus: (rideId: string, newStatus: RideStatus) => void;
-  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number; card?: number; check?: number; tip?: number; } }) => void;
+  onSetFare: (rideId: string, details: { totalFare: number; paymentDetails: { cash?: number | null; card?: number | null; check?: number | null; tip?: number | null; } }) => void;
   onUnassignDriver: (rideId: string) => void;
   onEditRide: (ride: Ride) => void;
   onUnscheduleRide: (rideId: string) => void;

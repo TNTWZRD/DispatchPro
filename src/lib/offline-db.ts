@@ -43,6 +43,7 @@ export interface SyncMetadata {
 
 // Extended types with offline metadata
 export interface OfflineDocument {
+  id: string;
   _offline?: {
     id: string;
     lastModified: Date;

@@ -116,7 +116,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
        if (additionalInfo?.isNewUser) {
          const newAppUser: AppUser = {
            uid: fbUser.uid,
+           id: fbUser.uid,
            email: fbUser.email,
+           name: fbUser.displayName,
            displayName: fbUser.displayName,
            role: Role.DISPATCHER, 
            photoURL: fbUser.photoURL,
@@ -149,7 +151,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const fbUser = result.user;
     const newAppUser: AppUser = {
         uid: fbUser.uid,
+        id: fbUser.uid,
         email: fbUser.email,
+        name: fbUser.displayName,
         displayName: fbUser.displayName, 
         role: Role.DISPATCHER, 
     };

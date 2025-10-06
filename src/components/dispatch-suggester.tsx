@@ -34,8 +34,8 @@ export function DispatchSuggester({ pendingRides, availableDrivers, onAssignSugg
         pendingRideRequests: pendingRides.map(r => ({
           requestId: r.id,
           pickupLocation: r.pickup.name,
-          dropoffLocation: r.dropoff.name,
-          passengerCount: r.passengerCount,
+          dropoffLocation: r.dropoff?.name || 'Unknown destination',
+          passengerCount: r.passengerCount || 1,
           movingFee: r.movingFee,
           scheduledTime: r.scheduledTime?.toISOString(),
         })),
