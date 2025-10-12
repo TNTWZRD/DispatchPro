@@ -12,6 +12,14 @@ import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firest
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const DynamicTraccarMapView = dynamic(
+  () => import('../../../components/TraccarMapView').then((mod) => mod.TraccarMapView),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="w-full h-full bg-muted" />,
+  }
+);
+
 const DynamicMapView = dynamic(
   () => import('../../../components/map-view').then((mod) => mod.MapView),
   {
@@ -98,9 +106,13 @@ export default function MapPage() {
     
     return (
         <div className="flex h-full flex-col gap-6 bg-secondary/50 p-4 md:p-6">
-            <AdminBreadcrumb segments={[{ name: 'Admin', href: '/admin' }, { name: 'Live Map' }]} />
+            <AdminBreadcrumb segments={[{ name: 'Admin', href: '/admin' }, { name: 'Fleet Map' }]} />
             <div className="min-h-0 flex-1">
-                <DynamicMapView rides={rides} drivers={drivers} />
+                <DynamicTraccarMapView 
+                    className="h-full" 
+                    mode="both" 
+                    height="calc(100vh - 200px)"
+                />
             </div>
         </div>
     );

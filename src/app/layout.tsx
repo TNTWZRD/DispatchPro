@@ -6,6 +6,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
+import { TraccarProvider } from '@/context/traccar-context';
 import { MainHeader } from '@/components/main-header';
 import AuthDebugger from '@/components/AuthDebugger';
 
@@ -26,6 +27,7 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased h-full")}>
         <AuthProvider>
+          <TraccarProvider>
             <div className="flex flex-col h-full">
                 <MainHeader />
                 <main className="flex-1 overflow-hidden">
@@ -34,6 +36,7 @@ export default function RootLayout({
             </div>
             <Toaster />
             <AuthDebugger />
+          </TraccarProvider>
         </AuthProvider>
       </body>
     </html>

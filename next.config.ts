@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Allow cross-origin requests from our domain in development
+  allowedDevOrigins: ['dispatchpro.jajliardo.com'],
   images: {
     remotePatterns: [
       {

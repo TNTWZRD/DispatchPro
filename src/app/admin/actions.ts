@@ -38,7 +38,7 @@ export async function sendInviteEmail(prevState: any, formData: FormData) {
   
   const { email, invitedById } = validatedFields.data;
   const inviteCode = generateInviteCode();
-  const registrationUrl = `http://localhost:9002/register?code=${inviteCode}`;
+  const registrationUrl = `https://dispatchpro.jajliardo.com/register?code=${inviteCode}`;
 
   try {
     // Store invite in Firestore
@@ -93,7 +93,7 @@ export async function inviteDriver(prevState: any, formData: FormData) {
   
   const { email, driverName, invitedById } = validatedFields.data;
   const inviteCode = generateInviteCode();
-  const registrationUrl = `http://localhost:9002/register?code=${inviteCode}`;
+  const registrationUrl = `https://dispatchpro.jajliardo.com/register?code=${inviteCode}`;
 
   try {
      // Store invite in Firestore
