@@ -1,0 +1,49 @@
+rules_version = 2;
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Authenticated users can read all users (for admin/dispatcher functionality)
+    match /users/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    // Drivers collection - users can read/write their own driver document
+    match /drivers/{driverId} {
+      allow read, write: if request.auth != null && request.auth.uid == driverId;
+    }
+    
+    // Authenticated users can read all drivers (for dispatch functionality)
+    match /drivers/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    // Rides collection - authenticated users can read/write
+    match /rides/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Messages collection - authenticated users can read/write
+    match /messages/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Invites collection - authenticated users can read
+    match /invites/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    // Vehicles collection - authenticated users can read
+    match /vehicles/{document} {
+      allow read: if request.auth != null;
+    }
+    
+    // Fallback rule for development - remove in production
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

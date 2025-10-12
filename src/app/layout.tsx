@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 import { MainHeader } from '@/components/main-header';
+import AuthDebugger from '@/components/AuthDebugger';
 
 export default function RootLayout({
   children,
@@ -32,6 +33,7 @@ export default function RootLayout({
                 </main>
             </div>
             <Toaster />
+            <AuthDebugger />
         </AuthProvider>
       </body>
     </html>
